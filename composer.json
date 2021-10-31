@@ -1,0 +1,65 @@
+{
+  "name": "easterism/core3",
+  "type": "framework",
+  "description": "Fullstack framework for business application",
+  "keywords": ["framework"],
+  "homepage": "https://github.com/easterism/core3",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "misterEaster",
+      "email": "easter.by@gmail.com",
+      "role": "Developer"
+    },
+    {
+      "name": "bluefish",
+      "email": "shabuninil24@gmail.com",
+      "role": "Developer"
+    }
+  ],
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require": {
+    "php": ">=7.0.0",
+    "ext-json": "*",
+    "ext-zip": "*",
+    "ext-mbstring": "*",
+    "ext-curl": "*",
+    "ext-gd": "*",
+    "ext-intl": "*",
+    "ext-pdo": "*",
+    "ext-xml": "*",
+
+    "shabuninil/coreui-core": "*",
+    "shabuninil/coreui-alert": "*",
+    "shabuninil/coreui-form": "*",
+    "shabuninil/coreui-panel": "*",
+    "shabuninil/coreui-table": "*",
+    "shabuninil/coreui-tabs": "*",
+
+    "zendframework/zend-session": "2.8.*",
+    "zendframework/zend-cache": "2.8.*",
+    "zendframework/zend-serializer": "2.9.*",
+    "zendframework/zend-validator": "2.10.*",
+    "zendframework/zend-mail": "2.10.*",
+    "zendframework/zend-i18n": "2.9.*",
+
+    "zf1/zend-registry": "~1.12",
+    "zf1/zend-config": "~1.12",
+    "zf1/zend-acl": "~1.12",
+    "zf1/zend-ldap": "~1.12",
+    "zf1/zend-auth": "~1.12",
+
+    "belhard/zend-db": "dev-master",
+    "belhard/xajax": "dev-master",
+    "belhard/floatthead": "dev-master",
+    "belhard/simplemodal": "dev-master",
+
+    "components/jquery": "2.1.4",
+    "monolog/monolog": "1.23.*",
+    "guzzlehttp/guzzle": "6.5.0",
+    "blueimp/jquery-file-upload": "10.*",
+    "firephp/firephp-core": "*",
+    "phpseclib/phpseclib": "~2.0"
+  }
+}
