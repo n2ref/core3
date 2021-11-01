@@ -53,39 +53,33 @@ if ( ! file_exists($autoload_file)) {
 require_once $autoload_file;
 
 
-$config_inline = array(
-    'system'     => [
-        'name'   => 'CORE',
-        'https'  => false,
-        'theme'  => 'material',
-        'cache'  => [
+$config_inline = [
+    'system' => [
+        'name'     => 'CORE3',
+        'https'    => false,
+        'cache'    => [
             'dir'     => 'cache',
             'options' => [],
         ],
-        'debug'  => [
-            'on'      => false,
-            'firephp' => false
-        ],
-        'database'     => [
+        'debug'    => ['on' => false,],
+        'database' => [
             'adapter'                    => 'Pdo_Mysql',
             'params'                     => [
-                'charset'          => 'utf8',
-                'adapterNamespace' => '\\Core\\Db_Adapter'
+                'charset' => 'utf8',
             ],
             'isDefaultTableAdapter'      => true,
             'profiler'                   => [
                 'enabled' => false,
-                'class'   => 'Zend_Db_Profiler_Firebug'
+                'class'   => 'Zend_Db_Profiler_Firebug',
             ],
             'caseFolding'                => true,
             'autoQuoteIdentifiers'       => true,
             'allowSerialization'         => true,
-            'autoReconnectOnUnserialize' => true
+            'autoReconnectOnUnserialize' => true,
         ],
-        'include_path' => '',
-        'temp'         => sys_get_temp_dir() ?: "/tmp"
-    ]
-);
+        'temp'     => sys_get_temp_dir() ?: "/tmp",
+    ],
+];
 
 
 $config = new \Zend_Config($config_inline, true);
@@ -100,13 +94,11 @@ $config->merge($config_ini);
 
 // отладка приложения
 if ($config->system->debug->on) {
+    error_reporting(E_ALL);
     ini_set('display_errors', true);
 } else {
     ini_set('display_errors', false);
 }
-
-// устанавливаем шкурку
-define('THEME', $config->system->theme);
 
 // определяем путь к папке кеша
 if (strpos($config->system->cache->dir, '/') !== 0) {
@@ -117,12 +109,7 @@ if (strpos($config->system->cache->dir, '/') !== 0) {
 //конфиг стал только для чтения
 $config->setReadOnly();
 
-if (isset($config->system->include_path) && $config->system->include_path) {
-    set_include_path(get_include_path() . PATH_SEPARATOR . $config->system->include_path);
-}
 
-
-require_once "classes/Db_Adapter_{$config->system->database->adapter}.php";
 require_once 'classes/Tools.php';
 require_once 'classes/Translate.php';
 
@@ -140,21 +127,6 @@ if (isset($config->system->auth) && $config->system->auth->on) {
     }
 }
 
-//MPDF PATH
-define("_MPDF_TEMP_PATH", rtrim($config->system->cache->dir, "/") . '/');
-define("_MPDF_TTFONTDATAPATH", rtrim($config->system->cache->dir, "/") . '/');
-
-//сохраняем параметры сессии
-if ($config->system->session) {
-    \Zend_Session::setOptions($config->system->session->toArray());
-}
 
 //сохраняем конфиг
 \Zend_Registry::set('config', $config);
-
-//обрабатываем конфиг ядра
-$core_conf_file = __DIR__ . "/../../conf.ini";
-if (file_exists($core_conf_file)) {
-    $core_config = new \Zend_Config_Ini($core_conf_file, 'production');
-    \Zend_Registry::set('core_config', $core_config);
-}

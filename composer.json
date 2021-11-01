@@ -1,9 +1,9 @@
 {
-  "name": "easterism/core3",
+  "name": "shabuninil/core3",
   "type": "framework",
   "description": "Fullstack framework for business application",
   "keywords": ["framework"],
-  "homepage": "https://github.com/easterism/core3",
+  "homepage": "https://github.com/shabuninil/core3",
   "license": "MIT",
   "authors": [
     {
@@ -18,9 +18,11 @@
     }
   ],
   "minimum-stability": "dev",
+  "classmap-authoritative": true,
   "prefer-stable": true,
   "require": {
-    "php": ">=7.0.0",
+    "php": ">=7.4.0",
+
     "ext-json": "*",
     "ext-zip": "*",
     "ext-mbstring": "*",
@@ -30,19 +32,13 @@
     "ext-pdo": "*",
     "ext-xml": "*",
 
-    "shabuninil/coreui-core": "*",
-    "shabuninil/coreui-alert": "*",
-    "shabuninil/coreui-form": "*",
-    "shabuninil/coreui-panel": "*",
-    "shabuninil/coreui-table": "*",
-    "shabuninil/coreui-tabs": "*",
-
-    "zendframework/zend-session": "2.8.*",
-    "zendframework/zend-cache": "2.8.*",
-    "zendframework/zend-serializer": "2.9.*",
-    "zendframework/zend-validator": "2.10.*",
-    "zendframework/zend-mail": "2.10.*",
-    "zendframework/zend-i18n": "2.9.*",
+    "laminas/laminas-session": "2.12.*",
+    "laminas/laminas-cache": "2.13.*",
+    "laminas/laminas-serializer": "2.11.*",
+    "laminas/laminas-validator": "2.15.*",
+    "laminas/laminas-mail": "2.15.*",
+    "laminas/laminas-i18n": "2.11.*",
+    "laminas/laminas-authentication": "2.8.*",
 
     "zf1/zend-registry": "~1.12",
     "zf1/zend-config": "~1.12",
@@ -51,15 +47,25 @@
     "zf1/zend-auth": "~1.12",
 
     "belhard/zend-db": "dev-master",
-    "belhard/xajax": "dev-master",
-    "belhard/floatthead": "dev-master",
-    "belhard/simplemodal": "dev-master",
 
-    "components/jquery": "2.1.4",
     "monolog/monolog": "1.23.*",
     "guzzlehttp/guzzle": "6.5.0",
-    "blueimp/jquery-file-upload": "10.*",
-    "firephp/firephp-core": "*",
-    "phpseclib/phpseclib": "~2.0"
+    "phpseclib/phpseclib": "~2.0",
+    "lcobucci/jwt": "^4.1.4"
+  },
+  "replace": {
+    "laminas/laminas-cache-storage-adapter-apc": "*",
+    "laminas/laminas-cache-storage-adapter-apcu": "*",
+    "laminas/laminas-cache-storage-adapter-blackhole": "*",
+    "laminas/laminas-cache-storage-adapter-dba": "*",
+    "laminas/laminas-cache-storage-adapter-ext-mongodb": "*",
+    "laminas/laminas-cache-storage-adapter-memcache": "*",
+    "laminas/laminas-cache-storage-adapter-memcached": "*",
+    "laminas/laminas-cache-storage-adapter-mongodb": "*",
+    "laminas/laminas-cache-storage-adapter-redis": "*",
+    "laminas/laminas-cache-storage-adapter-session": "*",
+    "laminas/laminas-cache-storage-adapter-wincache": "*",
+    "laminas/laminas-cache-storage-adapter-xcache": "*",
+    "laminas/laminas-cache-storage-adapter-zend-server": "*"
   }
 }

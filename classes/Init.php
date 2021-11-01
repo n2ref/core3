@@ -1,11 +1,12 @@
 <?php
 namespace Core3;
 
-use \Zend\Session\Container as SessionContainer;
+use Lcobucci\JWT\Configuration;
+use Lcobucci\JWT\Signer\Rsa\Sha256;
+use Lcobucci\JWT\UnencryptedToken;
 
 require_once 'Log.php';
 require_once 'Acl.php';
-require_once 'Mtpl.php';
 
 
 /**
@@ -18,7 +19,7 @@ class Init extends Acl {
     private const RP = '8c1733d4cd0841199aa02ec9362be324';
 
     /**
-     * @var \Zend\Session\Container
+     * @var \stdClass
      */
     protected $auth;
 
@@ -46,53 +47,26 @@ class Init extends Acl {
 
     /**
      * Общая проверка аутентификации
-     * @throws \Zend_Session_Exception
      * @return bool
+     * @throws \Exception
      */
-    public function auth() {
+    public function auth(): bool {
 
         if (PHP_SAPI === 'cli') {
             return false;
         }
 
         // проверяем, есть ли в запросе токен
-        if (($auth = $this->authToken())) {
+        $auth = $this->getAuthByToken();
+
+        if ($auth instanceof \stdClass) {
             //произошла авторизация по токену
             $this->auth = $auth;
             \Zend_Registry::set('auth', $this->auth);
-            return false;
+            return true;
         }
 
-        $this->auth = new SessionContainer('auth');
-        if ( ! isset($this->auth->initialized)) {
-            //регенерация сессии для предотвращения угона
-            $this->auth->getManager()->regenerateId();
-            $this->auth->initialized = true;
-        }
-
-        // сохранение сессии в реестре
-        \Zend_Registry::set('auth', $this->auth);
-
-        if ( ! empty($this->auth->ID) && $this->auth->ID > 0) {
-            //is user active right now
-            if ($this->isUserActive($this->auth->ID) &&
-                isset($this->auth->accept_answer) &&
-                $this->auth->accept_answer === true
-            ) {
-                $session_lifetime = $this->getSetting('session_lifetime');
-                if ($session_lifetime) {
-                    $this->auth->setExpirationSeconds($session_lifetime, "accept_answer");
-                }
-                //$this->auth->lock();
-            } else {
-                $this->closeSession();
-                \Zend_Session::destroy();
-                //header("Location: /");
-            }
-            \Zend_Registry::set('auth', $this->auth);
-        }
-
-        return true;
+        return false;
     }
 
 
@@ -723,45 +697,56 @@ class Init extends Acl {
 
     /**
      * Проверка наличия токена в запросе
-     *
-     * @return \stdClass|string
+     * @return \stdClass|bool
      * @throws \Exception
      */
-    private function authToken() {
+    private function getAuthByToken() {
 
         $token = '';
         if ( ! empty($_SERVER['HTTP_AUTHORIZATION'])) {
             if (strpos('Bearer', $_SERVER['HTTP_AUTHORIZATION']) !== 0) {
-                return '';
+                return false;
             }
+
             $token = $_SERVER['HTTP_AUTHORIZATION'];
 
-        } else if ( ! empty($_SERVER['HTTP_CORE3M'])) {
-            $token = $_SERVER['HTTP_CORE3M'];
+        } else if ( ! empty($_SERVER['HTTP_CORE3'])) {
+            $token = $_SERVER['HTTP_CORE3'];
         }
 
         if ($token) {
-            //Необходимо для правильной работы контроллера
-            $this->setContext('webservice');
+            try {
+                $signer        = new Sha256();
+                $sign          = $this->config->system->auth->token->sign;
+                $configuration = Configuration::forSymmetricSigner($signer, $sign);
 
-            if ( ! $this->isModuleActive('webservice')) {
-                throw new \Exception(sprintf($this->_('Модуль %s не активен'), 'Webservice'), 503);
+                $token_jwt     = $configuration->parser()->parse((string)$token);
+                $token_exp     = $token_jwt->claims()->get('exp');
+                $token_user_id = $token_jwt->claims()->get('uid');
+
+                if (empty($token_exp) || empty($token_user_id)) {
+                    return false;
+                }
+
+                $now = date_create();
+                if ($now > $token_exp) {
+                    return false;
+                }
+
+                $session = $this->modAdmin->getSessionByToken($token);
+                $user    = $session->getUser();
+
+                $session->addRequest();
+
+                return $user;
+
+
+            } catch (\Exception $e) {
+                return false;
             }
-
-            $webservice_controller_path = $this->getModuleLocation('webservice') . '/Controller.php';
-            if ( ! file_exists($webservice_controller_path)) {
-                throw new \Exception(sprintf($this->_('Файл %s не найден'), 'Webservice'), 500);
-            }
-            require_once($webservice_controller_path);
-
-            $class_name = __NAMESPACE__ . '\\Mod\\Webservice\\Controller';
-            if ( ! class_exists($class_name)) {
-                throw new \Exception(sprintf($this->_('Класс %s не найден'), 'Webservice'), 500);
-            }
-
-            $webservice_controller = new $class_name();
-            return $webservice_controller->dispatchWebToken($token);
         }
+
+        return false;
     }
 
 

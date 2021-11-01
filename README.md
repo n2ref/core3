@@ -54,7 +54,7 @@ Open URL of new index.php file in your browser. Use 'admin' username and 'admin'
 
 Config parameters
 -----------------
-####General
+#### General
 - **system.name**                 System name
 - **system.host**                 Host name
 - **system.logo**                 The path to image file
@@ -71,7 +71,7 @@ Config parameters
 - **system.disable.title**        The reason for system disable
 - **system.disable.description**  Details of the system disable
 
-####Database
+#### Database
 - **system.database.params.host**            Host database server
 - **system.database.params.port**            Port number to database server
 - **system.database.params.dbname**          Database name on database server
@@ -79,7 +79,7 @@ Config parameters
 - **system.database.params.password**        Password to auth
 - **system.database.params.params.charset**  Charset name to connect database - utf8, utf8mb4 or another
 
-####Mail
+#### Mail
 - **system.mail.server**   Host mail server
 - **system.mail.port**     Port number to mail server
 - **system.mail.auth**     Auth method name - plain, login or crammd5
@@ -87,12 +87,12 @@ Config parameters
 - **system.mail.password** Password to auth
 - **system.mail.ssl**      Secure connection - ssl or tls 
 
-####Log
+#### Log
 - **system.log.on**     Log active - true or false
 - **system.log.writer** Method write log - file or database
 - **system.log.file**   Log file path
 
-####Ldap
+#### Ldap
 - **system.ldap.active**                  Ldap active - true or false
 - **system.ldap.root**                    User login with root privileges
 - **system.ldap.admin**                   User login with admin privileges

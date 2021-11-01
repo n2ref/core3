@@ -62,7 +62,7 @@ class Theme extends Common {
 
         $modules = $this->getModuleList();
 
-        //проверяем наличие контроллера для core3m в модулях
+        //проверяем наличие контроллера для core3 в модулях
         foreach ($modules as $key => $module) {
             $location = $this->getModuleLocation($module['name']);
             if ( ! file_exists($location . "/Mobile.php")) {

@@ -4,7 +4,8 @@ CREATE TABLE `core_controls` (
     `keyfield` varchar(20) NOT NULL DEFAULT '',
     `val` varchar(20) NOT NULL DEFAULT '',
     `author` varchar(255) NOT NULL,
-    `date_last_update` varchar(30) NOT NULL DEFAULT ''
+    `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- core_enum: table
@@ -19,6 +20,7 @@ CREATE TABLE `core_enum` (
     `is_default_sw` enum('Y','N') NOT NULL DEFAULT 'N',
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
     `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `parent_id_name` (`parent_id`,`name`) USING BTREE,
     UNIQUE KEY `global_id` (`global_id`) USING BTREE,
@@ -44,7 +46,7 @@ CREATE TABLE `core_modules` (
     `seq` int(11) DEFAULT NULL,
     `author` varchar(255) DEFAULT NULL,
     `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `date_created` timestamp NULL DEFAULT NULL,
+    `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `title` (`title`) USING BTREE,
     UNIQUE KEY `name` (`name`) USING BTREE,
@@ -63,7 +65,7 @@ CREATE TABLE `core_modules_actions` (
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
     `author` varchar(255) DEFAULT NULL,
     `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `date_created` timestamp NULL DEFAULT NULL,
+    `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `module_id_name` (`module_id`,`name`) USING BTREE,
     KEY `is_active_sw` (`is_active_sw`) USING BTREE,
@@ -82,6 +84,8 @@ CREATE TABLE `core_modules_available` (
     `data` longblob,
     `files_hash` text,
     `author` varchar(255) DEFAULT NULL,
+    `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`) USING BTREE,
     KEY `author` (`author`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -92,30 +96,29 @@ CREATE TABLE `core_roles` (
     `description` varchar(255) DEFAULT NULL,
     `access` text,
     `author` varchar(255) NULL DEFAULT NULL,
-    `position` int(11) NOT NULL,
     `access_add` text,
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
     `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `date_created` timestamp NULL DEFAULT NULL,
+    `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `name` (`name`) USING BTREE,
     KEY `is_active_sw` (`is_active_sw`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- core_session: table
-CREATE TABLE `core_session` (
+-- core_sessions: table
+CREATE TABLE `core_sessions` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
     `user_id` int(11) unsigned NOT NULL,
-    `sid` varchar(128) NOT NULL DEFAULT '',
-    `login_time` timestamp NULL DEFAULT NULL,
-    `logout_time` datetime DEFAULT NULL,
-    `ip` varchar(20) NOT NULL DEFAULT '',
-    `date_last_activity` timestamp NULL DEFAULT NULL,
-    `crypto_sw` enum('N','Y') NOT NULL DEFAULT 'N',
-    `is_expired_sw` enum('N','Y') NOT NULL DEFAULT 'N',
+    `refresh_token` varchar(255) NOT NULL,
+    `ip` varchar(100) NOT NULL,
+    `user_agent` varchar(255) NOT NULL,
+    `count_requests` int(11) unsigned DEFAULT 0,
+    `date_last_activity` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+    `date_expires` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`) USING BTREE,
     KEY `user_id` (`user_id`) USING BTREE,
-    KEY `sid` (`sid`) USING BTREE
+    KEY `refresh_token` (`refresh_token`) USING BTREE
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- core_settings: table
@@ -130,7 +133,7 @@ CREATE TABLE `core_settings` (
     `author` varchar(255) DEFAULT NULL,
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
     `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `date_created` timestamp NULL DEFAULT NULL,
+    `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `code` (`code`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -154,13 +157,13 @@ CREATE TABLE `core_users` (
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
     `author` varchar(255) DEFAULT NULL,
     `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `date_created` datetime NOT NULL,
+    `date_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `login` (`login`) USING BTREE,
     UNIQUE KEY `email` (`email`) USING BTREE,
     KEY `is_active_sw` (`is_active_sw`) USING BTREE,
     KEY `role_id` (`role_id`) USING BTREE,
-    CONSTRAINT `fk1_core_users` FOREIGN KEY (`role_id`) REFERENCES `core_roles` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT `fk1_core_users` FOREIGN KEY (`role_id`) REFERENCES `core_roles` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
