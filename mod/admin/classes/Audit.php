@@ -1,5 +1,5 @@
 <?php
-namespace Core\Mod\Admin;
+namespace Core3\Mod\Admin;
 
 /**
  * Class Audit

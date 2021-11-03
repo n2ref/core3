@@ -15,9 +15,41 @@ if ( ! file_exists($conf_file)) {
 }
 
 
-require_once 'classes/Error.php';
-require_once 'classes/Init.php';
+spl_autoload_register(function ($class) {
 
+    if (strpos($class, __NAMESPACE__) === 0) {
+        $class_explode   = explode("\\", $class);
+        $class_name      = end($class_explode);
+        $class_path      = [];
+        $count_namespace = count(explode("\\", __NAMESPACE__));
+
+        foreach ($class_explode as $key => $item) {
+            if ($key >= $count_namespace && $key < (count($class_explode) - 1)) {
+                $class_path[] = $item;
+            }
+        }
+
+
+        if (empty($class_path[0])) {
+            return false;
+        }
+
+        $class_path[0] = strtolower($class_path[0]);
+
+        if ( ! in_array($class_path[0], ['classes', 'interfaces'])) {
+            return false;
+        }
+
+        $class_path_implode = implode('/', $class_path);
+        $class_path_implode = $class_path_implode ? "/{$class_path_implode}" : '';
+
+        $file_path = __DIR__ . "/{$class_path_implode}/{$class_name}.php";
+
+        if (file_exists($file_path)) {
+            require_once $file_path;
+        }
+    }
+});
 
 
 if (PHP_SAPI === 'cli') {
@@ -110,18 +142,15 @@ if (strpos($config->system->cache->dir, '/') !== 0) {
 $config->setReadOnly();
 
 
-require_once 'classes/Tools.php';
-require_once 'classes/Translate.php';
 
-
-$translate = new Translate($config);
+$translate = new Classes\Translate($config);
 \Zend_Registry::set('translate', $translate);
 
 
 if (isset($config->system->auth) && $config->system->auth->on) {
     $realm = $config->system->auth->params->realm;
     $users = $config->system->auth->params->users;
-    if ($code = Tools::httpAuth($realm, $users)) {
+    if ($code = Classes\Tools::httpAuth($realm, $users)) {
         if ($code == 1) throw new \Exception($translate->tr("Неверный пользователь."));
         if ($code == 2) throw new \Exception($translate->tr("Неверный пароль."));
     }

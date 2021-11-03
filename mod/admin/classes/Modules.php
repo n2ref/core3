@@ -1,5 +1,5 @@
 <?php
-namespace Core\Mod\Admin;
+namespace Core3\Mod\Admin;
 use Core\Common;
 use Core\Mtpl;
 use CoreUI\Form;

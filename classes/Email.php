@@ -1,13 +1,12 @@
 <?php
-namespace Core3;
+namespace Core3\Classes;
 
-require_once 'Db.php';
+use Laminas\Mail;
+use Laminas\Mail\Transport;
+use Laminas\Mime\Message as MimeMessage;
+use Laminas\Mime\Mime;
+use Laminas\Mime\Part as MimePart;
 
-use Zend\Mail;
-use Zend\Mail\Transport;
-use Zend\Mime\Message as MimeMessage;
-use Zend\Mime\Mime;
-use Zend\Mime\Part as MimePart;
 
 /**
  * Class Email
@@ -367,7 +366,7 @@ class Email {
      * Отправка письма
      *
      * @param string $from
-     * @param array|string $to
+     * @param string $to
      * @param string $subj
      * @param string $body
      * @param string $cc
@@ -388,15 +387,19 @@ class Email {
         if (is_array($from)) {
             $from = "{$from[1]} <{$from[0]}>";
         }
+        $from = trim($from);
 
         // DEPRECATED
         if (is_array($to)) {
             $to = "{$to[1]} <{$to[0]}>";
         }
+        $to = trim($to);
 
-        if ($config->mail && $config->mail->force_from) {
+        $force_from = !empty($config->mail->force_from) ? $config->mail->force_from : $from;
+
+        if ($config->mail && $force_from) {
             $reply_from            = $from;
-            $reply_email           = trim($reply_from);
+            $reply_email           = $reply_from;
             $reply_name            = '';
             $reply_address_explode = explode('<', $reply_from);
 
@@ -406,7 +409,7 @@ class Email {
             }
 
             $message->setReplyTo($reply_email, $reply_name);
-            $from = $config->mail->force_from;
+            $from = $force_from;
         }
 
         $from_email           = trim($from);
@@ -417,33 +420,25 @@ class Email {
             $from_email = trim($from_address_explode[1], '> ');
             $from_name  = trim($from_address_explode[0]);
         }
-        $message->setFrom($from_email, $from_name);
-
-
 
 
         // TO
-        if (is_array($to)) {
-            $message->addTo($to[0], $to[1]);
-
-        } else {
-            $to_addresses_explode = explode(',', $to);
-            foreach ($to_addresses_explode as $to_address) {
-                if (empty(trim($to_address))) {
-                    continue;
-                }
-
-                $to_email           = trim($to_address);
-                $to_name            = '';
-                $to_address_explode = explode('<', $to_address);
-
-                if ( ! empty($to_address_explode[1])) {
-                    $to_email = trim($to_address_explode[1], '> ');
-                    $to_name  = trim($to_address_explode[0]);
-                }
-
-                $message->addTo($to_email, $to_name);
+        $to_addresses_explode = explode(',', $to);
+        foreach ($to_addresses_explode as $to_address) {
+            if (empty(trim($to_address))) {
+                continue;
             }
+
+            $to_email           = trim($to_address);
+            $to_name            = '';
+            $to_address_explode = explode('<', $to_address);
+
+            if ( ! empty($to_address_explode[1])) {
+                $to_email = trim($to_address_explode[1], '> ');
+                $to_name  = trim($to_address_explode[0]);
+            }
+
+            $message->addTo($to_email, $to_name);
         }
 
         // CC
@@ -534,6 +529,8 @@ class Email {
 
                 if ( ! empty($config->mail->username)) {
                     $config_smtp['connection_config']['username'] = $config->mail->username;
+                    $from_email = $config->mail->username;
+                    $from_name = '';
                 }
                 if ( ! empty($config->mail->password)) {
                     $config_smtp['connection_config']['password'] = $config->mail->password;
@@ -543,12 +540,11 @@ class Email {
                 }
             }
 
-
             $options   = new Transport\SmtpOptions($config_smtp);
             $transport = new Transport\Smtp();
             $transport->setOptions($options);
         }
-
+        $message->setFrom($from_email, $from_name);
         $transport->send($message);
 
         return true;

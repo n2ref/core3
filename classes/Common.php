@@ -1,5 +1,5 @@
 <?php
-namespace Core3;
+namespace Core3\Classes;
 
 require_once 'Acl.php';
 require_once 'Translate.php';
@@ -276,20 +276,4 @@ class Common extends Acl {
 	    $module_src = $this->getModuleSrc($module);
         Tools::printJs($module_src . $src, $chachable);
 	}
-}
-
-
-/**
- * Class stdObject
- */
-class stdObject {
-
-    /**
-     * @param string $method
-     * @param array  $arguments
-     * @return bool
-     */
-    public function __call($method, $arguments) {
-        return false;
-    }
 }

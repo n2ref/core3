@@ -1,10 +1,4 @@
-/mod/cron
-/mod/webservice
-/mod/profile
-/mod/queue
-/mod/repo
-/mod/settings
-/mod/billing
-/translate/*.mo
-/vendor
+mod/*
+!/mod/admin/*/
+vendor/
 *.lock

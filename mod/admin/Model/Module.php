@@ -1,5 +1,5 @@
 <?php
-namespace Core\Mod\Admin\Model;
+namespace Core3\Mod\Admin\Model;
 
 /**
  * Class Module

@@ -1,9 +1,9 @@
 <?php
-namespace Core3;
+namespace Core3\Classes;
 
 
 /**
- * Class Db_Adapter_Pdo_Mysql
+ *
  */
 class Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mysql {
 

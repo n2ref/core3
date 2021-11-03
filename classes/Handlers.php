@@ -1,5 +1,5 @@
 <?php
-namespace Core3;
+namespace Core3\Classes;
 use CoreUI\Form;
 
 

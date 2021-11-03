@@ -1,6 +1,5 @@
 <?php
-
-namespace Core3;
+namespace Core3\Classes;
 
 
 /**
@@ -11,7 +10,7 @@ namespace Core3;
 class Cache {
 
     private $adapter;
-    const NS = 'Core2';
+    const NS = 'Core3';
 
 
     /**

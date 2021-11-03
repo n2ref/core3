@@ -1,7 +1,9 @@
 <?php
-namespace Core3;
-require_once 'Acl.php';
+namespace Core3\Classes;
 
+/**
+ *
+ */
 class CommonApi extends Acl {
 	protected $auth;
 	protected $config;
@@ -11,8 +13,8 @@ class CommonApi extends Acl {
 	public function __construct($module) {
 		parent::__construct();
 		$this->module = $module;
-		$this->auth = Zend_Registry::get('auth');
-		$this->config = Zend_Registry::get('config');
+		$this->auth = \Zend_Registry::get('auth');
+		$this->config = \Zend_Registry::get('config');
 	}
 
     public function __call($method, $arguments)
@@ -46,11 +48,11 @@ class CommonApi extends Acl {
 			}
 			// Получение экземпляра класса для работы с правами пользователей
 			elseif ($k == 'acl') {
-				$v = $this->{$k} = Zend_Registry::getInstance()->get('acl');
+				$v = $this->{$k} = \Zend_Registry::getInstance()->get('acl');
 			}
             elseif ($k == 'modAdmin') {
                 require_once(DOC_ROOT . 'core3/inc/CoreController.php');
-                $v = $this->{$k} = new CoreController();
+                $v = $this->{$k} = new \CoreController();
                 $v->module = 'admin';
             }
 			// Получение экземпляра модели текущего модуля
@@ -60,7 +62,7 @@ class CommonApi extends Acl {
 						? DOC_ROOT . "core3/mod/admin"
 						: $this->getModuleLocation($this->module);
 
-				if (!file_exists($location . "/Model/$model.php")) throw new Exception('Модель не найдена.');
+				if (!file_exists($location . "/Model/$model.php")) throw new \Exception('Модель не найдена.');
 				$this->db; //FIXME грязный хак для того чтобы сработал сеттер базы данных. Потому что иногда его здесь еще нет, а для инициализаци модели используется адаптер базы данных по умолчанию
 				require_once($location . "/Model/$model.php");
 				$v = $this->{$k} = new $model();

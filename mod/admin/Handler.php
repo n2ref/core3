@@ -1,5 +1,5 @@
 <?php
-namespace Core\Mod\Admin;
+namespace Core3\Mod\Admin;
 use Core\Handlers;
 
 require_once DOC_ROOT . "/core3/classes/Handlers.php";

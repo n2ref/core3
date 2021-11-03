@@ -1,62 +1,132 @@
 <?php
-namespace Core3;
+namespace Core3\Classes;
+
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use Monolog\Handler\SlackWebhookHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Processor\WebProcessor;
 use Monolog\Formatter\NormalizerFormatter;
-
+use Laminas\Session\Container as SessionContainer;
 
 
 /**
  * Обеспечение журналирования запросов пользователей
  * и других событий
  * Class Logger
+ * @method slack($channel, $username)
  */
 class Log {
     private $log;
     private $config;
     private $writer;
     private $writer_custom;
+    private $handlers;
 
 
     /**
      * Log constructor.
      * @param string $name
+     * @throws \Exception
      */
-    public function __construct($name = 'core3') {
+    public function __construct($name = 'core2') {
 
-        if ($name != 'access') {
-            $this->log    = new Logger($_SERVER['SERVER_NAME'] . "." . $name);
-            $this->config = \Zend_Registry::isRegistered('core_config')
-                ? \Zend_Registry::getInstance()->get('core_config')
-                : \Zend_Registry::getInstance()->get('config');
+        if ($name !== 'access') {
+            //эта секция предназначена для работы ядра
+            $this->log = new Logger($_SERVER['SERVER_NAME'] . "." . $name);
+            $this->config = \Zend_Registry::getInstance()->get('core_config');
 
-            if ($this->config->log &&
-                $this->config->log->dir &&
-                is_string($this->config->log->dir) &&
+            if ($name === 'profile') {
+                if (isset($this->config->profile->mysql)) {
+                    $profile_mysql = strpos($this->config->profile->mysql, '/') !== 0
+                        ? DOC_ROOT . $this->config->profile->mysql
+                        : $this->config->profile->mysql;
 
-                (
-                    (is_dir($this->config->log->dir) && is_writable($this->config->log->dir)) ||
-                    (file_exists($this->config->log->dir . '/system.log') && is_writable(dirname($this->config->log->dir))) ||
-                    (is_writable($this->config->log->dir . '/system.log'))
-                )
-            ) {
-                $stream = new StreamHandler($this->config->log->dir . '/system.log');
-                //$stream->setFormatter(new NormalizerFormatter());
-                $this->log->pushHandler($stream);
+                    $stream = new StreamHandler($profile_mysql);
+                    $this->log->pushHandler($stream);
+                    $this->writer = 'file';
+                } else {
+                    return new \stdClass();
+                }
+
+            } elseif ($name === 'webhook') {
+                if (isset($this->config->log) &&
+                    isset($this->config->log->webhook)
+                ) {
+                    //TODO add more webhooks
+
+                } else {
+                    return new \stdClass();
+                }
+            } else {
+                if (isset($this->config->log) &&
+                    isset($this->config->log->system) &&
+                    ! empty($this->config->log->system->file) &&
+                    is_string($this->config->log->system->file)
+                ) {
+                    $stream = new StreamHandler($this->config->log->system->file);
+                    //$stream->setFormatter(new NormalizerFormatter());
+                    $this->log->pushHandler($stream);
+                }
             }
-
         } else {
-            $this->log = new Logger($name);
+            $this->config = \Zend_Registry::getInstance()->get('config');
+            $this->log    = new Logger($name);
         }
     }
 
 
     /**
-     * дополнительный лог в заданный файл
+     * Обработчик метода не доступного через экземпляр
+     * @param string    $name       Имя метода
+     * @param array     $arguments  Параметры метода
+     * @return object|null
+     */
+    public function __call($name, $arguments) {
+
+        if ($name == 'slack') {
+            if ( ! $this->config->log || ! $this->config->log->webhook->slack) {
+                return new \stdClass();
+            }
+
+            $channel                = null;
+            $username               = null;
+            $useAttachment          = true;
+            $iconEmoji              = null;
+            $useShortAttachment     = false;
+            $includeContextAndExtra = false;
+            $level                  = Logger::CRITICAL;
+            $bubble                 = true;
+            $excludeFields          = array();
+
+            if (isset($arguments[0])) $channel = $arguments[0];
+            if (isset($arguments[1])) $username = $arguments[1];
+
+            //TODO add other params
+            $this->handlers[$name] = [
+                $this->config->log->webhook->slack->url,
+                $channel,
+                $username,
+                $useAttachment,
+                $iconEmoji,
+                $useShortAttachment,
+                $includeContextAndExtra,
+                $level,
+                $bubble,
+                $excludeFields,
+            ];
+
+            return $this;
+        }
+        return null;
+    }
+
+
+    /**
+     * Дополнительный лог в заданный файл
      * @param $filename
      * @return $this
+     * @throws \Exception
      */
     public function file($filename) {
         if ( ! $this->writer_custom) {
@@ -74,7 +144,7 @@ class Log {
     public function access($name) {
         $this->setWriter();
         $this->log->pushProcessor(new WebProcessor());
-        $this->log->addInfo($name, array('sid' => \Zend_Session::getId()));
+        $this->log->info($name, array('sid' => SessionContainer::getDefaultManager()->getId()));
     }
 
 
@@ -87,6 +157,9 @@ class Log {
         if (is_array($msg)) {
             $context = $msg;
             $msg = '-';
+        }
+        if ($this->handlers) {
+            $this->setHandler(Logger::INFO);
         }
         $this->log->info($msg, $context);
         $this->removeCustomWriter();
@@ -103,13 +176,16 @@ class Log {
             $context = $msg;
             $msg = '-';
         }
+        if ($this->handlers) {
+            $this->setHandler(Logger::WARNING);
+        }
         $this->log->warning($msg, $context);
         $this->removeCustomWriter();
     }
 
 
     /**
-     * Ошибка в лог
+     * Предупреждение в лог
      * @param array|string $msg
      * @param array        $context
      */
@@ -117,6 +193,9 @@ class Log {
         if (is_array($msg)) {
             $context = $msg;
             $msg = '-';
+        }
+        if ($this->handlers) {
+            $this->setHandler(Logger::ERROR);
         }
         $this->log->error($msg, $context);
         $this->removeCustomWriter();
@@ -133,8 +212,19 @@ class Log {
             $context = $msg;
             $msg = '-';
         }
+        if ($this->handlers) {
+            $this->setHandler(Logger::DEBUG);
+        }
         $this->log->debug($msg, $context);
         $this->removeCustomWriter();
+    }
+
+
+    /**
+     * @return string
+     */
+    public function getWriter() {
+        return $this->writer;
     }
 
 
@@ -155,19 +245,33 @@ class Log {
     private function setWriter() {
         if ( ! $this->writer) {
             if (isset($this->config->log) &&
-                ! empty($this->config->log->file) &&
-                is_string($this->config->log->file) &&
-                ( ! is_dir($this->config->log->file) &&
-                    is_writable($this->config->log->file) ||
-                    ! file_exists($this->config->log->file) &&
-                    is_writable(dirname($this->config->log->file)))
+                isset($this->config->log->system) &&
+                ! empty($this->config->log->system->file) &&
+                is_string($this->config->log->system->file)
             ) {
-                $this->log->pushHandler(new StreamHandler($this->config->log->file, Logger::INFO));
+                $this->log->pushHandler(new StreamHandler($this->config->log->system->file, Logger::INFO));
                 $this->writer = 'file';
             } else {
-                $this->log->pushHandler(new SyslogHandler($_SERVER['SERVER_NAME'] . ".core3"));
+                $this->log->pushHandler(new SyslogHandler($_SERVER['SERVER_NAME'] . ".core2"));
                 $this->writer = 'syslog';
             }
         }
+    }
+
+    /**
+     * Установка обработчика
+     * @param int $level уровень журналирования
+     */
+    private function setHandler($level) {
+        while ($this->log->getHandlers()) {
+            $this->log->popHandler();
+        }
+        foreach ($this->handlers as $name => $params) {
+            if ($name == 'slack') {
+                $handler = new SlackWebhookHandler($params[0], $params[1], $params[2], $params[3], $params[4], $params[5], $params[6], $level);
+                $this->log->pushHandler($handler);
+            }
+        }
+
     }
 }

@@ -1,5 +1,5 @@
 <?php
-namespace Core\Mod\Admin;
+namespace Core3\Mod\Admin;
 use Core\Common;
 
 require_once DOC_ROOT . "/core3/classes/Common.php";

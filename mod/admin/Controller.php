@@ -1,7 +1,8 @@
 <?php
-namespace Core\Mod\Admin;
-use \Core\Common;
-use \Core\Email;
+namespace Core3\Mod\Admin;
+use \Core3\Classes\Common;
+use \Core3\Classes\Email;
+
 use \CoreUI\Alert;
 use \CoreUI\Panel;
 use CoreUI\Tabs;
