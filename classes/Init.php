@@ -84,17 +84,14 @@ class Init extends Acl {
         $request = $this->parseRequest();
 
 
-        if ( ! empty($this->auth) && ! empty($this->auth->ID) && ! empty($this->auth->LOGIN)) {
+        if ( ! empty($this->auth)) {
             // Выход
             if (isset($_GET['logout'])) {
-                $this->closeSession();
-                \Zend_Session::destroy();
-                header("Location: " . DOC_PATH);
-                return '';
+
 
             // SetupAcl
             } else {
-                if ($this->config->system->disable->on && ! $this->auth->ADMIN) {
+                if ($this->config->system->disable->on && ! $this->auth->isAdmin()) {
                     $theme_controller = $this->getThemeController();
                     return $theme_controller->getDisablePage();
                 }
@@ -112,10 +109,9 @@ class Init extends Acl {
                 $login    = is_string($_POST['login'])    ? $_POST['login']    : '';
                 $password = is_string($_POST['password']) ? $_POST['password'] : '';
                 $this->authLogin($login, $password);
-                header("Location: " . $_SERVER['REQUEST_URI']);
                 return '';
 
-            // Забыли парль?
+            // Забыли пароль?
             } elseif ($page == 'forgot' && $is_setup_mail) {
                 header('Content-Type: text/html; charset=utf-8');
                 if ( ! empty($_POST['email'])) {
@@ -148,54 +144,40 @@ class Init extends Acl {
         $section = ! empty($request['section']) ? $request['section'] : 'index';
 
 
-        // Обработчики
-        $connection = $this->db->getConnection();
-        \CoreUI\Registry::setDbConnection($connection);
-        \CoreUI\Registry::setLanguage('ru');
-        $handler = new \CoreUI\Handlers();
-        if ($handler->isHandler()) {
+        // Модуль
+        if ($module) {
+            // Обработчики
+            if ($request['handler']) {
+                $process  = '111';
+                $resource = '222';
 
-            $process  = $handler->getProcess();
-            $resource = $handler->getResource();
-
-            if ( ! empty($module)) {
-                $handler_method = $process . ucfirst(strtolower($resource));
-                if ($this->issetHandlerModule($module, $handler_method)) {
-                    $result = $this->handlerModule($module, $handler_method);
-                } else {
-                    $handler->process();
-                    $result = $handler->getResponse();
+                if (empty($module)) {
+                    return '';
                 }
-            } else {
-                $handler->process();
-                $result = $handler->getResponse();
-            }
 
-            return $result;
-        }
+                $handler_method = $process . ucfirst(strtolower($resource));
+
+                return $this->handlerModule($module, $handler_method);
+
+            } else {
+
+                if ($this->auth->isMobile()) {
+                    $module_content = $this->getModuleContentMobile($module, $section);
+                } else {
+                    $module_content = $this->getModuleContent($module, $section);
+                }
+
+                return ob_get_clean() . $module_content;
+            }
 
         // Меню
-        if (empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
-            $theme_controller = $this->getThemeController();
-            if ($this->auth->MOBILE) {
-                header('Content-type: application/json; charset="utf-8"');
-                return $theme_controller->getMenuMobile();
-
-            } else {
-                header('Content-Type: text/html; charset=utf-8');
-                return $theme_controller->getMenu();
-            }
-
-        // Модуль
         } else {
-            ob_start();
-            if ($this->auth->MOBILE) {
-                $page_content = $this->getModuleMobileContent($module, $section);
-            } else {
-                $page_content = $this->getModuleContent($module, $section);
-            }
+            if ($this->auth->isMobile()) {
+                return $this->getMenuMobile();
 
-            return ob_get_clean() . implode('', $page_content['content']);
+            } else {
+                return $this->getMenu();
+            }
         }
     }
 
@@ -255,14 +237,12 @@ class Init extends Acl {
 
     /**
      * Получение контента модуля
-
      * @param string $module
      * @param string $section
-
-     * @return string
+     * @return mixed
      * @throws \Exception
      */
-    private function getModuleContent($module, $section) {
+    private function getModuleContent(string $module, string $section) {
 
         if ( ! $this->isModuleInstalled($module)) {
             throw new \Exception(sprintf($this->_("Модуль %s не установлен в системе!"), $module));
@@ -303,14 +283,12 @@ class Init extends Acl {
 
     /**
      * Получение контента модуля
-
      * @param string $module
      * @param string $section
-
-     * @return string
+     * @return mixed
      * @throws \Exception
      */
-    private function getModuleMobileContent($module, $section) {
+    private function getModuleContentMobile(string $module, string $section) {
 
         if ( ! $this->isModuleInstalled($module)) {
             throw new \Exception(sprintf($this->_("Модуль %s не установлен в системе!"), $module));
@@ -346,6 +324,24 @@ class Init extends Acl {
 
         $controller = new $class_name();
         return $controller->$section_method();
+    }
+
+
+    /**
+     *
+     */
+    private function getMenu(): array {
+
+        return [];
+    }
+
+
+    /**
+     *
+     */
+    private function getMenuMobile(): array {
+
+        return [];
     }
 
 
@@ -413,7 +409,7 @@ class Init extends Acl {
         require_once $module_save_path;
 
 
-        // Инифиализация обработчика
+        // Инициализация обработчика
         $handler_class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Handler';
         if ( ! class_exists($handler_class_name)) {
             return false;
@@ -556,13 +552,13 @@ class Init extends Acl {
 
         // обновление записи о последней активности
         $where = [
-            $this->db->quoteInto("sid = ?",     $this->auth->getManager()->getId()),
-            $this->db->quoteInto("ip = ?",      $_SERVER['REMOTE_ADDR']),
-            $this->db->quoteInto("user_id = ?", $this->auth->ID),
-            'logout_time IS NULL'
+            $this->db->quoteInto("refresh_token = ?", $this->auth->getToken()),
+            $this->db->quoteInto("ip = ?",            $_SERVER['REMOTE_ADDR']),
+            $this->db->quoteInto("user_id = ?",       $this->auth->getUser()->id),
         ];
         $this->db->update('core_session', [
-            'last_activity' => new \Zend_Db_Expr('NOW()')
+            'count_requests'     => new \Zend_Db_Expr('count_requests + 1'),
+            'date_last_activity' => new \Zend_Db_Expr('NOW()')
         ], $where);
     }
 }

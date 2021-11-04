@@ -36,4 +36,22 @@ class Auth extends Db {
 
 
     }
+
+
+    public function isMobile() {
+
+
+    }
+
+
+    public function isAdmin() {
+
+
+    }
+
+
+    public function getToken() {
+
+
+    }
 }

@@ -1,4 +1,6 @@
 <?php
+namespace Core3\Mod\Admin;
+
 require_once 'classes/Common.php';
 require_once 'classes/class.list.php';
 require_once 'classes/class.edit.php';
@@ -9,7 +11,7 @@ require_once 'classes/Alert.php';
 /**
  * Class CoreController
  */
-class MobileController extends Common {
+class Mobile extends Common {
 
 	protected $tpl = '';
 	protected $theme = 'default';
