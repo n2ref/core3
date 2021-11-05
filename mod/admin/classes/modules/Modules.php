@@ -1,5 +1,5 @@
 <?php
-namespace Core2;
+namespace Core3\Mod\Admin;
 
 require_once DOC_ROOT . 'core2/inc/classes/Common.php';
 require_once DOC_ROOT . 'core2/inc/classes/class.list.php';
@@ -10,12 +10,11 @@ require_once DOC_ROOT . 'core2/inc/classes/Templater2.php';
 require_once 'InstallModule.php';
 require_once 'View.php';
 
-use Laminas\Session\Container as SessionContainer;
-use Core2\Mod\Admin;
+use Core3\Mod\Admin;
 
 /**
  * Class Modules
- * @package Core2
+ * @package Core3
  */
 class Modules extends \Common  {
 
@@ -776,5 +775,86 @@ class Modules extends \Common  {
         } else {
             return $this->table();
         }
+    }
+
+
+    /**
+     * Список доступных модулей
+     * @return array
+     */
+    protected function getModuleList(): array {
+
+        $modules_raw = $this->db->fetchAll("
+			SELECT m.id,
+				   m.name,
+				   m.title,
+				   m.is_home_page_sw,
+				   ma.id    AS action_id,
+				   ma.name  AS action_name,
+				   ma.title AS action_title
+			FROM core_modules AS m
+				LEFT JOIN core_modules_actions AS ma ON m.id = ma.module_id 
+				                                    AND ma.is_active_sw = 'Y'
+			WHERE m.is_active_sw = 'Y'
+			  AND m.is_visible_sw = 'Y'
+			ORDER BY m.seq, ma.seq
+		");
+
+        $modules = [];
+        if ( ! empty($modules_raw)) {
+            foreach ($modules_raw as $module) {
+                if ($this->checkAcl($module['name'], 'access')) {
+                    if ($module['action_name']) {
+                        if ($this->checkAcl($module['name'] . '_' . $module['action_name'], 'access')) {
+                            if ( ! isset($modules[$module['id']])) {
+                                $modules[$module['id']] = array(
+                                    'name'            => $module['name'],
+                                    'title'           => $module['title'],
+                                    'is_home_page_sw' => $module['is_home_page_sw'],
+                                    'actions'         => [
+                                        $module['action_id'] = [
+                                            'name'  => $module['action_name'],
+                                            'title' => $module['action_title'],
+                                        ]
+                                    ]
+                                );
+                            } else {
+                                $modules[$module['id']]['actions'][$module['action_id']] = [
+                                    'name'  => $module['action_name'],
+                                    'title' => $module['action_title'],
+                                ];
+                            }
+
+                        }
+                    } else {
+                        $modules[$module['id']] = [
+                            'name'            => $module['name'],
+                            'title'           => $module['title'],
+                            'is_home_page_sw' => $module['is_home_page_sw'],
+                            'actions'         => []
+                        ];
+                    }
+                }
+            }
+        }
+
+        if ($this->auth->ADMIN) {
+            $modules['-1'] = [
+                'name'            => 'admin',
+                'title'           => $this->_('Админ'),
+                'is_home_page_sw' => 'Y',
+                'actions'         => [
+                    '-1' => ['name' => 'modules',    'title' => $this->_('Модули')],
+                    '-2' => ['name' => 'settings',   'title' => $this->_('Конфигурация')],
+                    '-3' => ['name' => 'enum',       'title' => $this->_('Справочники')],
+                    '-4' => ['name' => 'users',      'title' => $this->_('Пользователи')],
+                    '-5' => ['name' => 'roles',      'title' => $this->_('Роли')],
+                    '-6' => ['name' => 'monitoring', 'title' => $this->_('Мониторинг')],
+                    '-7' => ['name' => 'audit',      'title' => $this->_('Аудит')],
+                ]
+            ];
+        }
+
+        return $modules;
     }
 }

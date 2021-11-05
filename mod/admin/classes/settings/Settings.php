@@ -6,7 +6,7 @@
  * Time: 1:24
  */
 
-namespace Core2;
+namespace Core3;
 
 
 class Settings extends \Common

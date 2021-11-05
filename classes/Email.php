@@ -333,38 +333,7 @@ class Email {
 
 
     /**
-     * DEPRECATED
-     * Отправка мгновенного сообщения
-     * @return array Массив с содержимым (ok => true) или (error => текст ошибки)
-     * @deprecated
-     */
-    public function sendImmediately() {
-
-        try {
-            $is_send = $this->zendSend(
-                $this->mail_data['from'],
-                $this->mail_data['to'],
-                $this->mail_data['subject'],
-                $this->mail_data['body'],
-                $this->mail_data['cc'],
-                $this->mail_data['bcc'],
-                $this->mail_data['files']
-            );
-
-            if ( ! $is_send) {
-                throw new \Exception('Не удалось отправить сообщение');
-            }
-        } catch (\Exception $e) {
-            return false;
-        }
-
-        return true;
-    }
-
-
-    /**
      * Отправка письма
-     *
      * @param string $from
      * @param string $to
      * @param string $subj
@@ -372,7 +341,6 @@ class Email {
      * @param string $cc
      * @param string $bcc
      * @param array $files
-     *
      * @return bool Успешна или нет отправка
      * @throws \Zend_Exception
      */

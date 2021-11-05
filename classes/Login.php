@@ -1,8 +1,6 @@
 <?php
 namespace Core3\Classes;
 
-use Laminas\Session\Container as SessionContainer;
-
 
 /**
  * Class Login

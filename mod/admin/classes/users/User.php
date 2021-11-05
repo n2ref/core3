@@ -1,5 +1,5 @@
 <?php
-namespace Core2\Mod\Admin\Users;
+namespace Core3\Mod\Admin\Users;
 
 require_once DOC_ROOT . "core2/inc/classes/Common.php";
 

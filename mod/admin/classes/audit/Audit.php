@@ -1,5 +1,5 @@
 <?php
-namespace Core2;
+namespace Core3;
 
 require_once DOC_ROOT . "core2/mod/admin/classes/audit/DBMaster.php";
 require_once DOC_ROOT . "core2/mod/admin/classes/modules/InstallModule.php";

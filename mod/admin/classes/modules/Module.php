@@ -1,5 +1,5 @@
 <?php
-namespace Core2\Mod\Admin;
+namespace Core3\Mod\Admin;
 
 
 /**

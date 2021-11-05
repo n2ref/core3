@@ -1,9 +1,5 @@
 <?php
-
-use Laminas\Session\Container as SessionContainer;
-
-
-require_once("core2/inc/ajax.func.php");
+namespace \Core3\Mod\Admin;
 
 
 /**
@@ -820,7 +816,7 @@ class ModAjax extends ajaxFunc {
                 if (!$name[0]) throw new Exception($this->_("Не удалось получить группу репозитория."));
                 if (!$name[1]) throw new Exception($this->_("Не удалось получить версию релиза."));
                 require_once('classes/modules/Gitlab.php');
-                $gl = new \Core2\Gitlab();
+                $gl = new \Core3\Gitlab();
                 $fn = $gl->getZip($name[0], $name[1]);
                 if ($e = $gl->getError()) {
                     throw new \Exception($e);
@@ -885,7 +881,7 @@ class ModAjax extends ajaxFunc {
                 //проверяем все SQL и PHP файлы на ошибки
                 require_once('classes/modules/InstallModule.php');
 
-                $inst                          = new \Core2\InstallModule();
+                $inst                          = new \Core3\InstallModule();
                 $mInfo                         = array('install' => array());
                 $mInfo['install']['module_id'] = $xmlObj->install->module_id;
                 $mInfo['install']['module_group'] = !empty($xmlObj->install->module_group) ? $xmlObj->install->module_group : '';

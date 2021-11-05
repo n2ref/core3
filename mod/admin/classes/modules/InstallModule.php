@@ -1,10 +1,10 @@
 <?php
-namespace Core2;
+namespace Core3;
+use Core3\Classes\Common;
 
 require_once DOC_ROOT . "/core2/inc/classes/Common.php";
 require_once DOC_ROOT . "/core2/inc/classes/class.list.php";
 
-use Laminas\Session\Container as SessionContainer;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7;
 use GuzzleHttp\Exception\RequestException;
@@ -12,7 +12,7 @@ use GuzzleHttp\Exception\RequestException;
 /**
  * Class InstallModule
  */
-class InstallModule extends \Common {
+class InstallModule extends Common {
 
     /**
      * путь для установки модуля

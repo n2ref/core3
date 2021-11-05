@@ -1,9 +1,6 @@
 <?php
 namespace Core3\Classes;
 
-require_once 'Tools.php';
-require_once 'Log.php';
-
 
 /**
  * Class Error

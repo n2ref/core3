@@ -7,7 +7,6 @@ use Monolog\Handler\SlackWebhookHandler;
 use Monolog\Handler\SyslogHandler;
 use Monolog\Processor\WebProcessor;
 use Monolog\Formatter\NormalizerFormatter;
-use Laminas\Session\Container as SessionContainer;
 
 
 /**

@@ -1,9 +1,5 @@
 <?php
 namespace Core3\Classes;
-use CoreUI\Form;
-
-
-require_once 'Common.php';
 
 
 /**

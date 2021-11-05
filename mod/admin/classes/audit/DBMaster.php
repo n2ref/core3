@@ -1,9 +1,9 @@
 <?php
-namespace Core2;
+namespace Core3;
 
 /**
  * Class DBMaster
- * @package Core2
+ * @package Core3
  */
 class DBMaster {
 	private $db;

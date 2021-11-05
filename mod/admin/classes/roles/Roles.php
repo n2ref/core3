@@ -1,5 +1,5 @@
 <?php
-namespace Core2;
+namespace Core3;
 
 require_once DOC_ROOT . 'core2/inc/classes/class.list.php';
 require_once DOC_ROOT . 'core2/inc/classes/class.edit.php';
@@ -9,7 +9,7 @@ require_once DOC_ROOT . 'core2/inc/classes/Templater3.php';
 
 /**
  * Class Roles
- * @package Core2
+ * @package Core3
  */
 class Roles extends \Common {
 

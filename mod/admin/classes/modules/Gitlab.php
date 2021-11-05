@@ -1,7 +1,7 @@
 <?php
-namespace Core2;
+namespace Core3\Mod\Admin;
+use Core3\Classes\Common;
 
-use Laminas\Session\Container as SessionContainer;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7;
 use GuzzleHttp\Exception\RequestException;
@@ -12,8 +12,8 @@ use GuzzleHttp\Exception\RequestException;
  * Date: 17.03.2017
  * Time: 9:25
  */
-class Gitlab extends \Common
-{
+class Gitlab extends Common  {
+
     private $error;
     private $client;
     private $api_version = 'v4';

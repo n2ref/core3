@@ -75,7 +75,7 @@ class Init extends Acl {
      * @return mixed|string
      * @throws \Exception
      */
-    public function dispatch() {
+    public function dispatch(): string {
 
         if (PHP_SAPI === 'cli') {
             return $this->dispatchCli();
@@ -83,36 +83,18 @@ class Init extends Acl {
 
         $request = $this->parseRequest();
 
-
-        if ( ! empty($this->auth)) {
-            // Выход
-            if (isset($_GET['logout'])) {
-
-
-            // SetupAcl
-            } else {
-                if ($this->config->system->disable->on && ! $this->auth->isAdmin()) {
-                    $theme_controller = $this->getThemeController();
-                    return $theme_controller->getDisablePage();
-                }
-
-                $this->logActivity(['/profile/index/unread']);
-                $this->setupAcl();
-            }
-
-        } else {
-            $page          = isset($_GET['page']) ? $_GET['page'] : '';
+        if (empty($this->auth)) {
             $is_setup_mail = ! empty($this->config->system->mail) && ! empty($this->config->system->mail->server);
 
             // Авторизация
-            if (isset($_POST['login']) && isset($_POST['password'])) {
+            if ($request->isLogin()) {
                 $login    = is_string($_POST['login'])    ? $_POST['login']    : '';
                 $password = is_string($_POST['password']) ? $_POST['password'] : '';
                 $this->authLogin($login, $password);
                 return '';
 
             // Забыли пароль?
-            } elseif ($page == 'forgot' && $is_setup_mail) {
+            } elseif ($request->isFatgon() && $is_setup_mail) {
                 header('Content-Type: text/html; charset=utf-8');
                 if ( ! empty($_POST['email'])) {
                     $this->forgotPass($_POST['email']);
@@ -121,64 +103,71 @@ class Init extends Acl {
                 return $theme_controller->getForgotPass();
 
             // Сброс пароля
-            } elseif ($page == 'reset' && ! empty($_GET['token']) && $is_setup_mail) {
+            } elseif ($request->isReset() && $is_setup_mail) {
                 header('Content-Type: text/html; charset=utf-8');
                 $new_password = ! empty($_POST['password'])  ? $_POST['password']  : '';
                 $this->resetPass($_GET['token'], $new_password);
                 $theme_controller = $this->getThemeController();
                 return $theme_controller->getResetPass();
 
-            // Форма входа
-            }  else {
-                if ( ! empty($request['module'])) {
-                    header('HTTP/1.1 403 Forbidden');
-                }
-                header('Content-Type: text/html; charset=utf-8');
-                $theme_controller = $this->getThemeController();
-                return $theme_controller->getLogin();
+            } else {
+                http_response_code(403);
             }
         }
 
+        $this->logRequest($request);
 
-        $module  = ! empty($request['module'])  ? $request['module']  : 'dashboard';
-        $section = ! empty($request['section']) ? $request['section'] : 'index';
+        $result = '';
+        ob_start();
 
+        // Выход
+        if ($request->isLogout()) {
+            $result = $this->auth->logout();
 
-        // Модуль
-        if ($module) {
-            // Обработчики
-            if ($request['handler']) {
-                $process  = '111';
-                $resource = '222';
+        // Disable
+        } elseif ($this->config->system->disable->on && ! $this->auth->isAdmin()) {
+            $result = $this->getDisablePage();
 
-                if (empty($module)) {
-                    return '';
-                }
-
-                $handler_method = $process . ucfirst(strtolower($resource));
-
-                return $this->handlerModule($module, $handler_method);
-
-            } else {
-
-                if ($this->auth->isMobile()) {
-                    $module_content = $this->getModuleContentMobile($module, $section);
-                } else {
-                    $module_content = $this->getModuleContent($module, $section);
-                }
-
-                return ob_get_clean() . $module_content;
-            }
-
-        // Меню
         } else {
-            if ($this->auth->isMobile()) {
-                return $this->getMenuMobile();
+            // SetupAcl
+            $this->auth->setupAcl();
 
+            // Модуль
+            if ($request->isModule()) {
+                // Обработчики
+                if ($request->isHandler()) {
+                    $result = $this->handlerModule($request->module, $request->getHandlerMethod());
+
+                } else {
+                    if ($request->isMobile()) {
+                        $result = $this->getModuleContentMobile($request->module, $request->section);
+                    } else {
+                        $result = $this->getModuleContent($request->module, $request->section);
+                    }
+                }
+
+            // Меню
             } else {
-                return $this->getMenu();
+                if ($request->isMobile()) {
+                    $result = $this->getMenuMobile();
+
+                } else {
+                    $result = $this->getMenu();
+                }
+            }
+
+            if (is_array($result)) {
+                // header('Content-type: application/json; charset="utf-8"');
+                $result = json_encode($result);
             }
         }
+
+
+        $output = ob_get_clean() . $result;
+
+        $this->logOutput($output);
+
+        return $output;
     }
 
 
@@ -187,7 +176,7 @@ class Init extends Acl {
      * @return string
      * @throws \Exception
      */
-    private function dispatchCli() {
+    private function dispatchCli(): string {
 
         $result  = '';
 
@@ -346,6 +335,21 @@ class Init extends Acl {
 
 
     /**
+     * @return array
+     */
+    private function getDisablePage(): array {
+
+        $page = [
+            'type'        => 'disable_page',
+            'title'       => $this->config->system->disable->title,
+            'description' => $this->config->system->disable->description,
+        ];
+
+        return $page;
+    }
+
+
+    /**
      * Сохранение данных в модулях
      *
      * @param string   $module
@@ -478,25 +482,25 @@ class Init extends Acl {
      */
     private function getAuthByToken() {
 
-        $token = '';
+        $access_token = '';
         if ( ! empty($_SERVER['HTTP_AUTHORIZATION'])) {
             if (strpos('Bearer', $_SERVER['HTTP_AUTHORIZATION']) !== 0) {
                 return false;
             }
 
-            $token = $_SERVER['HTTP_AUTHORIZATION'];
+            $access_token = $_SERVER['HTTP_AUTHORIZATION'];
 
-        } else if ( ! empty($_SERVER['HTTP_CORE3'])) {
-            $token = $_SERVER['HTTP_CORE3'];
+        } else if ( ! empty($_SERVER['HTTP_ACCESS_TOKEN'])) {
+            $access_token = $_SERVER['HTTP_ACCESS_TOKEN'];
         }
 
-        if ($token) {
+        if ($access_token) {
             try {
                 $signer        = new Sha256();
                 $sign          = $this->config->system->auth->token->sign;
                 $configuration = Configuration::forSymmetricSigner($signer, $sign);
 
-                $token_jwt     = $configuration->parser()->parse((string)$token);
+                $token_jwt     = $configuration->parser()->parse((string)$access_token);
                 $token_exp     = $token_jwt->claims()->get('exp');
                 $token_user_id = $token_jwt->claims()->get('uid');
 
@@ -509,7 +513,7 @@ class Init extends Acl {
                     return false;
                 }
 
-                $session = $this->modAdmin->getSessionByToken($token);
+                $session = $this->modAdmin->getSessionByToken($access_token);
                 $user    = $session->getUser();
 
                 $session->addRequest();
@@ -531,7 +535,7 @@ class Init extends Acl {
      * @param array $exclude исключения адресов
      * @throws \Exception
      */
-    private function logActivity($exclude = []) {
+    private function logRequest($exclude = []) {
 
         if ($exclude && in_array($_SERVER['QUERY_STRING'], $exclude)) {
             return;
@@ -552,7 +556,7 @@ class Init extends Acl {
 
         // обновление записи о последней активности
         $where = [
-            $this->db->quoteInto("refresh_token = ?", $this->auth->getToken()),
+            $this->db->quoteInto("refresh_token = ?", $this->auth->getRefrashToken()),
             $this->db->quoteInto("ip = ?",            $_SERVER['REMOTE_ADDR']),
             $this->db->quoteInto("user_id = ?",       $this->auth->getUser()->id),
         ];
@@ -560,5 +564,30 @@ class Init extends Acl {
             'count_requests'     => new \Zend_Db_Expr('count_requests + 1'),
             'date_last_activity' => new \Zend_Db_Expr('NOW()')
         ], $where);
+    }
+
+
+    /**
+     * @param string $output
+     * @return bool
+     * @throws \Exception
+     */
+    private function logOutput(string $output): bool {
+
+
+        if ($this->config->system->log->on &&
+            $this->config->system->log->output &&
+            $this->config->system->log->writer == 'file'
+        ) {
+            if ( ! $this->config->log->file) {
+                throw new \Exception($this->_('Не задан файл журнала запросов'));
+            }
+
+            $log = new Log('access');
+            $log->info($output);
+        }
+
+
+        return true;
     }
 }

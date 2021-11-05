@@ -38,8 +38,7 @@ class Auth extends Db {
     }
 
 
-    public function isMobile() {
-
+    public function isMobile(): bool {
 
     }
 
@@ -50,7 +49,7 @@ class Auth extends Db {
     }
 
 
-    public function getToken() {
+    public function getRefrashToken() {
 
 
     }

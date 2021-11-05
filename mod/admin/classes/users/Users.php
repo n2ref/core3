@@ -1,14 +1,11 @@
 <?php
-namespace Core2\Mod\Admin\Users;
-
-require_once DOC_ROOT . 'core2/inc/classes/Common.php';
-
-use Laminas\Session\Container as SessionContainer;
+namespace Core3\Mod\Admin\Users;
+use Core3\Classes\Common;
 
 /**
  *
  */
-class Users extends \Common {
+class Users extends Common {
 
 
     /**
