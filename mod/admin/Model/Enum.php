@@ -1,92 +1,70 @@
 <?php
+namespace Core3\Mod\Admin\Model;
+
+
 /**
- * Created by JetBrains PhpStorm.
- * User: StepovichPE
- * Date: 14.09.13
- * Time: 17:04
- * To change this template use File | Settings | File Templates.
+ *
  */
+class Enum extends \Zend_Db_Table_Abstract {
 
-class Enum extends Zend_Db_Table_Abstract {
+	protected string $_name = 'core_enum';
+	private          $_enum = [];
 
-	protected $_name = 'core_enum';
-	private $_enum = array();
 
-	public function exists($expr, $var = array())
-	{
-		$sel = $this->select()->where($expr, $var);
-		return $this->fetchRow($sel->limit(1));
-	}
+    /**
+     * @param string $expr
+     * @param mixed  $var
+     * @return bool
+     */
+    public function isExists(string $expr, $var = []): bool {
 
-	public function fetchFields($fields, $expr, $var = array()) {
-		$sel = $this->select()->from($this->_name, $fields);
-		if ($var) {
-			$sel->where($expr, $var);
-		} else {
-			$sel->where($expr);
-		}
-		return $this->fetchAll($sel);
-	}
+        $select = $this->select();
 
-    public function fetchPairs($fields, $expr, $var = array()) {
-        $res = $this->fetchFields($fields, $expr, $var = array())->toArray();
-        $data = [];
-        foreach ($res as $item) {
-            $key = current($item);
-            $val = next($item);
-            $data[$key] = $val;
+        if ($var) {
+            $select->where($expr, $var);
+        } else {
+            $select->where($expr);
         }
-        return $data;
+
+        $select->limit(1);
+
+        return !! $this->fetchRow($select);
     }
 
-	public function fetchOne($field, $expr, $var = array())
-	{
-		$sel = $this->select();
-		if ($var) {
-			$sel->where($expr, $var);
-		} else {
-			$sel->where($expr);
-		}
-		return $this->fetchRow($sel)->$field;
-	}
 
-    public function getEnum($global_id) {
+    /**
+     * @param string $global_name
+     * @return array
+     */
+    public function getEnum(string $global_name): array {
 
-        if ( ! isset($this->_enum[$global_id])) {
-            $res  = $this->_db->fetchAll("
+        if ( ! isset($this->_enum[$global_name])) {
+            $enum_items = $this->_db->fetchAll("
                 SELECT e2.id, 
                        e2.name, 
-                       e2.custom_field, 
-                       e2.is_default_sw, 
+                       e2.custom_fields, 
                        CASE e.is_active_sw 
                            WHEN 'N' THEN 'N' 
                            ELSE e2.is_active_sw 
                        END AS is_active_sw
 				FROM core_enum AS e
 				    INNER JOIN core_enum AS e2 ON e.id = e2.parent_id
-				WHERE e.global_id = ?
+				WHERE e.global_name = ?
 				ORDER BY e2.seq
-            ", $global_id);
+            ", $global_name);
 
-            $data = [];
-            foreach ($res as $value) {
-                $data[$value['id']]           = [
-                    'value'        => $value['name'],
-                    'is_default'   => ($value['is_default_sw'] == 'Y' ? true : false),
-                    'is_active_sw' => $value['is_active_sw']
+            $enum_list = [];
+
+            foreach ($enum_items as $enum_item) {
+                $enum_list[$enum_item['id']] = [
+                    'value'        => $enum_item['name'],
+                    'is_active_sw' => $enum_item['is_active_sw'],
+                    'custom'       => $enum_item['custom_field'] ? json_decode($enum_item['custom_field'], true) : []
                 ];
-                $data[$value['id']]['custom'] = [];
-                if ($value['custom_field']) {
-                    $temp = explode(":::", $value['custom_field']);
-                    foreach ($temp as $val) {
-                        $temp2                                   = explode("::", $val);
-                        $data[$value['id']]['custom'][$temp2[0]] = isset($temp2[1]) ? $temp2[1] : '';
-                    }
-                }
             }
-            $this->_enum[$global_id] = $data;
+            $this->_enum[$global_name] = $enum_list;
         }
 
-        return $this->_enum[$global_id];
+        return $this->_enum[$global_name];
     }
 }

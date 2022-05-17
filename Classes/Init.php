@@ -1,15 +1,13 @@
 <?php
 namespace Core3\Classes;
-
+use Core3\Mod\Admin;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
 use Lcobucci\JWT\UnencryptedToken;
 
 
-
 /**
- * Class Init
- * @package Core
+ * @property Admin\Controller $modAdmin
  */
 class Init extends Acl {
 
@@ -56,10 +54,22 @@ class Init extends Acl {
         }
 
         // проверяем, есть ли в запросе токен
-        $auth = $this->getAuthByToken();
+        $access_token = '';
+        if ( ! empty($_SERVER['HTTP_AUTHORIZATION'])) {
+            if (strpos('Bearer', $_SERVER['HTTP_AUTHORIZATION']) === 0) {
+                $access_token = $_SERVER['HTTP_AUTHORIZATION'];
+            }
 
-        if ($auth instanceof Auth) {
-            //произошла авторизация по токену
+        } else if ( ! empty($_SERVER['HTTP_ACCESS_TOKEN'])) {
+            $access_token = $_SERVER['HTTP_ACCESS_TOKEN'];
+        }
+
+
+        $auth = $access_token
+            ? $this->getAuthByToken($access_token)
+            : null;
+
+        if ($auth) {
             $this->auth = $auth;
             \Zend_Registry::set('auth', $this->auth);
             return true;
@@ -476,57 +486,53 @@ class Init extends Acl {
 
 
     /**
-     * Проверка наличия токена в запросе
-     * @return \stdClass|bool
-     * @throws \Exception
+     * Авторизация по токену
+     * @param string $access_token
+     * @return Auth|null
      */
-    private function getAuthByToken() {
+    private function getAuthByToken(string $access_token): ?Auth {
 
-        $access_token = '';
-        if ( ! empty($_SERVER['HTTP_AUTHORIZATION'])) {
-            if (strpos('Bearer', $_SERVER['HTTP_AUTHORIZATION']) !== 0) {
-                return false;
+        try {
+            $sign          = $this->config->system->auth->token->sign;
+            $configuration = Configuration::forSymmetricSigner(new Sha256(), $sign);
+
+            $token_jwt  = $configuration->parser()->parse((string)$access_token);
+            $token_exp  = $token_jwt->claims()->get('exp');
+            $session_id = $token_jwt->claims()->get('sid');
+
+            if (empty($token_exp) || empty($session_id)) {
+                return null;
             }
 
-            $access_token = $_SERVER['HTTP_AUTHORIZATION'];
-
-        } else if ( ! empty($_SERVER['HTTP_ACCESS_TOKEN'])) {
-            $access_token = $_SERVER['HTTP_ACCESS_TOKEN'];
-        }
-
-        if ($access_token) {
-            try {
-                $signer        = new Sha256();
-                $sign          = $this->config->system->auth->token->sign;
-                $configuration = Configuration::forSymmetricSigner($signer, $sign);
-
-                $token_jwt     = $configuration->parser()->parse((string)$access_token);
-                $token_exp     = $token_jwt->claims()->get('exp');
-                $token_user_id = $token_jwt->claims()->get('uid');
-
-                if (empty($token_exp) || empty($token_user_id)) {
-                    return false;
-                }
-
-                $now = date_create();
-                if ($now > $token_exp) {
-                    return false;
-                }
-
-                $session = $this->modAdmin->getSessionByToken($access_token);
-                $user    = $session->getUser();
-
-                $session->addRequest();
-
-                return $user;
-
-
-            } catch (\Exception $e) {
-                return false;
+            $now = date_create();
+            if ($now > $token_exp) {
+                return null;
             }
+
+
+            $session = $this->modAdmin->dataSession->find($session_id)->current();
+
+            if (empty($session) || $session->is_active_sw == 'N') {
+                return null;
+            }
+
+
+            $user = $this->modAdmin->dataUsers->find($session->user_id)->current();
+
+            if (empty($user) && $user->is_active_sw == 'N') {
+                return null;
+            }
+
+            $session->date_last_activity = new \Zend_Db_Expr('NOW()');
+            $session->save();
+
+            return new Auth($user->toArray(), $session->toArray());
+
+        } catch (\Exception $e) {
+            // ignore
         }
 
-        return false;
+        return null;
     }
 
 

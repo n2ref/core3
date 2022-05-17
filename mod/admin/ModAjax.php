@@ -272,7 +272,7 @@ class ModAjax extends ajaxFunc {
                 $is_duplicate_enum = $this->db->fetchOne("
                     SELECT 1
                     FROM core_enum
-                    WHERE global_id = ?
+                    WHERE global_name = ?
                       AND id != ?
                 ", array(
                     $data['control']['global_id'],
@@ -385,7 +385,7 @@ class ModAjax extends ajaxFunc {
 				//определяем идентификатор и имя справочника
 				$enum_id = $this->dataEnum->find($data['control']['parent_id'])->current()->global_id;
 				//определям кастомные поля всех справочников
-				$res = $this->db->fetchAll("SELECT id, custom_field FROM core_enum WHERE parent_id IS NULL AND custom_field IS NOT NULL AND id!=?", $data['control']['parent_id']);
+				$res = $this->db->fetchAll("SELECT id, custom_fields FROM core_enum WHERE parent_id IS NULL AND custom_fields IS NOT NULL AND id!=?", $data['control']['parent_id']);
 				$id_to_update = array();
 				foreach ($res as $val) {
 					$cu_fi = unserialize(base64_decode($val['custom_field']));

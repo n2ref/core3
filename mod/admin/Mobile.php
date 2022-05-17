@@ -272,7 +272,7 @@ class Mobile extends Common {
 				}
 
 				$dataUser = $this->db->fetchRow("
-                    SELECT lastname, firstname, middlename, cu.email, u_login
+                    SELECT lname, fname, mname, cu.email, u_login
 			   		FROM core_users as cu
 			   		    LEFT JOIN core_users_profile AS cup ON cu.u_id = cup.user_id
 			   		WHERE cu.u_id = ?", $this->auth->ID
@@ -322,7 +322,7 @@ class Mobile extends Common {
 
 		$mods = $this->db->fetchAll("SELECT m.module_id, m.m_name, sm.sm_key, sm.sm_name
 							 FROM core_modules AS m
-							 LEFT JOIN core_modules_actions AS sm ON sm.m_id = m.m_id AND sm.visible = 'Y'
+							 LEFT JOIN core_modules_submodules AS sm ON sm.m_id = m.m_id AND sm.visible = 'Y'
 							 WHERE m.visible = 'Y' ORDER BY sm.seq");
 
 		$selectMods = '';
@@ -615,7 +615,7 @@ class Mobile extends Common {
 	 */
 	private function sendUserInformation($dataNewUser) {
 
-		$dataUser = $this->db->fetchRow("SELECT lastname, firstname, middlename
+		$dataUser = $this->db->fetchRow("SELECT lname, fname, mname
 			   							 FROM core_users AS cu
 			   							 LEFT JOIN core_users_profile AS cup ON cu.u_id = cup.user_id
 			   							 WHERE cu.u_id = ?",

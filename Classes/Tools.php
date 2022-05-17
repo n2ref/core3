@@ -3,7 +3,7 @@ namespace Core3\Classes;
 
 
 /**
- * Class Tools
+ *
  */
 class Tools {
 

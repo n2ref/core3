@@ -5,9 +5,6 @@ namespace Core3\Classes;
 /**
  * Локализация core3
  * Класс для переводов текста.
- *
- * @package    Core
- * @subpackage Translate
  */
 class Translate {
 

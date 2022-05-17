@@ -1,9 +1,8 @@
 <?php
-
+namespace Core3\Interfaces;
 
 /**
  * Определяет возможность подключения глобальных javascript скриптов из модулей
- * Interface TopJs
  */
 interface TopJs {
 

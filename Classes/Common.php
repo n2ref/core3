@@ -1,9 +1,6 @@
 <?php
 namespace Core3\Classes;
 
-require_once 'Acl.php';
-require_once 'Translate.php';
-
 
 /**
  * Class Common

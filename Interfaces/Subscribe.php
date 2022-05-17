@@ -1,12 +1,9 @@
 <?php
+namespace Core3\Interfaces;
+
 /**
  * Определяет возможность подписки на события, возникающие в других модулях
- *
- * User: StepovichPE
- * Date: 21.02.2018
- * Time: 14:41
  */
-
 interface Subscribe {
 
     /**

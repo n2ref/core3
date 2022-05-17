@@ -26,8 +26,8 @@ class Enum extends \Common {
         //$edit->firstColWidth = 200;
         $edit->SQL = "SELECT id,
                          name,
-                         global_id,
-                         custom_field
+                         global_name,
+                         custom_fields
                     FROM core_enum
                     WHERE 1=2";
         $edit->addControl($this->translate->tr("Название справочника:"), "TEXT", "maxlength=\"255\" size=\"60\"", "", "", true);
@@ -72,8 +72,8 @@ class Enum extends \Common {
         $edit->SQL = $this->db->quoteInto("
 				SELECT id,
 					 name,
-					 global_id,
-					 custom_field
+					 global_name,
+					 custom_fields
 				FROM core_enum
 				WHERE id = ?
 				  AND parent_id IS NULL
@@ -164,7 +164,7 @@ class Enum extends \Common {
                             WHERE e.is_default_sw = 'Y'
                               AND (SELECT id
                                    FROM core_enum
-                                   WHERE global_id = ?
+                                   WHERE global_name = ?
                                    LIMIT 1) = e.parent_id
                         ", $val['enum']);
 
@@ -422,9 +422,9 @@ class Enum extends \Common {
 
         $list->SQL = "
 				SELECT id,
-					   global_id,
+					   global_name,
 					   name,
-					   CASE WHEN custom_field IS NOT NULL THEN 'Да' END AS custom,
+					   CASE WHEN custom_fields IS NOT NULL THEN 'Да' END AS custom,
 					   (SELECT COUNT(1) FROM core_enum WHERE parent_id = e.id) AS co,
 					   is_active_sw
 				FROM core_enum AS e

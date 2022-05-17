@@ -58,7 +58,7 @@ class Acl extends Db {
                               m.seq, 
                               ma.access_default, 
                               ma.access_add
-                          FROM core_modules_actions AS ma
+                          FROM core_modules_submodules AS ma
                                INNER JOIN core_modules AS m ON m.id = ma.id AND m.is_active_sw = 'Y'
                           WHERE ma.id > 0 AND ma.is_active_sw = 'Y'
                          ORDER BY m.seq, ma.seq)

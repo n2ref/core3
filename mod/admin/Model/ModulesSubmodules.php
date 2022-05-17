@@ -4,10 +4,15 @@ namespace Core3\Mod\Admin\Model;
 /**
  *
  */
-class Modules extends \Zend_Db_Table_Abstract {
+class ModulesSubmodules extends \Zend_Db_Table_Abstract {
 
-    protected string $_name = 'core_modules';
-
+	protected string $_name         = 'core_modules_submodules';
+	protected        $_referenceMap = [
+		'Module' => [
+			'columns'       => 'id',
+			'refTableClass' => 'Modules'
+		]
+	];
 
 
     /**
@@ -32,13 +37,13 @@ class Modules extends \Zend_Db_Table_Abstract {
 
 
     /**
-     * Получаем активные модули
+     * @param int $module_id
      * @return \Zend_Db_Table_Rowset_Abstract
      */
-    public function getActive(): \Zend_Db_Table_Rowset_Abstract {
+    public function getRowsByModuleId(int $module_id): \Zend_Db_Table_Rowset_Abstract {
 
         $select = $this->select()
-            ->where("is_active_sw = 'Y'");
+            ->where("module_id = ?", $module_id);
 
         return $this->fetchAll($select);
     }

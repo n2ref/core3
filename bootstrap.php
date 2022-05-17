@@ -159,3 +159,6 @@ if (isset($config->system->auth) && $config->system->auth->on) {
 
 //сохраняем конфиг
 \Zend_Registry::set('config', $config);
+
+
+require_once 'autoload.php';

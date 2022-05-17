@@ -1,7 +1,9 @@
 <?php
-namespace Core3;
-require_once 'Acl.php';
+namespace Core3\Classes;
 
+/**
+ *
+ */
 class CommonPlugin extends Acl {
 
     private $_p = array();

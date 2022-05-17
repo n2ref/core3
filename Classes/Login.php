@@ -3,9 +3,7 @@ namespace Core3\Classes;
 
 
 /**
- * Class Login
- * @package Core2
- * @property \Users           $dataUsers
+ * @property \Core3\Mod\Admin\Model\Users  $dataUsers
  */
 class Login extends Db {
 

@@ -1,9 +1,9 @@
 <?php
+namespace Core3\Interfaces;
 
 
 /**
  * Определяет возможность подключения глобальных css скриптов из модулей
- * Interface TopCss
  */
 interface TopCss {
 

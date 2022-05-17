@@ -1,57 +1,35 @@
 <?php
+namespace Core3\Mod\Admin\Model;
 
 
 /**
- * Class Users
+ *
  */
-class Settings extends Zend_Db_Table_Abstract {
+class Settings extends \Zend_Db_Table_Abstract {
 
-	protected $_name = 'core_settings';
+	protected string $_name = 'core_settings';
 
-    /**
-     * Получаем значение одного поля
-     *
-     * @param $field
-     * @param $expr
-     * @param array $var
-     * @return string
-     */
-    public function fetchOne($field, $expr, $var = array())
-    {
-        $sel = $this->select();
-        if ($var) {
-            $sel->where($expr, $var);
-        } else {
-            $sel->where($expr);
-        }
-        return $this->fetchRow($sel)->$field;
-    }
 
     /**
-     * @param $expr
-     * @param array $var
-     * @return null|Zend_Db_Table_Row_Abstract
+     * @return \Zend_Db_Table_Rowset_Abstract
      */
-    public function exists($expr, $var = array()) {
-        $sel = $this->select()->where($expr, $var);
+    public function getRowsSystem(): \Zend_Db_Table_Rowset_Abstract {
 
-        return $this->fetchRow($sel->limit(1));
+        $select = $this->select()
+            ->where("data_group = 'system'");
+
+        return $this->fetchAll($select);
     }
+
 
     /**
-     * @return mixed
+     * @return \Zend_Db_Table_Rowset_Abstract
      */
-    public function getSystem() {
-        $sel = $this->select()->where("visible = 'Y' AND is_custom_sw = 'N'");
-        return $this->fetchAll($sel);
-    }
+    public function getExtra(): \Zend_Db_Table_Rowset_Abstract {
 
-    /**
-     * @return mixed
-     */
-    public function getCustom() {
-        $sel = $this->select()->where("visible = 'Y' AND is_custom_sw = 'Y'");
-        return $this->fetchAll($sel);
-    }
+        $select = $this->select()
+            ->where("data_group = 'extra'");
 
+        return $this->fetchAll($select);
+    }
 }

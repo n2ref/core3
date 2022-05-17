@@ -7,21 +7,14 @@ use \CoreUI\Alert;
 use \CoreUI\Panel;
 use CoreUI\Tabs;
 
-require_once DOC_ROOT . '/core3/classes/Common.php';
-require_once DOC_ROOT . '/core3/classes/Email.php';
-
-require_once "classes/Modules.php";
-require_once "classes/Modules_Install.php";
-require_once "classes/Users.php";
-require_once "classes/Settings.php";
-require_once "classes/Roles.php";
-require_once "classes/Enum.php";
-require_once "classes/DBMaster.php";
-
-
 
 /**
- * Class Controller
+ * @property Model\Modules           $dataModules
+ * @property Model\ModulesSubmodules $dataModulesSubmodules
+ * @property Model\Roles             $dataRoles
+ * @property Model\Session           $dataSession
+ * @property Model\Users             $dataUsers
+ * @property Model\Enum              $dataEnum
  */
 class Controller extends Common {
 
@@ -557,7 +550,7 @@ class Controller extends Common {
      */
     private function sendUserInformation($dataNewUser) {
 
-        $dataUser = $this->db->fetchRow("SELECT lastname, firstname, middlename, email
+        $dataUser = $this->db->fetchRow("SELECT lname, fname, mname, email
                                             FROM core_users AS cu
                                             LEFT JOIN core_users_profile AS cup ON cu.u_id = cup.user_id
                                             WHERE cu.u_id = ?",

@@ -1,6 +1,5 @@
 <?php
 namespace Core3\Classes;
-
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SlackWebhookHandler;

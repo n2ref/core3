@@ -1,11 +1,9 @@
 <?php
+namespace Core3\Interfaces;
+
 /**
  * Определяет возможность кастомного удаления для стандартных таблиц
- * User: StepovichPE
- * Date: 21.04.2015
- * Time: 14:41
  */
-
 interface Delete {
 
     /**

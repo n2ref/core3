@@ -1,7 +1,5 @@
 <?php
 namespace Core3\Classes;
-
-require_once "Cache.php";
 use Zend\Cache\StorageFactory;
 
 
@@ -208,7 +206,7 @@ class Db {
                     SELECT m.title,
                            ma.title AS action_title
                     FROM core_modules AS m
-                        INNER JOIN core_modules_actions AS ma ON ma.module_id = m.id
+                        INNER JOIN core_modules_submodules AS ma ON ma.module_id = m.id
                     WHERE CONCAT(m.name, '_', ma.name) = ?
                 ", $module_id);
 				$module = array($module['title'], $module['action_title']);
@@ -298,13 +296,13 @@ class Db {
 		$res = $this->db->fetchAll("
             SELECT id, 
                    name, 
-                   custom_field, 
+                   custom_fields, 
                    is_default_sw
             FROM core_enum
             WHERE is_active_sw = 'Y'
             AND parent_id = (SELECT id 
                              FROM core_enum 
-                             WHERE global_id = ? 
+                             WHERE global_name = ? 
                                AND is_active_sw = 'Y')
             ORDER BY seq
         ", $global_id);
@@ -344,7 +342,7 @@ class Db {
             WHERE is_active_sw = 'Y'
             AND parent_id = (SELECT id 
                              FROM core_enum 
-                             WHERE global_id = ? 
+                             WHERE global_name = ? 
                                AND is_active_sw = 'Y')
             ORDER BY seq
         ", $global_id);
@@ -381,7 +379,7 @@ class Db {
 		$res = $this->db->fetchRow("
             SELECT id, 
                    name, 
-                   custom_field, 
+                   custom_fields, 
                    is_default_sw
             FROM core_enum
             WHERE is_active_sw = 'Y'
@@ -454,7 +452,7 @@ class Db {
 			$is = $this->db->fetchOne("
                 SELECT 1 
                 FROM core_modules AS m
-                    INNER JOIN core_modules_actions AS s ON s.id = m.id
+                    INNER JOIN core_modules_submodules AS s ON s.id = m.id
                 WHERE m.name = ? 
                   AND s.name = ? 
                   AND s.is_active_sw = 'Y'
@@ -489,7 +487,7 @@ class Db {
                        m.is_system_sw, 
                        ma.module_id
                 FROM core_modules AS m
-                    LEFT JOIN core_modules_actions AS ma ON ma.module_id = m.id AND ma.is_active_sw = 'Y'
+                    LEFT JOIN core_modules_submodules AS ma ON ma.module_id = m.id AND ma.is_active_sw = 'Y'
                 WHERE m.is_active_sw = 'Y'
                   AND m.name = ?
                   AND ma.name = ?
