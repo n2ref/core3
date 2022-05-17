@@ -12,8 +12,8 @@ use CoreUI\Tabs;
  * @property Model\Modules           $dataModules
  * @property Model\ModulesSubmodules $dataModulesSubmodules
  * @property Model\Roles             $dataRoles
- * @property Model\Session           $dataSession
  * @property Model\Users             $dataUsers
+ * @property Model\UsersSession      $dataUsersSession
  * @property Model\Enum              $dataEnum
  */
 class Controller extends Common {

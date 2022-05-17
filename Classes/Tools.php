@@ -566,6 +566,54 @@ class Tools {
     }
 
 
+    /**
+     * Получение формата для ответа
+     * @param string $default
+     * @return string
+     */
+    public static function getBestMathType(string $default = 'text/html'): string {
+
+        $types           = [];
+        $available_types = [
+            'text/html', 'text/plain', 'application/json'
+        ];
+
+        if (isset($_SERVER['HTTP_ACCEPT']) && ($accept = strtolower($_SERVER['HTTP_ACCEPT']))) {
+            $explode_accept = explode(',', $accept);
+
+            if ( ! empty($explode_accept)) {
+                foreach ($explode_accept as $accept_type) {
+                    if (strpos($accept_type, ';') !== false) {
+                        $explode_accept_type = explode(';', $accept_type);
+                        $quality             = '';
+
+                        if (preg_match('/q=([0-9.]+)/', $explode_accept_type[1], $quality)) {
+                            $types[$explode_accept_type[0]] = $quality[1];
+                        } else {
+                            $types[$explode_accept_type[0]] = 0;
+                        }
+
+                    } else {
+                        $types[$accept_type] = 1;
+                    }
+                }
+
+                arsort($types, SORT_NUMERIC);
+            }
+        }
+
+
+        if ( ! empty($types)) {
+            foreach ($types as $type => $v) {
+                if (array_key_exists($type, $available_types)) {
+                    return $type;
+                }
+            }
+        }
+
+        return $default;
+    }
+
 
     /**
      * Конвертирует размер из ini формата в байты

@@ -1,9 +1,7 @@
 <?php
 namespace Core3\Classes;
+use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin;
-use Lcobucci\JWT\Configuration;
-use Lcobucci\JWT\Signer\Rsa\Sha256;
-use Lcobucci\JWT\UnencryptedToken;
 
 
 /**
@@ -11,17 +9,10 @@ use Lcobucci\JWT\UnencryptedToken;
  */
 class Init extends Acl {
 
-    private const RP = '8c1733d4cd0841199aa02ec9362be324';
-
-    /**
-     * @var Auth
-     */
-    protected Auth $auth;
-
-
     /**
      * Init constructor.
      * @throws \Exception
+     * @throws \Psr\Container\ContainerExceptionInterface
      */
     public function __construct() {
         parent::__construct();
@@ -32,9 +23,7 @@ class Init extends Acl {
             }
         }
 
-        $tz = ! empty($this->config->system) && ! empty($this->config->system->timezone)
-            ? $this->config->system->timezone
-            : '';
+        $tz = $this->config?->system?->timezone;
 
         if ( ! empty($tz)) {
             date_default_timezone_set($tz);
@@ -43,39 +32,68 @@ class Init extends Acl {
 
 
     /**
-     * Общая проверка аутентификации
-     * @return bool
+     * @return string
      * @throws \Exception
      */
-    public function auth(): bool {
+    public function dispatch(): string {
 
         if (PHP_SAPI === 'cli') {
-            return false;
+            return $this->dispatchCli();
         }
 
-        // проверяем, есть ли в запросе токен
-        $access_token = '';
-        if ( ! empty($_SERVER['HTTP_AUTHORIZATION'])) {
-            if (strpos('Bearer', $_SERVER['HTTP_AUTHORIZATION']) === 0) {
-                $access_token = $_SERVER['HTTP_AUTHORIZATION'];
+        $router = [
+            '~^/core/auth/login$~' => [
+                'POST' => ['method' => 'login', 'params' => ['$php://input/json']],
+            ],
+
+            '~^/core/registration/email~' => [
+                'POST' => ['method' => 'registrationEmail', 'params' => ['$php://input/json']],
+            ],
+            '~^/core/registration/email/check$~' => [
+                'POST' => ['method' => 'registrationEmailCheck', 'params' => ['$php://input/json']],
+            ],
+
+            '~^/core/restore~' => [
+                'POST' => ['method' => 'restorePass', 'params' => ['$php://input/json']],
+            ],
+            '~^/core/restore/check$~' => [
+                'POST' => ['method' => 'restorePassCheck', 'params' => ['$php://input/json']],
+            ],
+        ];
+
+
+        try {
+            $rout = $this->getRout($router, $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
+
+            if (empty($rout)) {
+                throw new HttpException('404 Not found', 'not_found', 404);
             }
 
-        } else if ( ! empty($_SERVER['HTTP_ACCESS_TOKEN'])) {
-            $access_token = $_SERVER['HTTP_ACCESS_TOKEN'];
+            // Обнуление
+            $_GET     = [];
+            $_POST    = [];
+            $_REQUEST = [];
+            $_FILES   = [];
+
+            $rest = new Rest();
+
+            if ( ! method_exists($rout['method'], '__call') && ! is_callable([$rest, $rout['method']])) {
+                throw new HttpException("Incorrect method", 'incorrect_method', 500);
+            }
+
+            ob_start();
+            $result = call_user_func_array([$rest, $rout['method']], $rout['params']);
+            ob_clean();
+
+            return HttpResponse::dataJson($result);
+
+
+        } catch (HttpException $e) {
+            return HttpResponse::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
+
+        } catch (\Exception $e) {
+            return HttpResponse::errorJson($e->getMessage(), $e->getCode(), 500);
         }
-
-
-        $auth = $access_token
-            ? $this->getAuthByToken($access_token)
-            : null;
-
-        if ($auth) {
-            $this->auth = $auth;
-            \Zend_Registry::set('auth', $this->auth);
-            return true;
-        }
-
-        return false;
     }
 
 
@@ -85,7 +103,7 @@ class Init extends Acl {
      * @return mixed|string
      * @throws \Exception
      */
-    public function dispatch(): string {
+    public function dispatchOLD(): string {
 
         if (PHP_SAPI === 'cli') {
             return $this->dispatchCli();
@@ -178,6 +196,87 @@ class Init extends Acl {
         $this->logOutput($output);
 
         return $output;
+    }
+
+
+    /**
+     * @param array  $routes
+     * @param string $uri
+     * @param string $http_method
+     * @return array
+     * @throws HttpException
+     */
+    private function getRout(array $routes, string $uri, string $http_method): array {
+
+        $result = [];
+
+        if ( ! empty($routes)) {
+            foreach ($routes as $route_rule => $route) {
+                $matches = [];
+
+                if (preg_match($route_rule, $uri, $matches)) {
+
+                    if ( ! is_array($route)) {
+                        break;
+                    }
+
+                    if ( ! isset($route[$http_method])) {
+                        throw new HttpException("Incorrect http method", 'incorrect_http_method', 405);
+                    }
+
+                    if (empty($route[$http_method]['method'])) {
+                        throw new HttpException("Incorrect method", 'incorrect_method', 500);
+                    }
+
+                    $result['method'] = $route[$http_method]['method'];
+                    $result['params'] = [];
+
+                    if ( ! empty($route[$http_method]['params']) && is_array($route[$http_method]['params'])) {
+                        foreach ($route[$http_method]['params'] as $param) {
+                            if (is_int($param)) {
+                                if (isset($matches[$param])) {
+                                    $result['params'][] = $matches[$param];
+                                }
+
+                            } else {
+                                switch ($param) {
+                                    case '$_GET':
+                                        $result['params'][] = $_GET;
+                                        break;
+
+                                    case '$_POST':
+                                        $result['params'][] = $_POST;
+                                        break;
+
+                                    case '$_FILES':
+                                        $result['params'][] = $_FILES;
+                                        break;
+
+                                    case '$php://input':
+                                        $result['params'][] = file_get_contents('php://input', 'r');
+                                        break;
+
+                                    case '$php://input/json':
+                                        $request_raw = file_get_contents('php://input', 'r');
+                                        $request     = @json_decode($request_raw, true);
+
+                                        if (json_last_error() !== JSON_ERROR_NONE) {
+                                            throw new HttpException('Incorrect json data', 'incorrect_json_data', 400);
+                                        }
+
+                                        $result['params'][] = $request;
+                                        break;
+                                }
+                            }
+                        }
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        return $result;
     }
 
 
@@ -482,57 +581,6 @@ class Init extends Acl {
         }
 
         return $result;
-    }
-
-
-    /**
-     * Авторизация по токену
-     * @param string $access_token
-     * @return Auth|null
-     */
-    private function getAuthByToken(string $access_token): ?Auth {
-
-        try {
-            $sign          = $this->config->system->auth->token->sign;
-            $configuration = Configuration::forSymmetricSigner(new Sha256(), $sign);
-
-            $token_jwt  = $configuration->parser()->parse((string)$access_token);
-            $token_exp  = $token_jwt->claims()->get('exp');
-            $session_id = $token_jwt->claims()->get('sid');
-
-            if (empty($token_exp) || empty($session_id)) {
-                return null;
-            }
-
-            $now = date_create();
-            if ($now > $token_exp) {
-                return null;
-            }
-
-
-            $session = $this->modAdmin->dataSession->find($session_id)->current();
-
-            if (empty($session) || $session->is_active_sw == 'N') {
-                return null;
-            }
-
-
-            $user = $this->modAdmin->dataUsers->find($session->user_id)->current();
-
-            if (empty($user) && $user->is_active_sw == 'N') {
-                return null;
-            }
-
-            $session->date_last_activity = new \Zend_Db_Expr('NOW()');
-            $session->save();
-
-            return new Auth($user->toArray(), $session->toArray());
-
-        } catch (\Exception $e) {
-            // ignore
-        }
-
-        return null;
     }
 
 

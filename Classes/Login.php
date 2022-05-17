@@ -1311,7 +1311,7 @@ class Login extends Db {
      * @param string $action
      */
     private function setContext($module, $action = 'index') {
-        \Zend_Registry::set('context', [$module, $action]);
+        Registry::set('context', [$module, $action]);
     }
 
 

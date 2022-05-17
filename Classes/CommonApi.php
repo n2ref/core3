@@ -13,8 +13,8 @@ class CommonApi extends Acl {
 	public function __construct($module) {
 		parent::__construct();
 		$this->module = $module;
-		$this->auth = \Zend_Registry::get('auth');
-		$this->config = \Zend_Registry::get('config');
+		$this->auth   = Registry::get('auth');
+		$this->config = Registry::get('config');
 	}
 
     public function __call($method, $arguments)
@@ -48,7 +48,7 @@ class CommonApi extends Acl {
 			}
 			// Получение экземпляра класса для работы с правами пользователей
 			elseif ($k == 'acl') {
-				$v = $this->{$k} = \Zend_Registry::getInstance()->get('acl');
+				$v = $this->{$k} = Registry::get('acl');
 			}
             elseif ($k == 'modAdmin') {
                 require_once(DOC_ROOT . 'core3/inc/CoreController.php');

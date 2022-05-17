@@ -2,6 +2,8 @@
 namespace Core3\Classes;
 
 
+use Laminas\ServiceManager\ServiceManager;
+
 /**
  * Class Common
  * @property string $module
@@ -23,20 +25,19 @@ class Common extends Acl {
         $child = get_class($this);
 		parent::__construct();
 
-        $reg = \Zend_Registry::getInstance();
 
         //$this->resId = ! empty($_GET['module']) ? $_GET['module'] : 'admin';
         if ($child) {
             $this->module = strtolower($child);
-            if (!$reg->isRegistered('invoker')) {
-                $reg->set('invoker', $this->module);
+            if ( ! Registry::isRegistered('invoker')) {
+                Registry::set('invoker', $this->module);
             }
         }
 		else {
 			$this->module = !empty($context[0]) ? $context[0] : '';
 		}
 
-        $this->auth      = $reg->get('auth');
+        $this->auth      = Registry::isRegistered('auth') ? Registry::get('auth') : null;
         $this->resId     = $this->module;
 
 		if ( ! empty($context[1]) && $context[1] !== 'index') {
@@ -58,7 +59,7 @@ class Common extends Acl {
      * @throws \Zend_Exception
      */
     public function getInvoker() {
-        return \Zend_Registry::get('invoker');
+        return Registry::get('invoker');
     }
 
 
@@ -85,7 +86,7 @@ class Common extends Acl {
         } else {
             // Получение экземпляра класса для работы с правами пользователей
             if ($param == 'acl') {
-                $result = self::$_params['acl'] = \Zend_Registry::getInstance()->get('acl');
+                $result = self::$_params['acl'] = Registry::getInstance()->get('acl');
 
             // Получение конфига модуля
             } elseif ($param != 'config' && strpos($param, 'config') === 0) {

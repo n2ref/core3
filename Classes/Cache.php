@@ -1,16 +1,14 @@
 <?php
+
 namespace Core3\Classes;
 
-
 /**
- * Class Cache
- * backward compatibility for Zend\Cache
- * @package Core2
+ *
  */
 class Cache {
-
     private $adapter;
-    const NS = 'Core3';
+    private $adapter_name; //может пригодиться
+    private $namespace = 'Core2';
 
 
     /**
@@ -18,9 +16,11 @@ class Cache {
      * @link https://docs.zendframework.com/zend-cache/storage/adapter/
      * @param $adapter
      */
-    public function __construct($adapter) {
+    public function __construct($adapter, $adapter_name) {
+        $this->adapter      = $adapter;
+        $this->adapter_name = $adapter_name;
 
-        $this->adapter = $adapter;
+        $this->namespace = $this->adapter->getOptions()->getNamespace();
     }
 
 
@@ -31,8 +31,7 @@ class Cache {
      * @param $arguments
      */
     public function __call($name, $arguments) {
-
-        return call_user_func_array([$this->adapter, $name], $arguments);
+        return call_user_func_array(array($this->adapter, $name), $arguments);
     }
 
 
@@ -41,8 +40,28 @@ class Cache {
      * @return mixed
      */
     public function test($key) {
-
         return $this->adapter->hasItem($key);
+    }
+
+
+    /**
+     * add tags to the key
+     * @param $key
+     * @param $tags
+     * @return void
+     */
+    public function setTags($key, $tags) {
+        if (method_exists($this->adapter, 'setTags')) return $this->adapter->setTags($key, $tags);
+        //TODO сделать тэгирование
+    }
+
+
+    public function clearByTags($tags) {
+        if (method_exists($this->adapter, 'clearByTags')) $this->adapter->clearByTags($tags);
+        else {
+            //TODO сделать очистку по тэгам
+            $this->adapter->clearByNamespace($this->namespace);
+        }
     }
 
 
@@ -51,10 +70,8 @@ class Cache {
      * @return bool
      */
     public function load($key) {
-
         $data = $this->adapter->getItem($key);
         if ( ! $data) $data = false; //совместимость с проверкой от zf1
-
         return $data;
     }
 
@@ -65,9 +82,8 @@ class Cache {
      * @param array $tags
      */
     public function save($data, $key, $tags = []) {
-
         $this->adapter->setItem($key, $data);
-        if ($tags) $this->adapter->setTags($key, $tags);
+        if ($tags) $this->setTags($key, $tags);
     }
 
 
@@ -75,10 +91,12 @@ class Cache {
      * @param       $mode
      * @param array $tags
      */
-    public function clean($mode = '', $tags = []) {
-
-        if ($tags) $this->adapter->clearByTags($tags); else {
-            $this->adapter->clearByNamespace(self::NS);
+    public function clean($key = '', $tags = []) {
+        if ($tags) {
+            $this->clearByTags($tags);
+        } else {
+            if ($key) $this->adapter->removeItem($key);
+            else $this->adapter->clearByNamespace($this->namespace);
         }
     }
 
@@ -87,8 +105,8 @@ class Cache {
      * @param $key
      */
     public function remove($key) {
-
-        if (is_array($key)) $this->adapter->removeItems($key); else $this->adapter->removeItem($key);
+        if (is_array($key)) $this->adapter->removeItems($key);
+        else $this->adapter->removeItem($key);
     }
 
 }

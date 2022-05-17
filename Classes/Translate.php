@@ -126,7 +126,7 @@ class Translate {
                 ));
                 unset($translate_second);
 
-                \Zend_Registry::set('translate', $this);
+                Registry::set('translate', $this);
             }
         }
     }

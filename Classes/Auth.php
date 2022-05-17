@@ -36,6 +36,24 @@ class Auth {
     /**
      * @return string
      */
+    public function getLogin(): string {
+
+        return (string)($this->user['login'] ?? '');
+    }
+
+
+    /**
+     * @return string
+     */
+    public function getEmail(): string {
+
+        return (string)($this->user['email'] ?? '');
+    }
+
+
+    /**
+     * @return string
+     */
     public function getUserName(): string {
 
         $fname = $this->user['fname'] ?? '';

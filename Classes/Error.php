@@ -25,9 +25,6 @@ class Error {
                 echo $e->getMessage() . PHP_EOL;
             }
 
-        } elseif ($is_debug && ! empty($config) && $config->debug && $config->debug->firephp) {
-            Tools::fb($e->getMessage() . "\n" . $e->getFile() . ': ' . $e->getLine() . "\n\n" . $e->getTraceAsString());
-
         } else {
             if (substr($e->getMessage(), 0, 8) == 'SQLSTATE') {
                 $message = 'Ошибка базы данных';
@@ -35,7 +32,7 @@ class Error {
                 $message = 'Ошибка системы';
             }
 
-            $type = self::getBestMathType('text/html');
+            $type = Tools::getBestMathType('text/html');
             switch ($type) {
                 default:
                 case 'text/html':
@@ -81,59 +78,8 @@ class Error {
             }
         }
 
-        if (class_exists('\Zend_Registry')) {
-            $log = new Log();
-            $log->error($e->getMessage());
-        }
-    }
-
-
-    /**
-     * Получение формата для ответа
-     * @param string $default
-     * @return string
-     */
-    private static function getBestMathType($default = 'text/html') {
-
-        $types           = [];
-        $available_types = [
-            'text/html', 'text/plain', 'application/json'
-        ];
-
-        if (isset($_SERVER['HTTP_ACCEPT']) && ($accept = strtolower($_SERVER['HTTP_ACCEPT']))) {
-            $explode_accept = explode(',', $accept);
-
-            if ( ! empty($explode_accept)) {
-                foreach ($explode_accept as $accept_type) {
-                    if (strpos($accept_type, ';') !== false) {
-                        $explode_accept_type = explode(';', $accept_type);
-                        $quality             = '';
-
-                        if (preg_match('/q=([0-9.]+)/', $explode_accept_type[1], $quality)) {
-                            $types[$explode_accept_type[0]] = $quality[1];
-                        } else {
-                            $types[$explode_accept_type[0]] = 0;
-                        }
-
-                    } else {
-                        $types[$accept_type] = 1;
-                    }
-                }
-
-                arsort($types, SORT_NUMERIC);
-            }
-        }
-
-
-        if ( ! empty($types)) {
-            foreach ($types as $type => $v) {
-                if (array_key_exists($type, $available_types)) {
-                    return $type;
-                }
-            }
-        }
-
-        return $default;
+        $log = new Log();
+        $log->error($e->getMessage());
     }
 
 
@@ -146,7 +92,7 @@ class Error {
         $config = [];
 
         if (class_exists('\Zend_Registry') && \Zend_Registry::isRegistered('config')) {
-            $config = \Zend_Registry::get('config');
+            $config = Registry::get('config');
         }
 
         return $config;

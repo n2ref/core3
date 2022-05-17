@@ -1,6 +1,6 @@
 <?php
 namespace Core3\Classes;
-use Zend\Cache\StorageFactory;
+use Laminas\Cache\Storage;
 
 
 /**
@@ -29,20 +29,15 @@ class Db {
 
 
     /**
-     * Db constructor.
-     * @param \Zend_Config|object|null $config
-     * @throws \Exception
+     * @param $config
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
 	public function __construct($config = null) {
 
-	    if (is_null($config)) {
-	        // Если выполняется кампойзер, то зенда не будет
-            $this->config = class_exists('\Zend_Registry')
-                ? \Zend_Registry::get('config')
-                : new \stdClass();
-		} else {
-			$this->config = $config;
-		}
+        $this->config = is_null($config)
+            ? Registry::get('config')
+            : $config;
 	}
 
 
@@ -65,41 +60,47 @@ class Db {
 
             // Получение указанного кэша
             if ($param == 'cache') {
-                $reg = \Zend_Registry::getInstance();
-
-                if ( ! $this->config) {
-                    $this->config = $reg->get('config');
-                }
-
-                $options = $this->config->system->cache->options ? $this->config->system->cache->options->toArray() : [];
-                $adapter = ! empty($this->config->system->cache->adapter) ? $this->config->system->cache->adapter : 'Filesystem';
-
-                if (isset($this->config->system->cache->adapter)) {
-                    $adapter = $this->config->system->cache->adapter;
-                    $options = $this->config->system->cache->options->toArray();
-
-                } else {
-                    if ($adapter == 'Filesystem' && $this->config->system->cache) { //если кеш задан в основном конфиге
-                        $options['cache_dir'] = $this->config->system->cache;
+                if ( ! Registry::isRegistered($param)) {
+                    if ( ! $this->_core_config) {
+                        $this->_core_config = Registry::get('core_config');
                     }
+
+                    $options      = $this->config?->cache?->options ? $this->config->cache->options->toArray() : [];
+                    $adapter_name = $this->config?->cache?->adapter ? $this->config->cache->adapter : 'Filesystem';
+
+                    if (isset($this->config->cache->adapter)) {
+                        $adapter_name = $this->config->cache->adapter;
+                        $options = $this->config->cache->options->toArray();
+                    }
+                    else { //DEPRECATED
+                        if ($adapter_name == 'Filesystem' && $this->config->cache) { //если кеш задан в основном конфиге
+                            $options['cache_dir'] = $this->config->cache;
+                        }
+                    }
+                    $options['namespace'] = "Core3";
+                    //$container = null; // can be any configured PSR-11 container
+                    //$sf = $container->get(StorageAdapterFactoryInterface::class);
+                    if ($adapter_name == 'Filesystem') {
+                        $adapter  = new Storage\Adapter\Filesystem($options);
+                    }
+                    if ($adapter_name == 'Redis') {
+                        $options['namespace'] = $_SERVER['SERVER_NAME'] . ":Core2";
+                        unset($options['cache_dir']);
+                        $adapter  = new Storage\Adapter\Redis($options);
+                    }
+                    $adapter->addPlugin(new Storage\Plugin\Serializer());
+                    $plugin = new Storage\Plugin\ExceptionHandler();
+                    $plugin->getOptions()->setThrowExceptions(false);
+                    $adapter->addPlugin($plugin);
+
+                    $result = new Cache($adapter, $adapter_name);
+                    Registry::set($param, $result);
                 }
-
-                $options['namespace'] = "Core";
-                $sf = StorageFactory::factory([
-                    'adapter' => [
-                        'name'    => $adapter,
-                        'options' => $options,
-                        'plugins' => ['serializer'],
-                    ],
-                ]);
-                $sf->addPlugin(StorageFactory::pluginFactory('serializer'));
-
-                $result = new Cache($sf);
             }
 
             // Получение экземпляра переводчика
             if ($param == 'translate') {
-                $result = \Zend_Registry::get('translate');
+                $result = Registry::get('translate');
             }
 
             // Получение экземпляра логера
@@ -234,7 +235,8 @@ class Db {
      * @param string $expired
      */
 	public function closeSession($expired = 'N') {
-		$auth = \Zend_Registry::get('auth');
+
+        $auth = Registry::get('auth');
 
 		if ($auth && $auth->ID && $auth->ID > 0) {
 			$where = [
@@ -628,7 +630,7 @@ class Db {
         $db = \Zend_Db::factory($database);
         \Zend_Db_Table::setDefaultAdapter($db);
         $db->getConnection();
-        \Zend_Registry::getInstance()->set('db', $db);
+        Registry::set('db', $db);
 
         if ($this->config->system->timezone) {
             $db->query("SET time_zone = '{$this->config->system->timezone}'");
@@ -675,7 +677,7 @@ class Db {
 	/**
 	 * Получение всех настроек системы
 	 */
-	final private function getAllSettings() {
+	private function getAllSettings() {
 
 		$key = "all_settings_" . $this->config->system->database->params->dbname;
 
