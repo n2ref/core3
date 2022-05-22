@@ -5,9 +5,9 @@ namespace Core3\Classes;
  *
  */
 class CommonApi extends Acl {
-	protected $auth;
-	protected $config;
-	private $module = array();
+	protected       $auth;
+	protected mixed $config;
+	private         $module = array();
 	private $_p = array();
 
 	public function __construct($module) {

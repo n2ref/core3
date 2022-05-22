@@ -14,10 +14,6 @@ use Lcobucci\JWT\Signer\Rsa\Sha256;
  */
 class Rest extends Common {
 
-    private const RP = '8c1733d4cd0841199aa02ec9362be324';
-
-
-
     /**
      * Авторизация по email
      * @param array $params
@@ -94,6 +90,123 @@ class Rest extends Common {
         $user_session->save();
 
 
+
+        setcookie("Core-Refresh-Token", $refresh_token, time() + 157680000, '/core', null, false);
+
+        return [
+            'refresh_token' => $refresh_token->toString(),
+            'access_token'  => $access_token->toString(),
+        ];
+    }
+
+
+    /**
+     * Регистрация с помощью email
+     * @param $params
+     * @return string[]
+     * @throws HttpException
+     * @throws \Zend_Db_Adapter_Exception
+     * @throws \Zend_Exception
+     *
+     * @OA\Post(
+     *   path    = "/client/registration/email",
+     *   tags    = { "Доступ" },
+     *   summary = "Регистрация с помощью email",
+     *   @OA\RequestBody(
+     *     required = true,
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(type = "object", example =
+     *         {
+     *           "email": "client@gmail.com",
+     *           "lname": "Фамилия",
+     *           "code": "100500",
+     *           "password": "nty0473vy24t7ynv2304t750vm3t5"
+     *         }
+     *       )
+     *     )
+     *   ),
+     *   @OA\Response(
+     *     response    = "200",
+     *     description = "Успешное выполнение",
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(type = "object", example = { "webtoken" = "xxxxxxxxx" } )
+     *     )
+     *   ),
+     *   @OA\Response(
+     *     response    = "400",
+     *     description = "Отправленные данные некорректны",
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(ref = "#/components/schemas/Error")
+     *     )
+     *   )
+     * )
+     */
+    #[ArrayShape(['status' => "string", 'webtoken' => "mixed"])]
+    public function registrationEmail(array $params) : array {
+
+        HttpValidator::testParameters([
+            'email'    => 'req,string(1-255),email',
+            'login'    => 'req,string(1-255)',
+            'name'     => 'string(1-255)',
+            'password' => 'req,string(1-255)',
+        ], $params);
+
+        $params['lname'] = htmlspecialchars($params['lname']);
+
+        $client = $this->modClients->getClientByEmail($params['email']);
+
+        if ($client instanceof Clients\Client) {
+            if ($client->status !== 'new') {
+                throw new HttpException('Пользователь с таким email уже зарегистрирован', 'email_isset', 400);
+            }
+
+            if ( ! $client->reg_code ||
+                ! $client->reg_expired ||
+                $client->reg_code != $params['code'] ||
+                $client->reg_expired <= date('Y-m-d H:i:s')
+            ) {
+                throw new HttpException('Указан некорректный код, либо его действие закончилось', 'code_incorrect', 400);
+            }
+
+        } else {
+            throw new HttpException('Введите email и получите код регистрации', 'email_not_found', 400);
+        }
+
+        $client->update([
+            'status'      => 'active',
+            'lastname'    => $params['lname'],
+            'pass'        => \Tool::pass_salt($params['password']),
+            'reg_code'    => null,
+            'reg_expired' => null,
+        ]);
+
+
+
+        $user_session = $this->modAdmin->dataUsers->createRow([
+            'user_id'            => $user->id,
+            'refresh_token'      => $refresh_token->toString(),
+            'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
+            'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
+            'date_expired'       => date('Y-m-d H:i:s', $exp->getTimestamp()),
+            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
+        ])->save();
+
+
+        $refresh_token = $this->getRefreshToken($user->id, $user->login);
+        $access_token  = $this->getAccessToken($user->id, $user->login);
+        $exp           = $refresh_token->claims()->get('exp');
+
+        $user_session = $this->modAdmin->dataUsersSession->createRow([
+            'user_id'            => $user->id,
+            'refresh_token'      => $refresh_token->toString(),
+            'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
+            'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
+            'date_expired'       => date('Y-m-d H:i:s', $exp->getTimestamp()),
+            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
+        ])->save();
 
         setcookie("Core-Refresh-Token", $refresh_token, time() + 157680000, '/core', null, false);
 

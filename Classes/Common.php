@@ -1,234 +1,286 @@
 <?php
 namespace Core3\Classes;
 
-
-use Laminas\ServiceManager\ServiceManager;
-
 /**
- * Class Common
- * @property string $module
+ *
  */
-class Common extends Acl {
+abstract class Common extends Acl {
 
-	protected $auth;
-	protected $resId;
+    protected $auth      = null;
+    protected $module    = '';
+    protected $submodule = '';
+    protected $recource  = '';
 
-	private static $_params = [];
-	private static $_models = [];
+	private static array $params = [];
 
 
     /**
-     * Common constructor.
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
 	public function __construct() {
-
-        $child = get_class($this);
 		parent::__construct();
 
+        $child_class_name = preg_match('~^Core3/Mod/([A-z0-9\_]+)/Controller$~', get_class($this), $match)
+            ? $match[1]
+            : '';
 
-        //$this->resId = ! empty($_GET['module']) ? $_GET['module'] : 'admin';
-        if ($child) {
-            $this->module = strtolower($child);
-            if ( ! Registry::isRegistered('invoker')) {
-                Registry::set('invoker', $this->module);
-            }
-        }
-		else {
-			$this->module = !empty($context[0]) ? $context[0] : '';
-		}
 
+        $this->module    = strtolower($child_class_name);
+        $this->submodule = Registry::isRegistered('submodule') ? Registry::get('submodule') : null;
+        $this->recource  = $this->module && $this->submodule ? "{$this->module}_{$this->submodule}" : $this->module;
         $this->auth      = Registry::isRegistered('auth') ? Registry::get('auth') : null;
-        $this->resId     = $this->module;
+    }
 
-		if ( ! empty($context[1]) && $context[1] !== 'index') {
-			$this->resId .= '_' . $context[1];
-		}
-	}
 
     /**
      * @param string $k
      * @return bool
      */
 	public function __isset($k) {
-		return isset(self::$_params[$k]);
+		return isset(self::$params[$k]);
 	}
-
-
-    /**
-     * @return mixed
-     * @throws \Zend_Exception
-     */
-    public function getInvoker() {
-        return Registry::get('invoker');
-    }
 
 
     /**
      * Автоматическое подключение других модулей
      * инстансы подключенных объектов хранятся в массиве $_params
      *
-     * @param string $param
+     * @param string $param_name
      * @return Common|null|\Zend_Db_Adapter_Abstract|\Zend_Config_Ini|Mod\Admin\Controller|mixed
      * @throws \Exception
      */
-    public function __get($param) {
+    public function __get(string $param_name) {
 
-        //исключение для гетера базы или кеша, выполняется всегда
-        if (in_array($param, ['db', 'cache', 'translate', 'log'])) {
-            return parent::__get($param);
+        if (strpos($param_name, 'data') === 0) {
+            return parent::__get($param_name . "|" . $this->module);
+
+        } elseif (strpos($param_name, 'worker') === 0) {
+            return parent::__get($param_name);
         }
 
-        $result = null;
+        $param_value = NULL;
 
-        if (array_key_exists($param, self::$_params)) {
-            $result = self::$_params[$param];
+        if (array_key_exists($param_name, self::$params)) {
+            $param_value = self::$params[$param_name];
 
         } else {
             // Получение экземпляра класса для работы с правами пользователей
-            if ($param == 'acl') {
-                $result = self::$_params['acl'] = Registry::getInstance()->get('acl');
+            if ($param_name == 'acl') {
+                $param_value = $this->{$param_name} = Registry::get('acl');
 
-            // Получение конфига модуля
-            } elseif ($param != 'config' && strpos($param, 'config') === 0) {
-                $module     = strtolower(substr($param, 6));
-                $module_loc = self::getModuleLocation($module);
-                $conf_file  = "{$module_loc}/conf.ini";
+            } elseif ($param_name === 'moduleConfig') {
 
-                if (is_file($conf_file)) {
-                    $configMod = new \Zend_Config_Ini($conf_file);
-                    $extMod    = $configMod->getExtends();
-                    $configExt = new \Zend_Config_Ini(DOC_ROOT . "/conf.ini");
-                    $ext       = $configExt->getExtends();
+                $module_config = $this->getModuleConfig($this->module);
 
-                    if ( ! empty($_SERVER['SERVER_NAME']) &&
-                        array_key_exists($_SERVER['SERVER_NAME'], $ext) &&
-                        array_key_exists($_SERVER['SERVER_NAME'], $extMod)
-                    ) {
-                        $modConfig = new \Zend_Config_Ini($conf_file, $_SERVER['SERVER_NAME']);
-                    } else {
-                        $modConfig = new \Zend_Config_Ini($conf_file, 'production');
-                    }
-
-                    $modConfig->setReadOnly();
-                    $result = self::$_params[$param] = $modConfig;
+                if ($module_config === false) {
+                    \Core2\Error::Exception($this->_("Не найден конфигурационный файл модуля."), 500);
                 } else {
-                    throw new \Exception(sprintf($this->_("Не найден конфигурационный файл %s."), $conf_file));
+                    $param_value = $this->{$param_name} = $module_config;
                 }
 
-            // Получение экземпляра контроллера указанного модуля
-            } elseif (strpos($param, 'mod') === 0) {
-                $module = strtolower(substr($param, 3));
+            } // Получение экземпляра контроллера указанного модуля
+            elseif (strpos($param_name, 'mod') === 0) {
+                $module_name = strtolower(substr($param_name, 3));
+                $param_value = $this->getModuleConstructor($module_name);
 
-                if ($location = $this->getModuleLocation($module)) {
-                    if ( ! $this->isModuleActive($module)) {
-                        throw new \Exception(sprintf($this->_('Модуль "%s" не активен'), $module));
-                    }
-
-                    $cl              = ucfirst($param) . 'Controller';
-                    $controller_file = $location . '/' . $cl . '.php';
-
-                    if ( ! file_exists($controller_file)) {
-                        throw new \Exception(sprintf($this->_('Не найден файл %s.'), $cl));
-                    }
-
-                    require_once($controller_file);
-
-                    if (!class_exists($cl)) {
-                        throw new \Exception(sprintf($this->_('Не найден класс %s.'), $cl));
-                    }
-
-                    $result         = self::$_params[$param] = new $cl();
-                    $result->module = $module;
-
-                } else {
-                    $message = $this->_('Модуль "%s" не найден');
-                    throw new \Exception(sprintf($message, $module));
+            } // Получение экземпляра плагина для указанного модуля
+            elseif (strpos($param_name, 'plugin') === 0) {
+                $plugin      = ucfirst(substr($param_name, 6));
+                $module      = $this->module;
+                $location    = $this->getModuleLocation($this->module);
+                $plugin_file = "{$location}/Plugins/{$plugin}.php";
+                if ( ! file_exists($plugin_file)) {
+                    throw new Exception(sprintf($this->translate->tr("Плагин \"%s\" не найден."), $plugin));
                 }
-
-            // Получение экземпляра api класса указанного модуля
-            } elseif (strpos($param, 'api') === 0) {
-                $module     = substr($param, 3);
-                if ($param == 'api') $module = $this->module;
+                require_once("CommonPlugin.php");
+                require_once($plugin_file);
+                $temp = "\\" . $module . "\\Plugins\\" . $plugin;
+                $param_value    = $this->{$param_name} = new $temp();
+                $param_value->setModule($this->module);
+            } // Получение экземпляра api класса указанного модуля
+            elseif (strpos($param_name, 'api') === 0) {
+                $module = substr($param_name, 3);
+                if ($param_name == 'api') $module = $this->module;
                 if ($this->isModuleActive($module)) {
-                    $location = $module == 'Admin'
-                        ? DOC_ROOT . "core3/mod/admin"
+                    $location   = $module == 'Admin'
+                        ? DOC_ROOT . "core2/mod/admin"
                         : $this->getModuleLocation($module);
-                    $module = ucfirst($module);
+                    $module     = ucfirst($module);
                     $module_api = "Mod{$module}Api";
-                    if (!file_exists($location . "/{$module_api}.php")) {
+                    if ( ! file_exists($location . "/{$module_api}.php")) {
                         return new stdObject();
                     } else {
                         require_once "CommonApi.php";
                         require_once $location . "/{$module_api}.php";
-                        $result = $this->{$param} = new $module_api();
+                        $api = new $module_api();
+                        if ( ! is_subclass_of($api, 'CommonApi')) {
+                            return new stdObject();
+                        }
+                        $param_value = $this->{$param_name} = $api;
                     }
                 } else {
                     return new stdObject();
                 }
 
+            // Получение экземпляра логера
+            } elseif ($param_name == 'log') {
+                $param_value = new Log();
+
             } else {
-                $result = self::$_params[$param] = $this;
+                return parent::__get($param_name);
             }
         }
 
-        return $result;
+        return $param_value;
 	}
 
 
     /**
-     * @param string $k
-     * @param mixed  $v
+     * @param string $param_name
+     * @param mixed  $param_value
      * @return $this
      */
-	public function __set($k, $v) {
-		self::$_params[$k] = $v;
+	public function __set(string $param_name, mixed $param_value) {
+        self::$params[$param_name] = $param_value;
 		return $this;
 	}
 
 
     /**
-     * @param string $module
-     * @param string $model
-     * @return mixed
-     * @throws \Exception
+     * @param string $module_name
+     * @return bool
      */
-	function getModel($module, $model) {
+    final public function isModuleInstalled(string $module_name): bool {
 
-        $module = strtolower($module);
-        $model  = ucfirst(strtolower($model));
+        $key = "core3_mod_installed_{$this->config?->system?->database?->params?->dbname}_{$module_name}";
 
-        if (array_key_exists($module . '-' . $model, self::$_models)) {
-            $result = self::$_models[$module . '-' . $model];
+        if ( ! $this->cache->test($key)) {
+            $is_install = parent::isModuleInstalled($module_name);
+            $this->cache->save($is_install, $key, ['core3_mod']);
 
         } else {
-
-            if ($location = $this->getModuleLocation($module)) {
-                if ( ! $this->isModuleActive($module)) {
-                    throw new \Exception(sprintf($this->_('Модуль "%s" не активен'), $module));
-                }
-
-                $model_class = 'Core\\Mod\\' . ucfirst($module). '\\' . $model;
-                $model_file  = $location . '/resources/' . $model . '.php';
-
-                if ( ! file_exists($model_file)) {
-                    throw new \Exception(sprintf($this->_('Не найден файл %s.'), $model_file));
-                }
-
-                require_once($model_file);
-
-                if ( ! class_exists($model_class)) {
-                    throw new \Exception(sprintf($this->_('Не найден класс %s.'), $model_class));
-                }
-
-                $result = self::$_models[$module . '-' . $model] = new $model_class();
-
-            } else {
-                $message = $this->_('Модуль "%s" не найден');
-                throw new \Exception(sprintf($message, $module));
-            }
+            $is_install = $this->cache->load($key);
         }
 
-        return $result;
+        return $is_install;
+    }
+
+
+    /**
+     * @param string $module_name
+     * @return string
+     * @throws \Exception
+     */
+    final public function getModuleLocation(string $module_name): string {
+
+        $key = "core3_mod_location_{$this->config?->system?->database?->params?->dbname}_{$module_name}";
+
+        if ( ! $this->cache->test($key)) {
+            $location = parent::getModuleLocation($module_name);
+            $this->cache->save($location, $key, ['core3_mod']);
+
+        } else {
+            $location = $this->cache->load($key);
+        }
+
+        return $location;
+    }
+
+
+    /**
+     * Возврат версии модуля
+     * @param string $module_name
+     * @return string
+     */
+    final public function getModuleVersion(string $module_name): string {
+
+        $key = "core3_mod_version_{$this->config?->system?->database?->params?->dbname}_{$module_name}";
+
+        if ( ! $this->cache->test($key)) {
+            $version = parent::getModuleVersion($module_name);
+            $this->cache->save($version, $key, ['core3_mod']);
+
+        } else {
+            $version = $this->cache->load($key);
+        }
+
+        return $version;
+    }
+
+
+    /**
+     * @throws \Exception
+     */
+    public function getModuleConstructor(string $module_name) {
+
+        if ($module_name === 'admin') {
+            require_once(DOC_ROOT . 'core2/inc/CoreController.php');
+            $param_value         = $this->modAdmin = new CoreController();
+            $param_value->module = $module;
+
+
+        } elseif ($location = $this->getModuleLocation($module_name)) {
+            if ( ! $this->isModuleActive($module)) {
+                throw new Exception("Модуль \"{$module}\" не активен");
+            }
+
+            $cl              = ucfirst($param_name) . 'Controller';
+            $controller_file = $location . '/' . $cl . '.php';
+
+            if ( ! file_exists($controller_file)) {
+                throw new Exception(sprintf($this->translate->tr("Модуль \"%s\" сломан. Не найден файл контроллера."), $module));
+            }
+
+            $autoload_file = $location . "/vendor/autoload.php";
+            if (file_exists($autoload_file)) {
+                require_once($autoload_file);
+            }
+
+            require_once($controller_file);
+
+            if ( ! class_exists($cl)) {
+                throw new Exception(sprintf($this->translate->tr("Модуль \"%s\" сломан. Не найден класс контроллера."), $module));
+            }
+
+
+            $param_value         = $this->{$param_name} = new $cl();
+            $param_value->module = $module;
+
+        } else {
+            throw new Exception(sprintf($this->translate->tr("Модуль \"%s\" не найден"), $module));
+        }
+    }
+
+
+    /**
+     * @param string $module_name
+     * @return bool
+     */
+    final public function isModuleActive(string $module_name): bool {
+
+        $key = "core2_mod_is_active{$this->config?->system?->database?->params?->dbname}_{$module_name}";
+
+        if ( ! $this->cache->test($key)) {
+            $is_active = parent::isModuleActive($module_name);
+            $this->cache->save($is_active, $key, ['core3_mod']);
+        } else {
+            $is_active = $this->cache->load($key);
+        }
+
+        return $is_active;
+    }
+
+
+    /**
+     * @param string $name
+     * @return Log
+     * @throws \Exception
+     */
+    final public function log($name) {
+
+        $log = new Log($name);
+        return $log;
     }
 
 
@@ -236,7 +288,7 @@ class Common extends Acl {
 	 * Print link to CSS file
 	 * @param string $href - CSS filename
 	 */
-	protected function printCss($href) {
+	public function printCss($href) {
         Tools::printCss($href);
 	}
 
@@ -246,8 +298,8 @@ class Common extends Acl {
 	 * @param string $module
 	 * @param string $href - CSS filename
 	 */
-	protected function printCssModule($module, $href) {
-        $module_src = $this->getModuleSrc($module);
+    public function printCssModule($module, $href) {
+        $module_src = $this->getModuleFolder($module);
         Tools::printCss($module_src . $href);
 	}
 
@@ -258,7 +310,7 @@ class Common extends Acl {
 	 * @param string $src - JS filename
 	 * @param bool   $chachable
 	 */
-	protected function printJs($src, $chachable = false) {
+    public function printJs($src, $chachable = false) {
         Tools::printJs($src, $chachable);
 	}
 
@@ -270,8 +322,8 @@ class Common extends Acl {
 	 * @param string $src - JS filename
 	 * @param bool   $chachable
 	 */
-	protected function printJsModule($module, $src, $chachable = false) {
-	    $module_src = $this->getModuleSrc($module);
+    public function printJsModule($module, $src, $chachable = false) {
+	    $module_src = $this->getModuleFolder($module);
         Tools::printJs($module_src . $src, $chachable);
 	}
 }
