@@ -1,6 +1,5 @@
 <?php
 namespace Core3\Classes;
-use Laminas\Cache\Storage;
 
 
 /**

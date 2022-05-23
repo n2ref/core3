@@ -18,114 +18,93 @@ class Translate {
     /**
      * Translate constructor.
      * инициализируется свойство $translate
-     * @param \Zend_Config $config
+     * @param Config $config
      * @throws \Exception
      */
-	public function __construct(\Zend_Config $config) {
+	public function __construct(Config $config) {
 
-        if (isset($config->translate) && $config->translate->on) {
-            if ( ! empty($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
-                $lng = substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2);
-            }
-            // TODO Удален try, спросить зачем он был нужен
+        if ($config?->translate?->on) {
             if ($config->translate->locale) {
-                $lng = $config->translate->locale;
+                $locale = $config->translate->locale;
             }
+
             if ($config->translate->adapter == 'gettext') {
-                $content = "core3/translations/$lng.mo";
+                $content = __DIR__ . "/../translations/{$locale}.mo";
             } else {
                 throw new \Exception("Адаптер перевода не поддерживается");
             }
-            $this->locale = $lng;
-            $this->setup(array(
-                'adapter' => $config->translate->adapter,
-                'content' => DOC_ROOT . $content,
-                'locale'  => $lng
-            ));
+
+            $this->locale = $locale;
+
+            if ($config['locale'] == 'ru') {
+                $this->translate = new \Zend_Translate([
+                    'adapter' => $config->translate->adapter,
+                    'content' => $content,
+                    'locale'  => $locale
+                ]);
+            }
         }
 	}
 
 
-    /**
-     * Добавляем все имеющиеся варианты перевода текста и определяем язык пользователя
-     *
-     * @return void
-     */
-	public function setup($config) {
-        if ($config['locale'] == 'ru') return;
-        $this->translate = new \Zend_Translate($config);
-	}
-
-
-    /**
-     * Проверяет, создан ли объект для переводов
-     * @return mixed
-     */
-    public function isSetup() {
-        return $this->translate;
-    }
-
-
 	/**
      * Определяет язык пользователя
-	 * @param $lng
+	 * @param string $locale
      * @return void
 	 */
-	public function setLocale($lng) {
-		$this->translate->setLocale($lng);
-        $this->locale = $lng;
+	public function setLocale(string $locale): void {
+		$this->translate->setLocale($locale);
+        $this->locale = $locale;
 	}
 
 
     /**
      * @return string
      */
-    public function getLocale() {
+    public function getLocale(): string {
         return $this->locale;
     }
 
 
     /**
      * Добавление переводов для модулей
-     * @param $location
+     * @param string $translation_dir
+     * @param string $conf_file
+     * @throws \Zend_Config_Exception
      * @throws \Exception
      */
-    public function setupExtra($location) {
-        $ini = $location . "/conf.ini";
-        if ($this->translate && is_dir($location . "/translations") && file_exists($ini)) {
-            $temp = parse_ini_file($ini, true);
-            $goit = false;
-            foreach ($temp as $k => $v) {
-                $k = explode(":", $k);
-                if ($_SERVER['SERVER_NAME'] == trim($k[0])) {
-                    $goit = true;
-                    break;
-                }
-            }
-            if ($goit) {
-                $config = new \Zend_Config_Ini($location . "/conf.ini", $_SERVER['SERVER_NAME']);
-            } else {
-                $config = new \Zend_Config_Ini($location . "/conf.ini", 'production');
-            }
-            if (isset($config->translate) && $config->translate->on) {
-                $lng = $this->getLocale();
-                // TODO Удален try, спросить зачем он был нужен
+    public function addTranslation(string $translation_dir, string $conf_file): void {
+
+        if ($this->translate &&
+            is_dir($translation_dir) &&
+            file_exists($conf_file)
+        ) {
+            $isset_section = $this->issetConfigSection($conf_file, $_SERVER['SERVER_NAME'] ?? '');
+            $section       = $isset_section ? $_SERVER['SERVER_NAME'] : 'production';
+            $config        = new \Zend_Config_Ini($conf_file, $section);
+
+            if ($config->translate && $config->translate->on) {
+                $locale = $this->getLocale();
+
                 if ($config->translate->adapter == 'gettext') {
-                    $content = $location . "/translations/$lng.mo";
+                    $content = $translation_dir . "/$locale.mo";
                 } else {
                     throw new \Exception("Адаптер перевода модуля не поддерживается");
                 }
-                $translate_second = new \Zend_Translate(array(
+
+
+                $translate_second = new \Zend_Translate([
                     'adapter' => $config->translate->adapter,
                     'content' => $content,
-                    'locale'  => $lng
-                ));
-                $this->translate->addTranslation(array(
-                    'content' => $translate_second,
-                    'locale'  => $lng
-                ));
-                unset($translate_second);
+                    'locale'  => $locale
+                ]);
 
+                $this->translate->addTranslation([
+                    'content' => $translate_second,
+                    'locale'  => $locale
+                ]);
+
+                unset($translate_second);
                 Registry::set('translate', $this);
             }
         }
@@ -134,15 +113,43 @@ class Translate {
 
 	/**
 	 * Получение перевода с английского на язык пользователя
-
 	 * @param   string $str      Строка на английском, которую следует перевести на язык пользователя
 	 * @param   string $category Категория к которой относится строка(необязательный параметр)
 	 * @return  string Переведеная строка (если перевод не найден, возращает $str)
 	 */
-	public function tr($str, $category = "") {
+	public function tr(string $str, string $category = ""): string {
+
         if ( ! $this->translate) {
             return $str;
         }
+
 		return $this->translate->_($str);
 	}
+
+
+    /**
+     * @param string $config_path
+     * @param string $section
+     * @return bool
+     * @throws \Exception
+     */
+    private function issetConfigSection(string $config_path, string $section): bool {
+
+        if ( ! file_exists($config_path)) {
+            throw new \Exception("File not found: {$config_path}");
+        }
+
+        $ini           = parse_ini_file($config_path, true);
+        $isset_section = false;
+
+        foreach ($ini as $key => $value) {
+            $key = explode(":", $key);
+            if ($section == trim($key[0])) {
+                $isset_section = true;
+                break;
+            }
+        }
+
+        return $isset_section;
+    }
 }
