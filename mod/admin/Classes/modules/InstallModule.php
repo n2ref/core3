@@ -138,9 +138,9 @@ class InstallModule extends Common {
     private function setDb() {
         //делаем свое подключение к БД и включаем отображение исключений
         if ($this->moduleConfig->database && $this->moduleConfig->database->admin->username) {
-            $this->db = $this->newConnector($this->config->database->params->dbname, $this->moduleConfig->database->admin->username, $this->moduleConfig->database->admin->password, $this->config->database->params->host);
+            $this->db = $this->getConnection($this->config->database->params->dbname, $this->moduleConfig->database->admin->username, $this->moduleConfig->database->admin->password, $this->config->database->params->host);
         } else {
-            $this->db = $this->newConnector($this->config->database->params->dbname, $this->config->database->params->username, $this->config->database->params->password, $this->config->database->params->host);
+            $this->db = $this->getConnection($this->config->database->params->dbname, $this->config->database->params->username, $this->config->database->params->password, $this->config->database->params->host);
         }
         if ($this->config->system->timezone) $this->db->query("SET time_zone = '{$this->config->system->timezone}'");
 

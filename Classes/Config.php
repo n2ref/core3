@@ -71,6 +71,15 @@ class Config {
 
 
     /**
+     * @return array
+     */
+    public function toArray(): array {
+
+        // TODO вернуть массив
+    }
+
+
+    /**
      * @return void
      */
     public function setReadOnly(): void {

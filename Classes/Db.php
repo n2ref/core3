@@ -44,7 +44,7 @@ abstract class Db {
 
         } else {
             if ($param_name == 'db') {
-                $result = $this->establishConnection($this->config->system->database->toArray());
+                $result = $this->setupConnection($this->config->system->database->toArray());
 
             } elseif (strpos($param_name, 'data') === 0) {
                 $param_name_explode = explode("|", $param_name);
@@ -88,7 +88,7 @@ abstract class Db {
      * @return \Zend_Db_Adapter_Abstract
      * @throws \Zend_Db_Exception
      */
-    public function newConnector(string $dbname, string $username, string $password, array $options = []): \Zend_Db_Adapter_Abstract {
+    public function getConnection(string $dbname, string $username, string $password, array $options = []): \Zend_Db_Adapter_Abstract {
 
         $db = \Zend_Db::factory($options['adapter'] ?? 'Pdo_Mysql', [
             'dbname'           => $dbname,
@@ -270,7 +270,7 @@ abstract class Db {
      * @throws \Zend_Db_Exception
      * @throws \Exception
      */
-    protected function establishConnection(array $database): \Zend_Db_Adapter_Abstract {
+    protected function setupConnection(array $database): \Zend_Db_Adapter_Abstract {
 
         if (empty($database['dbname'])) {
             throw new \Exception($this->_('Не указано название базы данных'));
@@ -282,7 +282,7 @@ abstract class Db {
             throw new \Exception($this->_('Не указан пароль для подключения базе данных'));
         }
 
-        $db = $this->newConnector($database['dbname'], $database['username'], $database['password'], $database);
+        $db = $this->getConnection($database['dbname'], $database['username'], $database['password'], $database);
 
         \Zend_Db_Table::setDefaultAdapter($db);
 
