@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes;
+use Laminas\I18n\Translator\Translator;
 
 
 /**
@@ -13,6 +14,7 @@ class Translate {
      */
     private $translate;
     private $locale;
+    private $domain;
 
 
     /**
@@ -36,12 +38,17 @@ class Translate {
 
             $this->locale = $locale;
 
-            if ($config['locale'] == 'ru') {
-                $this->translate = new \Zend_Translate([
-                    'adapter' => $config->translate->adapter,
-                    'content' => $content,
-                    'locale'  => $locale
-                ]);
+
+            if ($config->locale != 'ru') {
+
+                $this->translate = new Translator();
+                $this->setLocale($config->locale);
+                $this->translate->addTranslationFile(
+                    $config->translate->adapter,
+                    $content,
+                    'core3',
+                    $config->locale
+                );
             }
         }
 	}
@@ -70,10 +77,12 @@ class Translate {
      * Добавление переводов для модулей
      * @param string $translation_dir
      * @param string $conf_file
+     * @param string $domain
      * @throws \Zend_Config_Exception
+     * @throws \Zend_Translate_Exception
      * @throws \Exception
      */
-    public function addTranslation(string $translation_dir, string $conf_file): void {
+    public function addTranslation(string $translation_dir, string $conf_file, string $domain): void {
 
         if ($this->translate &&
             is_dir($translation_dir) &&
@@ -93,18 +102,7 @@ class Translate {
                 }
 
 
-                $translate_second = new \Zend_Translate([
-                    'adapter' => $config->translate->adapter,
-                    'content' => $content,
-                    'locale'  => $locale
-                ]);
-
-                $this->translate->addTranslation([
-                    'content' => $translate_second,
-                    'locale'  => $locale
-                ]);
-
-                unset($translate_second);
+                $this->translate->addTranslationFile($config->translate->adapter, $content, $domain, $locale);
                 Registry::set('translate', $this);
             }
         }
@@ -113,17 +111,17 @@ class Translate {
 
 	/**
 	 * Получение перевода с английского на язык пользователя
-	 * @param   string $str      Строка на английском, которую следует перевести на язык пользователя
-	 * @param   string $category Категория к которой относится строка(необязательный параметр)
+	 * @param   string $str    Строка на английском, которую следует перевести на язык пользователя
+	 * @param   string $domain Категория к которой относится строка(необязательный параметр)
 	 * @return  string Переведеная строка (если перевод не найден, возращает $str)
 	 */
-	public function tr(string $str, string $category = ""): string {
+	public function tr(string $str, string $domain = "core3"): string {
 
         if ( ! $this->translate) {
             return $str;
         }
 
-		return $this->translate->_($str);
+        return $this->translate->translate($str, $domain, $this->locale);
 	}
 
 

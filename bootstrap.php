@@ -96,4 +96,4 @@ if ($config->system->debug->on) {
 
 
 Registry::set('translate', new Classes\Translate($config));
-Registry::set('config', $config);
+Registry::set('config',    $config);

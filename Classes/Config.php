@@ -7,9 +7,10 @@ namespace Core3\Classes;
 class Config {
 
     /**
-     * @var \Zend_Config|null
+     * @var array
      */
-    private $_data = null;
+    private array $_data               = [];
+    private bool  $_allowModifications = true;
 
 
     /**
@@ -18,19 +19,50 @@ class Config {
      */
     public function __get(string $param_name) {
 
-        if ($this->_data === null || ! isset($this->_data->{$param_name})) {
-            return null;
+        $result = null;
+
+        if (array_key_exists($param_name, $this->_data)) {
+            $result = $this->_data[$param_name];
         }
 
+        return $result;
+    }
 
-        $config_array  = $this->_data->{$param_name}->toArray();
-        $config_object = json_decode(json_encode($config_array));
 
-        if (isset($config_object->{$param_name})) {
-            return $config_object->{$param_name};
+    /**
+     * Only allow setting of a property if $allowModifications
+     * was set to true on construction. Otherwise, throw an exception.
+     *
+     * @param  string $name
+     * @param  mixed  $value
+     * @throws \Exception
+     * @return void
+     */
+    public function __set(string $name, mixed $value) {
+
+        if ($this->_allowModifications) {
+            if (is_array($value)) {
+                $config = new self();
+                $config->addArray($value);
+
+                $this->_data[$name] = $config;
+            } else {
+                $this->_data[$name] = $value;
+            }
+
+        } else {
+            throw new \Exception('Config is read only');
         }
+    }
 
-        return null;
+
+    /**
+     * Support isset() overloading on PHP 5.1
+     * @param string $name
+     * @return boolean
+     */
+    public function __isset(string $name): bool {
+        return isset($this->_data[$name]);
     }
 
 
@@ -41,10 +73,20 @@ class Config {
     public function addArray(array $settings): void {
 
         if ($this->_data === null) {
-            $this->_data = new \Zend_Config($settings, true);
+            foreach ($settings as $key => $value) {
+                if (is_array($value)) {
+                    $config = new self();
+                    $config->addArray($value);
+
+                    $this->_data[$key] = $config;
+
+                } else {
+                    $this->_data[$key] = $value;
+                }
+            }
+
         } else {
-            $config = new \Zend_Config($settings, true);
-            $this->_data->merge($config);
+            $this->merge($settings);
         }
     }
 
@@ -61,11 +103,13 @@ class Config {
             throw new \Exception("File not found: {$file_path}");
         }
 
+        $config_ini = new \Zend_Config_Ini($file_path, $section);
+
         if ($this->_data === null) {
-            $this->_data = new \Zend_Config_Ini($file_path, $section);
+            $this->addArray($config_ini->toArray());
+
         } else {
-            $config_ini = new \Zend_Config_Ini($file_path, $section);
-            $this->_data->merge($config_ini);
+            $this->merge($config_ini->toArray());
         }
     }
 
@@ -75,7 +119,17 @@ class Config {
      */
     public function toArray(): array {
 
-        // TODO вернуть массив
+        $array = [];
+
+        foreach ($this->_data as $key => $value) {
+            if ($value instanceof Config) {
+                $array[$key] = $value->toArray();
+            } else {
+                $array[$key] = $value;
+            }
+        }
+
+        return $array;
     }
 
 
@@ -84,8 +138,51 @@ class Config {
      */
     public function setReadOnly(): void {
 
+        $this->_allowModifications = false;
+
         if ($this->_data !== null) {
-            $this->_data->setReadOnly();
+            foreach ($this->_data as $value) {
+                if ($value instanceof Config) {
+                    $value->setReadOnly();
+                }
+            }
         }
+    }
+
+
+    /**
+     * Merge another Zend_Config with this one. The items
+     * in $merge will override the same named items in
+     * the current config.
+     * @param array $config
+     * @return Config
+     */
+    private function merge(array $config): Config {
+
+        foreach ($config as $key => $item) {
+            if (array_key_exists($key, $this->_data)) {
+                if ($item instanceof Config && $this->$key instanceof Config) {
+                    $this->$key = $this->$key->merge($item->toArray());
+                } else {
+                    $this->$key = $item;
+                }
+
+            } else {
+                if ($item instanceof Config) {
+                    $config_new = new self();
+                    $config_new->addArray($item->toArray());
+
+                    if ( ! $this->_allowModifications) {
+                        $config_new->setReadOnly();
+                    }
+
+                    $this->$key = $config_new;
+                } else {
+                    $this->$key = $item;
+                }
+            }
+        }
+
+        return $this;
     }
 }

@@ -6,7 +6,7 @@ namespace Core3\Classes;
  * @property \Zend_Db_Adapter_Abstract $db
  * @property Translate                 $translate
  */
-abstract class Db {
+abstract class Db extends System {
 
     /**
      * @var \Zend_Config
@@ -61,22 +61,6 @@ abstract class Db {
 
         return $result;
 	}
-
-
-    /**
-     * Перевод текста
-     * @param string $text
-     * @param string $module_name
-     * @return string|null
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     */
-    public function _(string $text, string $module_name = 'core3'): ?string {
-
-        $translate = Registry::isRegistered('translate') ? Registry::get('translate') : null;
-
-        return $translate?->tr($text, $module_name);
-    }
 
 
     /**

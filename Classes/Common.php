@@ -27,9 +27,9 @@ abstract class Common extends Acl {
 
 
         $this->module    = strtolower($child_class_name);
-        $this->submodule = Registry::isRegistered('submodule') ? Registry::get('submodule') : null;
+        $this->submodule = Registry::has('submodule') ? Registry::get('submodule') : null;
         $this->recource  = $this->module && $this->submodule ? "{$this->module}_{$this->submodule}" : $this->module;
-        $this->auth      = Registry::isRegistered('auth') ? Registry::get('auth') : null;
+        $this->auth      = Registry::has('auth') ? Registry::get('auth') : null;
     }
 
 

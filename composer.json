@@ -46,7 +46,6 @@
 
     "zf1/zend-config": "~1.12",
     "zf1/zend-acl": "~1.12",
-    "zf1/zend-translate": "~1.12",
 
     "belhard/zend-db": "dev-master",
 
