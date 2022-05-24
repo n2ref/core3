@@ -1,24 +1,21 @@
 <?php
-
 namespace Core3\Classes;
+use Laminas\Cache\Storage;
 
 /**
  *
  */
 class Cache {
     private $adapter;
-    private $adapter_name; //может пригодиться
-    private $namespace = 'Core2';
+    private $namespace;
 
 
     /**
-     * Cache constructor.
-     * @link https://docs.zendframework.com/zend-cache/storage/adapter/
-     * @param $adapter
+     * @param Storage\Adapter\AbstractAdapter $adapter
      */
-    public function __construct($adapter, $adapter_name) {
-        $this->adapter      = $adapter;
-        $this->adapter_name = $adapter_name;
+    public function __construct(Storage\Adapter\AbstractAdapter $adapter) {
+
+        $this->adapter = $adapter;
 
         $this->namespace = $this->adapter->getOptions()->getNamespace();
     }
@@ -27,38 +24,54 @@ class Cache {
     /**
      * call native methods
      * @link https://docs.zendframework.com/zend-cache/storage/adapter/#the-storageinterface
-     * @param $name
-     * @param $arguments
+     * @param string $name
+     * @param array  $arguments
+     * @return mixed
      */
-    public function __call($name, $arguments) {
+    public function __call(string $name, array $arguments = []) {
+
         return call_user_func_array(array($this->adapter, $name), $arguments);
     }
 
 
     /**
-     * @param $key
-     * @return mixed
+     * @param string $key
+     * @return bool
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
-    public function test($key) {
+    public function test(string $key): bool {
+
         return $this->adapter->hasItem($key);
     }
 
 
     /**
      * add tags to the key
-     * @param $key
-     * @param $tags
-     * @return void
+     * @param string $key
+     * @param array  $tags
+     * @return bool
      */
-    public function setTags($key, $tags) {
-        if (method_exists($this->adapter, 'setTags')) return $this->adapter->setTags($key, $tags);
+    public function setTags(string $key, array $tags): bool {
+
+        if (method_exists($this->adapter, 'setTags')) {
+            return $this->adapter->setTags($key, $tags);
+        }
         //TODO сделать тэгирование
+
+        return false;
     }
 
 
-    public function clearByTags($tags) {
-        if (method_exists($this->adapter, 'clearByTags')) $this->adapter->clearByTags($tags);
-        else {
+    /**
+     * @param array $tags
+     * @return void
+     */
+    public function clearByTags(array $tags): void {
+
+        if (method_exists($this->adapter, 'clearByTags')) {
+            $this->adapter->clearByTags($tags);
+
+        } else {
             //TODO сделать очистку по тэгам
             $this->adapter->clearByNamespace($this->namespace);
         }
@@ -66,47 +79,64 @@ class Cache {
 
 
     /**
-     * @param $key
-     * @return bool
+     * @param string $key
+     * @return mixed
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
-    public function load($key) {
-        $data = $this->adapter->getItem($key);
-        if ( ! $data) $data = false; //совместимость с проверкой от zf1
-        return $data;
+    public function load(string $key): mixed {
+
+        return $this->adapter->getItem($key);
     }
 
 
     /**
-     * @param       $data
-     * @param       $key
-     * @param array $tags
+     * @param string $key
+     * @param mixed  $data
+     * @param array  $tags
+     * @return void
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
-    public function save($data, $key, $tags = []) {
+    public function save(string $key, mixed $data, array $tags = []): void {
+
         $this->adapter->setItem($key, $data);
-        if ($tags) $this->setTags($key, $tags);
-    }
 
-
-    /**
-     * @param       $mode
-     * @param array $tags
-     */
-    public function clean($key = '', $tags = []) {
         if ($tags) {
-            $this->clearByTags($tags);
-        } else {
-            if ($key) $this->adapter->removeItem($key);
-            else $this->adapter->clearByNamespace($this->namespace);
+            $this->setTags($key, $tags);
         }
     }
 
 
     /**
-     * @param $key
+     * @param string $key
+     * @param array  $tags
+     * @return void
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
-    public function remove($key) {
-        if (is_array($key)) $this->adapter->removeItems($key);
-        else $this->adapter->removeItem($key);
+    public function clean(string $key = '', array $tags = []): void {
+
+        if ($tags) {
+            $this->clearByTags($tags);
+        } else {
+            if ($key) {
+                $this->adapter->removeItem($key);
+            } else {
+                $this->adapter->clearByNamespace($this->namespace);
+            }
+        }
     }
 
+
+    /**
+     * @param string $key
+     * @return void
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     */
+    public function remove(string $key): void {
+
+        if (is_array($key)) {
+            $this->adapter->removeItems($key);
+        } else {
+            $this->adapter->removeItem($key);
+        }
+    }
 }

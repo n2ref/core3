@@ -4,29 +4,10 @@ namespace Core3\Classes;
 
 /**
  * @property \Zend_Db_Adapter_Abstract $db
- * @property Translate                 $translate
  */
 abstract class Db extends System {
 
-    /**
-     * @var \Zend_Config
-     */
-    protected mixed $config;
-
 	private static array $params = [];
-
-
-    /**
-     * @param \stdClass|null $config
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     */
-	public function __construct(\stdClass $config = null) {
-
-        $this->config = is_null($config)
-            ? Registry::get('config')
-            : $config;
-	}
 
 
     /**

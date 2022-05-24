@@ -41,16 +41,17 @@ if (PHP_SAPI === 'cli') {
     }
 }
 
-$autoload_file = "vendor/autoload.php";
+$vendor_autoload_file = "vendor/autoload.php";
 
-if ( ! file_exists($autoload_file)) {
+if ( ! file_exists($vendor_autoload_file)) {
     throw new \Exception("No external libraries. You need to execute in the console: php " . DOC_ROOT . "/index.php --composer -p update");
 }
 
-require_once $autoload_file;
+require_once $vendor_autoload_file;
 require_once 'autoload.php';
 
 
+// Конфиг приложения
 $config_inline = [
     'system' => [
         'name'     => 'CORE3',
@@ -94,6 +95,14 @@ if ($config->system->debug->on) {
     ini_set('display_errors', false);
 }
 
+// Конфиг ядра
+$core_conf_file = __DIR__ . "/../conf.ini";
+if (file_exists($core_conf_file)) {
+    $core_config = new Classes\Config();
+    $core_config->addFileIni($core_conf_file, $_SERVER['SERVER_NAME'] ?? 'production');
+}
 
-Registry::set('translate', new Classes\Translate($config));
-Registry::set('config',    $config);
+
+Registry::set('config',      $config);
+Registry::set('core_config', $core_config);
+Registry::set('translate',   new Classes\Translate($config));

@@ -630,18 +630,62 @@ class Init extends Acl {
 
 
         if ($this->config->system->log->on &&
-            $this->config->system->log->output &&
+            $this->config->system->log->output_file &&
             $this->config->system->log->writer == 'file'
         ) {
             if ( ! $this->config->log->file) {
                 throw new \Exception($this->_('Не задан файл журнала запросов'));
             }
 
-            $log = new Log('access');
-            $log->info($output);
+            $this->log->file($this->config->system->log->output_file)->info($output);
         }
 
 
         return true;
+    }
+
+
+    /**
+     * @throws \Exception
+     */
+    private function __destruct() {
+
+        if ($this->core_config &&
+            $this->core_config->log &&
+            $this->core_config->log->profile &&
+            $this->core_config->log->profile->on &&
+            $this->core_config->log->profile->mysql
+        ) {
+            $sql_queries = $this->db->fetchAll("show profiles");
+            $total_time  = 0;
+            $max_slow    = [];
+
+            if ( ! empty($sql_queries)) {
+                foreach ($sql_queries as $sql_query) {
+
+                    if ( ! empty($sql_query['Duration'])) {
+                        $total_time += $sql_query['Duration'];
+
+                        if (empty($max_slow['Duration']) || $max_slow['Duration'] < $sql_query['Duration']) {
+                            $max_slow = $sql_query;
+                        }
+                    }
+                }
+            }
+
+            $request_method = ! empty($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'none';
+            $query_string   = ! empty($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '';
+
+            if ($total_time >= 1 || count($sql_queries) >= 100 || count($sql_queries) == 0) {
+                $function_log = 'warning';
+            } else {
+                $function_log = 'info';
+            }
+
+            $log_file = $this->log->file($this->core_config->system->profile->mysql);
+            $log_file->{$function_log}('request', [$request_method, round($total_time, 5), count($sql_queries), $query_string]);
+            $log_file->{$function_log}('  | max slow', $max_slow);
+            $log_file->{$function_log}('  | queries ', $sql_queries);
+        }
     }
 }
