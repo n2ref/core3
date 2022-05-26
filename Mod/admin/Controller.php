@@ -9,12 +9,12 @@ use CoreUI\Tabs;
 
 
 /**
- * @property Model\Modules           $dataModules
- * @property Model\ModulesSubmodules $dataModulesSubmodules
- * @property Model\Roles             $dataRoles
- * @property Model\Users             $dataUsers
- * @property Model\UsersSession      $dataUsersSession
- * @property Model\Enum              $dataEnum
+ * @property Model\Modules           $modelModules
+ * @property Model\ModulesSubmodules $modelModulesSubmodules
+ * @property Model\Roles             $modelRoles
+ * @property Model\Users             $modelUsers
+ * @property Model\UsersSession      $modelUsersSession
+ * @property Model\Enum              $modelEnum
  */
 class Controller extends Common {
 

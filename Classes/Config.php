@@ -46,7 +46,11 @@ class Config {
                 $config->addArray($value);
 
                 $this->_data[$name] = $config;
-            } else {
+
+            } elseif ($value instanceof Config) {
+                $this->_data[$name] = $value;
+
+            } elseif (is_scalar($value)) {
                 $this->_data[$name] = $value;
             }
 
@@ -68,9 +72,9 @@ class Config {
 
     /**
      * @param array $settings
-     * @return void
+     * @return Config
      */
-    public function addArray(array $settings): void {
+    public function addArray(array $settings): self {
 
         if ($this->_data === null) {
             foreach ($settings as $key => $value) {
@@ -88,16 +92,18 @@ class Config {
         } else {
             $this->merge($settings);
         }
+
+        return $this;
     }
 
 
     /**
      * @param string      $file_path
      * @param string|null $section
-     * @return void
+     * @return Config
      * @throws \Exception
      */
-    public function addFileIni(string $file_path, string $section = null): void {
+    public function addFileIni(string $file_path, string $section = null): self {
 
         if ( ! file_exists($file_path)) {
             throw new \Exception("File not found: {$file_path}");
@@ -111,6 +117,8 @@ class Config {
         } else {
             $this->merge($config_ini->toArray());
         }
+
+        return $this;
     }
 
 
@@ -155,34 +163,48 @@ class Config {
      * in $merge will override the same named items in
      * the current config.
      * @param array $config
-     * @return Config
+     * @return void
      */
-    private function merge(array $config): Config {
+    private function merge(array $config): void {
 
         foreach ($config as $key => $item) {
             if (array_key_exists($key, $this->_data)) {
-                if ($item instanceof Config && $this->$key instanceof Config) {
-                    $this->$key = $this->$key->merge($item->toArray());
-                } else {
+                if (is_array($item)) {
+
+                    if ($this->$key instanceof Config) {
+                        $this->$key->merge($item);
+
+                    } else {
+                        $config_new = new self();
+                        $config_new->addArray($item);
+
+                        if ( ! $this->_allowModifications) {
+                            $config_new->setReadOnly();
+                        }
+
+                        $this->$key = $config_new;
+                    }
+
+
+                } elseif (is_scalar($item)) {
                     $this->$key = $item;
                 }
 
             } else {
-                if ($item instanceof Config) {
+                if (is_array($item)) {
                     $config_new = new self();
-                    $config_new->addArray($item->toArray());
+                    $config_new->addArray($item);
 
                     if ( ! $this->_allowModifications) {
                         $config_new->setReadOnly();
                     }
 
                     $this->$key = $config_new;
-                } else {
+
+                } elseif (is_scalar($item)) {
                     $this->$key = $item;
                 }
             }
         }
-
-        return $this;
     }
 }

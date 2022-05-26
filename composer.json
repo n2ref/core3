@@ -37,6 +37,7 @@
     "laminas/laminas-validator": "2.15.*",
     "laminas/laminas-mail": "2.15.*",
     "laminas/laminas-i18n": "2.15.*",
+    "laminas/laminas-permissions-acl": "2.10.*",
     "laminas/laminas-authentication": "2.10.*",
     "laminas/laminas-cache-storage-adapter-filesystem": "*",
     "laminas/laminas-cache-storage-adapter-memcache": "*",
@@ -45,8 +46,6 @@
     "laminas/laminas-cache": "3.1.*",
 
     "zf1/zend-config": "~1.12",
-    "zf1/zend-acl": "~1.12",
-
     "belhard/zend-db": "dev-master",
 
     "monolog/monolog": "1.23.*",

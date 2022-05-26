@@ -7,7 +7,8 @@ namespace Core3\Mod\Admin\Model;
  */
 class Users extends \Zend_Db_Table_Abstract {
 
-	protected string $_name = 'core_users';
+
+	protected $_name = "core_users";
 
 
     /**

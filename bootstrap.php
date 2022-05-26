@@ -62,19 +62,11 @@ $config_inline = [
         ],
         'debug'    => ['on' => false,],
         'database' => [
+            'adapterNamespace'           => '\\Core3\\Classes\\Db_Adapter',
             'adapter'                    => 'Pdo_Mysql',
             'params'                     => [
                 'charset' => 'utf8',
             ],
-            'isDefaultTableAdapter'      => true,
-            'profiler'                   => [
-                'enabled' => false,
-                'class'   => 'Zend_Db_Profiler_Firebug',
-            ],
-            'caseFolding'                => true,
-            'autoQuoteIdentifiers'       => true,
-            'allowSerialization'         => true,
-            'autoReconnectOnUnserialize' => true,
         ],
         'temp' => sys_get_temp_dir() ?: "/tmp",
     ],

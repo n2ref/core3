@@ -10,7 +10,7 @@ class Registry {
     /**
      * @var ServiceManager
      */
-    private static ServiceManager $_service;
+    private static $_service;
 
 
     /**

@@ -74,6 +74,15 @@ class Auth {
 
 
     /**
+     * @return int
+     */
+    public function getRoleId(): int {
+
+        return $this->user['role_id'] ?? 0;
+    }
+
+
+    /**
      * @return string
      */
     public function getRefreshToken(): string {

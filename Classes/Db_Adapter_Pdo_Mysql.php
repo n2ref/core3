@@ -19,11 +19,13 @@ class Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mysql {
 	 * Begin new DB transaction for connection
 	 * @return self
 	 */
-	public function beginTransaction() {
+	public function beginTransaction(): self {
+
 		if ($this->_transactionLevel === 0) {
 			parent::beginTransaction();
 		}
-		$this->_transactionLevel++;
+
+        $this->_transactionLevel++;
 
 		return $this;
 	}
@@ -33,10 +35,12 @@ class Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mysql {
 	 * Commit DB transaction
 	 * @return self
 	 */
-	public function commit() {
-		if ($this->_transactionLevel === 1) {
+	public function commit(): self {
+
+        if ($this->_transactionLevel === 1) {
 			parent::commit();
 		}
+
 		$this->_transactionLevel--;
 
 		return $this;
@@ -47,10 +51,12 @@ class Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mysql {
 	 * Rollback DB transaction
 	 * @return self
 	 */
-	public function rollBack() {
-		if ($this->_transactionLevel === 1) {
+	public function rollBack(): self {
+
+        if ($this->_transactionLevel === 1) {
 			parent::rollBack();
 		}
+
 		$this->_transactionLevel--;
 
 		return $this;
@@ -61,7 +67,7 @@ class Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mysql {
 	 * Get adapter transaction level state. Return 0 if all transactions are complete
 	 * @return int
 	 */
-	public function getTransactionLevel() {
+	public function getTransactionLevel(): int {
 		return $this->_transactionLevel;
 	}
 } 

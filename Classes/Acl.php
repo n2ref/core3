@@ -1,16 +1,16 @@
 <?php
 namespace Core3\Classes;
-
-require_once 'Db.php';
+use Laminas\Permissions;
 
 
 /**
- * Class Acl
- * @package Core
+ *
  */
 class Acl extends Db {
-	
-	const INHER_ROLES = 'N';
+
+    const INHER_ROLES = 'N';
+
+    protected $auth = null;
 	protected $addRes = array();
 	protected $types = array(
         'default',
@@ -31,6 +31,15 @@ class Acl extends Db {
 
 
     /**
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+    public function __construct() {
+        $this->auth = Registry::has('auth') ? Registry::get('auth') : null;
+    }
+
+
+    /**
      *
      */
 	public function setupAcl() {
@@ -40,7 +49,6 @@ class Acl extends Db {
 		$key 		= 'acl_' . $auth->ROLEID . self::INHER_ROLES;
 
 		if ( ! $this->cache->test($key)) {
-			$acl = new \Zend_Acl();
             $res = $this->db->fetchAll("
                 SELECT *
                 FROM ((SELECT m.name, 
@@ -65,78 +73,80 @@ class Acl extends Db {
                 ORDER BY 2
             ");
 
-			$resources = array();
-			$resources2 = array();
-			$access_default = array();
+            $resources      = array();
+            $resources2     = array();
+            $access_default = array();
+
+            $acl = new Permissions\Acl\Acl();
 
 			// Если не назначена роль, добавляем виртуальную роль в ACL
 			if ($auth->ROLE === -1) {
-				$acl->addRole(new \Zend_Acl_Role($auth->ROLE));
+				$acl->addRole(new Permissions\Acl\Role\GenericRole($auth->ROLE));
 			}
 
-			// обрабатываем только модули
-			foreach ($res as $data) {
-				$access_default[$data['name']] = array();
-				if ($data['access_default']) {
-					$temp = @unserialize(base64_decode($data['access_default']));
-					if ($temp && is_array($temp)) $access_default[$data['name']] = $temp;
-				}
-				if ($data['access_add']) {
-					$temp = @unserialize(base64_decode($data['access_add']));
-					if ($temp && is_array($temp)) $access_default[$data['name']] += $temp;
-				}
-				$mod2 = explode('_', $data['name']);
-				if (!in_array($mod2[0], $resources)) {
-					$resources[] = $mod2[0];
-					$acl->addResource(new \Zend_Acl_Resource($mod2[0]));
-				}
-			}
+            // обрабатываем только модули
+            foreach ($res as $data) {
+                $access_default[$data['name']] = array();
+                if ($data['access_default']) {
+                    $temp = @unserialize(base64_decode($data['access_default']));
+                    if ($temp && is_array($temp)) $access_default[$data['name']] = $temp;
+                }
+                if ($data['access_add']) {
+                    $temp = @unserialize(base64_decode($data['access_add']));
+                    if ($temp && is_array($temp)) $access_default[$data['name']] += $temp;
+                }
+                $mod2 = explode('_', $data['name']);
+                if ( ! in_array($mod2[0], $resources)) {
+                    $resources[] = $mod2[0];
+                    $acl->addResource(new Permissions\Acl\Resource\GenericResource($mod2[0]));
+                }
+            }
 
-			// обрабатываем только субмодули
-			foreach ($res as $data) {
-				$mod2 = explode('_', $data['name']);
-				if ( ! empty($mod2[1])) {
-					if ( ! in_array($data['name'], $resources2)) {
-						$resources2[] = $data['name'];
-						$acl->addResource(new \Zend_Acl_Resource($data['name']), $mod2[0]);
-					}
-				}
-			}
+            // обрабатываем только субмодули
+            foreach ($res as $data) {
+                $mod2 = explode('_', $data['name']);
+                if ( ! empty($mod2[1])) {
+                    if ( ! in_array($data['name'], $resources2)) {
+                        $resources2[] = $data['name'];
+                        $acl->addResource(new Permissions\Acl\Resource\GenericResource($data['name']), $mod2[0]);
+                    }
+                }
+            }
 
-			if ($auth->ROLE !== -1) {
-				$roles   = $this->db->fetchAll("
+            if ($auth->ROLE !== -1) {
+                $roles = $this->db->fetchAll("
                     SELECT id, name, access
                     FROM core_roles
                     WHERE is_active_sw = 'Y'
                     ORDER BY position DESC
                 ");
-				$i = 1;
-				foreach ($roles as $value) {
-					$roleName = $value['name'];
-					if (self::INHER_ROLES == 'Y') {
-						if ($i == 1) {
-							$acl->addRole(new \Zend_Acl_Role($value['name']));
-						} else {
-							$acl->addRole(new \Zend_Acl_Role($value['name']), $roleName);
-						}
-					} else {
-						$acl->addRole(new \Zend_Acl_Role($roleName));
-					}
+                $i     = 1;
+                foreach ($roles as $value) {
+                    $roleName = $value['name'];
+                    if (self::INHER_ROLES == 'Y') {
+                        if ($i == 1) {
+                            $acl->addRole(new Permissions\Acl\Role\GenericRole($value['name']));
+                        } else {
+                            $acl->addRole(new Permissions\Acl\Role\GenericRole($value['name']), $roleName);
+                        }
+                    } else {
+                        $acl->addRole(new Permissions\Acl\Role\GenericRole($roleName));
+                    }
 
-					$access = unserialize($value['access']);
+                    $access = unserialize($value['access']);
                     if ( ! empty($access)) {
                         foreach ($access as $type => $data) {
                             if (strpos($type, 'default') === false) {
 
                                 foreach ($resources2 as $availSubRes) {
-                                    if (!empty($data[str_replace('_', '-', $availSubRes)])) {
+                                    if ( ! empty($data[str_replace('_', '-', $availSubRes)])) {
                                         $acl->allow($roleName, $availSubRes, $type);
                                     } else {
                                         $acl->deny($roleName, $availSubRes, $type);
                                     }
                                 }
                                 foreach ($resources as $availRes) {
-                                    if (!empty($data[$availRes])) {
+                                    if ( ! empty($data[$availRes])) {
                                         $acl->allow($roleName, $availRes, $type);
                                     } else {
                                         $acl->deny($roleName, $availRes, $type);
@@ -148,11 +158,11 @@ class Acl extends Db {
                             if (strpos($type, 'default') !== false) {
 
                                 $type = explode('_', $type);
-                                $type = !empty($type[1]) ? $type[0] : 'access';
+                                $type = ! empty($type[1]) ? $type[0] : 'access';
 
                                 foreach ($data as $res => $on) {
                                     $res = str_replace('-', '_', $res);
-                                    if (!empty($access_default[$res])) {
+                                    if ( ! empty($access_default[$res])) {
                                         if (isset($access_default[$res][$type]) && $access_default[$res][$type] === 'on') $acl->allow($roleName, $res, $type); // если в настройках модуля установлен access
 
                                         if (isset($access_default[$res][$type . "_all"]) && $access_default[$res][$type . "_all"] === 'on') $acl->allow($roleName, $res, $type . "_all"); // если в настройках модуля установлен all
@@ -166,78 +176,54 @@ class Acl extends Db {
                                 }
                             }
                         }
-					}
-					$i++;
-				}
-			}
-			else {
-				foreach ($access_default as $res => $types) {
-					if ($types) {
-						foreach ($types as $type => $on) {
-							if ($on === 'on') {
-								if ($type === 'access') $acl->allow($auth->ROLE, $res, $type);
-								if ($type === 'list_all') $acl->allow($auth->ROLE, $res, $type);
-								elseif ($type === 'list_owner') $acl->allow($auth->ROLE, $res, $type);
-								if ($type === 'read_all') $acl->allow($auth->ROLE, $res, $type);
-								elseif ($type === 'read_owner') $acl->allow($auth->ROLE, $res, $type);
-								if ($type === 'edit_all') $acl->allow($auth->ROLE, $res, $type);
-								elseif ($type === 'edit_owner') $acl->allow($auth->ROLE, $res, $type);
-								if ($type === 'delete_all') $acl->allow($auth->ROLE, $res, $type);
-								elseif ($type === 'delete_owner') $acl->allow($auth->ROLE, $res, $type);
-							} else if ($on === 'all') {
-								if ($type === 'access') $acl->allow($auth->ROLE, $res, $type . "_all");
-							} else if ($on === 'owner') {
-								if ($type === 'access') $acl->allow($auth->ROLE, $res, $type . "_owner");
-							}
-						}
-					}
-				}
-				if ($data['access_default']) {
-					$access = unserialize(base64_decode($data['access_default']));
-					foreach ($access as $type => $f) {
-						$acl->allow($auth->ROLE, $data['module_id'], $type);
-					}
-				}
-			}
-			$this->cache->save($acl, $key, array("role" . $auth->ROLEID));
-			$this->cache->save($resources, $key . 'availRes', array("role" . $auth->ROLEID));
-			$this->cache->save($resources2, $key . 'availSubRes', array("role" . $auth->ROLEID));
-		}
-		else {
-			$acl = $this->cache->load($key);
-			$resources = $this->cache->load($key . 'availRes');
-			$resources2 = $this->cache->load($key . 'availSubRes');
-		}
+                    }
+                    $i++;
+                }
+            } else {
+                foreach ($access_default as $res => $types) {
+                    if ($types) {
+                        foreach ($types as $type => $on) {
+                            if ($on === 'on') {
+                                if ($type === 'access') $acl->allow($auth->ROLE, $res, $type);
+                                if ($type === 'list_all') $acl->allow($auth->ROLE, $res, $type);
+                                elseif ($type === 'list_owner') $acl->allow($auth->ROLE, $res, $type);
+                                if ($type === 'read_all') $acl->allow($auth->ROLE, $res, $type);
+                                elseif ($type === 'read_owner') $acl->allow($auth->ROLE, $res, $type);
+                                if ($type === 'edit_all') $acl->allow($auth->ROLE, $res, $type);
+                                elseif ($type === 'edit_owner') $acl->allow($auth->ROLE, $res, $type);
+                                if ($type === 'delete_all') $acl->allow($auth->ROLE, $res, $type);
+                                elseif ($type === 'delete_owner') $acl->allow($auth->ROLE, $res, $type);
+                            } else if ($on === 'all') {
+                                if ($type === 'access') $acl->allow($auth->ROLE, $res, $type . "_all");
+                            } else if ($on === 'owner') {
+                                if ($type === 'access') $acl->allow($auth->ROLE, $res, $type . "_owner");
+                            }
+                        }
+                    }
+                }
+                if ($data['access_default']) {
+                    $access = unserialize(base64_decode($data['access_default']));
+                    foreach ($access as $type => $f) {
+                        $acl->allow($auth->ROLE, $data['module_id'], $type);
+                    }
+                }
+            }
 
-		Registry::set('acl', $acl);
-		Registry::set('availRes', $resources);
-		Registry::set('availSubRes', $resources2);
+            $this->cache->save($acl, $key, array("role" . $auth->ROLEID));
+            $this->cache->save($resources, $key . 'availRes', array("role" . $auth->ROLEID));
+            $this->cache->save($resources2, $key . 'availSubRes', array("role" . $auth->ROLEID));
+
+        } else {
+            $acl        = $this->cache->load($key);
+            $resources  = $this->cache->load($key . 'availRes');
+            $resources2 = $this->cache->load($key . 'availSubRes');
+        }
+
+        Registry::set('acl', $acl);
+        Registry::set('availRes', $resources);
+        Registry::set('availSubRes', $resources2);
 
 	}
-
-
-    /**
-     * Проверка существования и установка ресурса в ACL
-     * @param string         $resource
-     *
-     * @throws \Zend_Exception
-     */
-    private function setResource($resource) {
-        $acl         = Registry::get('acl');
-        $addRes      = Registry::get('addRes');
-        $availRes    = Registry::get('availRes');
-        $availSubRes = Registry::get('availSubRes');
-        if ( ! in_array($resource, $availRes) &&
-             ! in_array($resource, $addRes) &&
-             ! in_array($resource, $availSubRes)
-        ) {
-            $acl->addResource(new \Zend_Acl_Resource($resource));
-            $addRes[] = $resource;
-        }
-        if ($addRes) {
-            Registry::set('addRes', $addRes);
-        }
-    }
 
 
 	/**
@@ -296,35 +282,61 @@ class Acl extends Db {
     }
 
 
-	/**
+    /**
      * Проверка доступа к ресурсу $source для текущей роли
-	 * @param $source
-	 * @param $type
-	 * @return bool
-	 */
-	public function checkAcl($source, $type = 'access') {
+     * @param string $resource
+     * @param string $type
+     * @return bool
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+	public function isAllowed(string $resource, string $type = 'access'): bool {
 
-		$xxx = strrpos($source, 'xxx');
+		$xxx = strrpos($resource, 'xxx');
 		if ($xxx > 0) {
-			$source   = substr($source, 0, $xxx); //TODO SHOULD BE FIX
+			$resource = substr($resource, 0, $xxx); //TODO SHOULD BE FIX
 		}
         $acl      = Registry::get('acl');
         $auth     = Registry::get('auth');
 
-		if ($auth->LOGIN == 'root' || $auth->ADMIN) {
+		if ($auth->isAdmin()) {
 			return true;
 
-		} elseif (in_array($source, Registry::get('availRes'))) {
-			return $acl->isAllowed($auth->ROLE, $source, $type);
+		} elseif (in_array($resource, Registry::get('availRes'))) {
+			return $acl->isAllowed($auth->getRoleId(), $resource, $type);
 
-		} elseif (in_array($source, Registry::get('availSubRes'))) {
-			return $acl->isAllowed($auth->ROLE, $source, $type);
+		} elseif (in_array($resource, Registry::get('availSubRes'))) {
+			return $acl->isAllowed($auth->getRoleId(), $resource, $type);
 
-		} elseif (in_array($source, Registry::get('addRes'))) {
-			return $acl->isAllowed($auth->ROLE, $source, $type);
+		} elseif (in_array($resource, Registry::get('addRes'))) {
+			return $acl->isAllowed($auth->getRoleId(), $resource, $type);
 
 		} else {
 			return false;
 		}
 	}
+
+
+    /**
+     * Проверка существования и установка ресурса в ACL
+     * @param string         $resource
+     *
+     * @throws \Zend_Exception
+     */
+    private function setResource($resource) {
+        $acl         = Registry::get('acl');
+        $addRes      = Registry::get('addRes');
+        $availRes    = Registry::get('availRes');
+        $availSubRes = Registry::get('availSubRes');
+        if ( ! in_array($resource, $availRes) &&
+            ! in_array($resource, $addRes) &&
+            ! in_array($resource, $availSubRes)
+        ) {
+            $acl->addResource(new \Zend_Acl_Resource($resource));
+            $addRes[] = $resource;
+        }
+        if ($addRes) {
+            Registry::set('addRes', $addRes);
+        }
+    }
 }

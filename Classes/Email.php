@@ -11,7 +11,7 @@ use Laminas\Mime\Part as MimePart;
 /**
  * Class Email
  */
-class Email {
+class Email extends Db {
 
     protected $mail_data = [
         'from'       => '',
@@ -185,7 +185,6 @@ class Email {
     public function send($immediately = false) {
 
         try {
-            $db = new Db();
 
             if (empty($this->mail_data['from'])) {
                 $config = \Zend_Registry::get('config');
@@ -199,9 +198,9 @@ class Email {
                 $this->mail_data['from'] = "$server_name <noreply@{$server}>";
             }
 
-            if ($db->isModuleActive('queue')) {
-                $version  = $db->getModuleVersion('queue');
-                $location = $db->getModuleLocation('queue');
+            if ($this->db->isModuleActive('queue')) {
+                $version  = $this->db->getModuleVersion('queue');
+                $location = $this->db->getModuleLocation('queue');
                 require_once $location . '/ModQueueController.php';
 
                 if (version_compare($version, '1.2.0', '<')) {
@@ -250,16 +249,15 @@ class Email {
                     }
 
 
-                    $zend_db = \Zend_Registry::get('db');
-                    $zend_db->beginTransaction();
+                    $this->db->beginTransaction();
                     $mail_id = $queue->save();
 
                     if ( ! $mail_id || $mail_id <= 0) {
-                        $zend_db->rollback();
+                        $this->db->rollback();
                         throw new \Exception('Ошибка добавления сообщения в очередь');
 
                     }
-                    $zend_db->commit();
+                    $this->db->commit();
 
                     if ($immediately) {
                         $is_send = $this->zendSend(

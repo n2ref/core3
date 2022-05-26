@@ -4,10 +4,10 @@ use Laminas\Cache\Storage;
 
 
 /**
- * @property Config $config
- * @property Config $core_config
- * @property Cache  $cache
- * @property Log    $log
+ * @property-read Config $config
+ * @property-read Config $core_config
+ * @property-read Cache  $cache
+ * @property-read Log    $log
  */
 abstract class System {
 
@@ -17,16 +17,26 @@ abstract class System {
     /**
      * Перевод текста
      * @param string $text
+     * @param array  $params
      * @param string $domain
      * @return string|null
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function _(string $text, string $domain = 'core3'): ?string {
+    public function _(string $text, array $params = [], string $domain = 'core3'): ?string {
 
-        $translate = Registry::has('translate') ? Registry::get('translate') : null;
+        $translate      = Registry::has('translate') ? Registry::get('translate') : null;
+        $translate_text = $translate?->tr($text, $domain);
 
-        return $translate?->tr($text, $domain);
+        $func_params = [$translate_text];
+
+        if ( ! empty($params)) {
+            foreach ($params as $param) {
+                $func_params[] = $param;
+            }
+        }
+
+        return call_user_func_array('sprintf', $func_params);
     }
 
 

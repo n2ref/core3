@@ -10,7 +10,7 @@ use Lcobucci\JWT\Signer\Rsa\Sha256;
 
 
 /**
- * @property Admin\Controller $modAdmin
+ *
  */
 class Rest extends Common {
 
@@ -59,14 +59,15 @@ class Rest extends Common {
         ], $params);
 
 
-        $user = $this->modAdmin->dataUsers->getRowByLoginEmail($params['login']);
+
+        $user = $this->modAdmin->modelUsers->getRowByLoginEmail($params['login']);
 
         if ($user) {
             if ($user->is_active_sw == 'N') {
                 throw new HttpException('Этот пользователь деактивирован', 'user_inactive', 400);
             }
 
-            if ($user->password != Tools::pass_salt($params['password'])) {
+            if ($user->pass != Tools::pass_salt($params['password'])) {
                 throw new HttpException('Неверный пароль', 'pass_incorrect', 400);
             }
 
@@ -79,7 +80,7 @@ class Rest extends Common {
         $access_token  = $this->getAccessToken($user->id, $user->login);
         $exp           = $refresh_token->claims()->get('exp');
 
-        $user_session = $this->modAdmin->dataUsersSession->createRow([
+        $user_session = $this->modAdmin->modelUsersSession->createRow([
             'user_id'            => $user->id,
             'refresh_token'      => $refresh_token->toString(),
             'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
