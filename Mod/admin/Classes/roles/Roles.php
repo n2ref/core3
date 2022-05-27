@@ -35,7 +35,7 @@ class Roles extends \Common {
                            name,
                            description,
                            position,
-                           access
+                           privileges
                     FROM core_roles
                     WHERE id = ?
                 ", $_GET['edit']);
@@ -52,7 +52,7 @@ class Roles extends \Common {
                                 module_id, 
                                 m.seq AS seq, 
                                 '' AS seq2, 
-                                m.access_add
+                                m.access_extra
                          FROM core_modules AS m
                          WHERE m.visible = 'Y')
                         

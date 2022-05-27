@@ -88,94 +88,17 @@ class Tools {
     }
 
 
-	/**
-	 * Запись логов в файл
-	 * Строки маркируются датой и временем
-     *
-	 * @param string $filename
-	 * @param string $text
-	 */
-	public static function logToFile($filename, $text) {
-
-    	$f = fopen($filename, 'a');
-    	if (!$f) return;
-    	ob_start();
-    	echo date('Y-m-d H:i:s') . ' ';
-		if (is_array($text) || is_object($text)) {
-			echo "<PRE>";print_r($text);echo"</PRE>";//die();
-		} else {
-			echo $text;
-		}
-		$text = ob_get_clean();
-		fwrite($f, $text . chr(10) . chr(13));
-		fclose($f);
-    }
-
-    
-    /**
-     * Write any data to file
-     *
-     * @param string $filename
-     * @param mixed  $data
-     *
-     * @return void
-     */
-	public static function dataToFile($filename, $data) {
-    	$f = fopen($filename, 'a');
-    	if (!$f) return;
-    	ob_start();
-		if (is_array($data) || is_object($data)) {
-			echo "<PRE>";print_r($data);echo"</PRE>";//die();
-		} else {
-			echo $data;
-		}
-		$data = ob_get_clean();
-		fwrite($f, $data);
-		fclose($f);
-    }
-
-
-    /**
-     * Добавление в лог текста
-     * @param  mixed $text
-     * @return void
-     */
-    public static function log($text) {
-
-    	$cnf = Zend_Registry::get('config');
-    	if ($cnf->log->on && $cnf->log->path) {
-			$f = fopen($cnf->log->path, 'a');
-			if (is_array($text) || is_object($text)) {
-				ob_start();
-				echo "<PRE>";print_r($text);echo"</PRE>";//die();
-				$text = ob_get_clean();
-			}
-			fwrite($f, $text . chr(10) . chr(13));
-			fclose($f);
-		}
-    }
-
-
-    /**
-     * Вывод текста в FirePhp
-     * @param $text
-     */
-    public static function fb($text) {
-		$firephp = \FirePHP::getInstance(true);
-        $firephp->fb($text);
-    }
-
-
     /**
      * Добавляет разделитель через каждые 3 символа в указанном числе
-     *
-     * @param string $_
-     * @param string $del
-     *
+     * @param string $number
+     * @param string $separator
      * @return string
      */
-    public static function commafy($_, $del = ';psbn&') {
-	    return strrev( (string)preg_replace( '/(\d{3})(?=\d)(?!\d*\.)/', '$1' . $del , strrev( $_ ) ) );
+    public static function numberFormat(string $number, string $separator = ' '): string {
+
+        $number = (string)preg_replace('/(\d{3})(?=\d)(?!\d*\.)/', "$1{$separator}", strrev($number));
+
+	    return strrev($number);
 	}
 
 
@@ -184,24 +107,26 @@ class Tools {
      * @param  string $pass - password
      * @return string
      */
-    public static function pass_salt($pass) {
+    public static function passSalt(string $pass): string {
 
-		$salt = "sdv235!#&%asg@&fHTA";
-		$spec = array('~','!','@','#','$','%','^','&','*','?');
-		$c_text = md5($pass);
-		$crypted = md5(md5($salt) . $c_text);
-		$temp = '';
-		for ($i = 0; $i < mb_strlen($crypted); $i++) {
-			if (ord($c_text[$i]) >= 48 && ord($c_text[$i]) <= 57) {
-				$temp .= $spec[$c_text[$i]];
-			} elseif (ord($c_text[$i]) >= 97 && ord($c_text[$i]) <= 100) {
-				$temp .= mb_strtoupper($crypted[$i]);
-			} else {
-				$temp .= $crypted[$i];
-			}
-		}
-		return md5($temp);
-	}
+        $salt    = "sdv235!#&%asg@&fHTA";
+        $spec    = ['~', '!', '@', '#', '$', '%', '^', '&', '*', '?'];
+        $c_text  = md5($pass);
+        $crypted = md5(md5($salt) . $c_text);
+        $temp    = '';
+
+        for ($i = 0; $i < mb_strlen($crypted); $i++) {
+            if (ord($c_text[$i]) >= 48 && ord($c_text[$i]) <= 57) {
+                $temp .= $spec[$c_text[$i]];
+            } elseif (ord($c_text[$i]) >= 97 && ord($c_text[$i]) <= 100) {
+                $temp .= mb_strtoupper($crypted[$i]);
+            } else {
+                $temp .= $crypted[$i];
+            }
+        }
+
+        return md5($temp);
+    }
 
 
     /**

@@ -59,20 +59,18 @@ class Rest extends Common {
         ], $params);
 
 
-
         $user = $this->modAdmin->modelUsers->getRowByLoginEmail($params['login']);
 
-        if ($user) {
-            if ($user->is_active_sw == 'N') {
-                throw new HttpException('Этот пользователь деактивирован', 'user_inactive', 400);
-            }
-
-            if ($user->pass != Tools::pass_salt($params['password'])) {
-                throw new HttpException('Неверный пароль', 'pass_incorrect', 400);
-            }
-
-        } else {
+        if ( ! $user) {
             throw new HttpException('Пользователя с таким логином нет', 'login_not_found', 400);
+        }
+
+        if ($user->is_active_sw == 'N') {
+            throw new HttpException('Этот пользователь деактивирован', 'user_inactive', 400);
+        }
+
+        if ($user->pass != Tools::passSalt($params['password'])) {
+            throw new HttpException('Неверный пароль', 'pass_incorrect', 400);
         }
 
 
@@ -316,7 +314,7 @@ class Rest extends Common {
             $expiration = (int)$this->config->system->auth->refresh_token->expiration;
         }
         if ($this->config?->system?->auth?->token_sign) {
-            $sign = (int)$this->config->system->auth->token->token_sign;
+            $sign = $this->config->system->auth->token_sign;
         }
 
 

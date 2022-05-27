@@ -136,8 +136,8 @@ class Modules extends \Common  {
                                        isset_home_page,
                                        $field dependencies,
                                        seq,
-                                       access_default,
-                                       access_add								   
+                                       privileges,
+                                       access_extra								   
                                   FROM core_modules
                                  WHERE m_id = '$refid'";
                     $edit->addControl("Модуль:", "TEXT", "maxlength=\"60\" size=\"60\"", "", "", true);
