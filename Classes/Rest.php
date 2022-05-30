@@ -14,6 +14,70 @@ use Lcobucci\JWT\Signer\Rsa\Sha256;
  */
 class Rest extends Common {
 
+
+    /**
+     * @return mixed
+     * @throws HttpException
+     */
+    public function dispatch(): mixed {
+
+        $router = [
+            '~^/core/auth/login$~' => [
+                'POST' => ['method' => 'login', 'params' => ['$php://input/json']],
+            ],
+            '~^/core/auth/logout$~' => [
+                'POST' => ['method' => 'login', 'params' => ['$php://input/json']],
+            ],
+            '~^/core/auth/refresh$~' => [
+                'POST' => ['method' => 'refreshToken', 'params' => ['$php://input/json']],
+            ],
+
+            '~^/core/registration/email$~'        => [
+                'POST' => ['method' => 'registrationEmail', 'params' => ['$php://input/json']],
+            ],
+            '~^/core/registration/email/check$~' => [
+                'POST' => ['method' => 'registrationEmailCheck', 'params' => ['$php://input/json']],
+            ],
+
+            '~^/core/restore$~'        => [
+                'POST' => ['method' => 'restorePass', 'params' => ['$php://input/json']],
+            ],
+            '~^/core/restore/check$~' => [
+                'POST' => ['method' => 'restorePassCheck', 'params' => ['$php://input/json']],
+            ],
+
+            '~^/core/cabinet$~' => [
+                'GET' => ['method' => 'getCabinet', 'params' => []],
+            ],
+        ];
+
+
+        $rout = $this->getRout($router, $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
+
+        if (empty($rout)) {
+            throw new HttpException('404 Not found', 'not_found', 404);
+        }
+
+        // Обнуление
+        $_GET     = [];
+        $_POST    = [];
+        $_REQUEST = [];
+        $_FILES   = [];
+
+        $rest = new Rest();
+
+        if ( ! method_exists($rout['method'], '__call') && ! is_callable([$rest, $rout['method']])) {
+            throw new HttpException("Incorrect method", 'incorrect_method', 500);
+        }
+
+        ob_start();
+        $result = call_user_func_array([$rest, $rout['method']], $rout['params']);
+        ob_clean();
+
+        return $result;
+    }
+
+
     /**
      * Авторизация по email
      * @param array $params
@@ -50,7 +114,6 @@ class Rest extends Common {
      *   )
      * )
      */
-    #[ArrayShape(['refresh_token' => "string", 'access_token' => "string"])]
     public function login(array $params): array {
 
         HttpValidator::testParameters([
@@ -73,24 +136,24 @@ class Rest extends Common {
             throw new HttpException('Неверный пароль', 'pass_incorrect', 400);
         }
 
-
-        $refresh_token = $this->getRefreshToken($user->id, $user->login);
-        $access_token  = $this->getAccessToken($user->id, $user->login);
-        $exp           = $refresh_token->claims()->get('exp');
-
         $user_session = $this->modAdmin->modelUsersSession->createRow([
             'user_id'            => $user->id,
-            'refresh_token'      => $refresh_token->toString(),
             'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
             'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
-            'date_expired'       => date('Y-m-d H:i:s', $exp->getTimestamp()),
             'date_last_activity' => new \Zend_Db_Expr('NOW()'),
         ]);
+        $session_id = $user_session->save();
+
+
+        $refresh_token = $this->getRefreshToken($user->id, $user->login, $session_id);
+        $access_token  = $this->getAccessToken($user->id, $user->login, $session_id);
+        $exp           = $refresh_token->claims()->get('exp');
+
+
+        $user_session->refresh_token = $refresh_token->toString();
+        $user_session->date_expired  = date('Y-m-d H:i:s', $exp->getTimestamp());
         $user_session->save();
 
-
-
-        setcookie("Core-Refresh-Token", $refresh_token, time() + 157680000, '/core', null, false);
 
         return [
             'refresh_token' => $refresh_token->toString(),
@@ -143,7 +206,6 @@ class Rest extends Common {
      *   )
      * )
      */
-    #[ArrayShape(['status' => "string", 'webtoken' => "mixed"])]
     public function registrationEmail(array $params) : array {
 
         HttpValidator::testParameters([
@@ -218,10 +280,10 @@ class Rest extends Common {
 
     /**
      * Общая проверка аутентификации
-     * @return bool
+     * @return Auth|null
      * @throws \Exception
      */
-    private function auth(): bool {
+    public function getAuth():? Auth {
 
         // проверяем, есть ли в запросе токен
         $access_token = '';
@@ -234,18 +296,35 @@ class Rest extends Common {
             $access_token = $_SERVER['HTTP_ACCESS_TOKEN'];
         }
 
-
         $auth = $access_token
             ? $this->getAuthByToken($access_token)
             : null;
 
         if ($auth) {
             $this->auth = $auth;
-            Registry::set('auth', $this->auth);
-            return true;
         }
 
-        return false;
+        return $auth;
+    }
+
+
+    /**
+     * @return array[]
+     */
+    public function getCabinet(): array {
+
+        return [
+            'user' => [
+                'id'     => $this->auth->getUserId(),
+                'name'   => $this->auth->getUserName(),
+                'login'   => $this->auth->getUserLogin(),
+                'avatar' => '',
+            ],
+            'system'  => [
+                'name' => $this->config->system->name
+            ],
+            'modules' => [],
+        ];
     }
 
 
@@ -257,12 +336,17 @@ class Rest extends Common {
     private function getAuthByToken(string $access_token): ?Auth {
 
         try {
-            $sign          = $this->config->system->auth->token->sign;
-            $configuration = Configuration::forSymmetricSigner(new Sha256(), $sign);
+            $sign = $this->config?->system?->auth?->token_sign ?? '';
+
+            if ($sign) {
+                $configuration = Configuration::forSymmetricSigner(new Sha256(), Key\InMemory::plainText($sign));
+            } else {
+                $configuration = Configuration::forUnsecuredSigner();
+            }
 
             $token_jwt  = $configuration->parser()->parse((string)$access_token);
+            $session_id = $token_jwt->headers()->get('sid');
             $token_exp  = $token_jwt->claims()->get('exp');
-            $session_id = $token_jwt->claims()->get('sid');
 
             if (empty($token_exp) || empty($session_id)) {
                 return null;
@@ -274,14 +358,13 @@ class Rest extends Common {
             }
 
 
-            $session = $this->modAdmin->dataSession->find($session_id)->current();
+            $session = $this->modAdmin->modelUsersSession->find($session_id)->current();
 
             if (empty($session) || $session->is_active_sw == 'N') {
                 return null;
             }
 
-
-            $user = $this->modAdmin->dataUsers->find($session->user_id)->current();
+            $user = $this->modAdmin->modelUsers->find($session->user_id)->current();
 
             if (empty($user) && $user->is_active_sw == 'N') {
                 return null;
@@ -293,6 +376,9 @@ class Rest extends Common {
             return new Auth($user->toArray(), $session->toArray());
 
         } catch (\Exception $e) {
+            echo '<pre>';
+            print_r($e->getMessage());
+            echo '</pre>';
             // ignore
         }
 
@@ -301,30 +387,102 @@ class Rest extends Common {
 
 
     /**
+     * @param array  $routes
+     * @param string $uri
+     * @param string $http_method
+     * @return array
+     * @throws HttpException
+     */
+    private function getRout(array $routes, string $uri, string $http_method): array {
+
+        $result = [];
+
+        if ( ! empty($routes)) {
+            foreach ($routes as $route_rule => $route) {
+                $matches = [];
+
+                if (preg_match($route_rule, $uri, $matches)) {
+
+                    if ( ! is_array($route)) {
+                        break;
+                    }
+
+                    if ( ! isset($route[$http_method])) {
+                        throw new HttpException("Incorrect http method", 'incorrect_http_method', 405);
+                    }
+
+                    if (empty($route[$http_method]['method'])) {
+                        throw new HttpException("Incorrect method", 'incorrect_method', 500);
+                    }
+
+                    $result['method'] = $route[$http_method]['method'];
+                    $result['params'] = [];
+
+                    if ( ! empty($route[$http_method]['params']) && is_array($route[$http_method]['params'])) {
+                        foreach ($route[$http_method]['params'] as $param) {
+                            if (is_int($param)) {
+                                if (isset($matches[$param])) {
+                                    $result['params'][] = $matches[$param];
+                                }
+
+                            } else {
+                                switch ($param) {
+                                    case '$_GET':
+                                        $result['params'][] = $_GET;
+                                        break;
+
+                                    case '$_POST':
+                                        $result['params'][] = $_POST;
+                                        break;
+
+                                    case '$_FILES':
+                                        $result['params'][] = $_FILES;
+                                        break;
+
+                                    case '$php://input':
+                                        $result['params'][] = file_get_contents('php://input', 'r');
+                                        break;
+
+                                    case '$php://input/json':
+                                        $request_raw = file_get_contents('php://input', 'r');
+                                        $request     = @json_decode($request_raw, true);
+
+                                        if (json_last_error() !== JSON_ERROR_NONE) {
+                                            throw new HttpException('Incorrect json data', 'incorrect_json_data', 400);
+                                        }
+
+                                        $result['params'][] = $request;
+                                        break;
+                                }
+                            }
+                        }
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+
+    /**
      * @param int    $user_id
      * @param string $user_login
+     * @param int    $session_id
      * @return \Lcobucci\JWT\Token\Plain
      */
-    private function getRefreshToken(int $user_id, string $user_login): \Lcobucci\JWT\Token\Plain {
+    private function getRefreshToken(int $user_id, string $user_login, int $session_id): \Lcobucci\JWT\Token\Plain {
 
-        $expiration = 86400; // Сутки
-        $sign       = '';
-
-        if ($this->config?->system?->auth?->refresh_token?->expiration) {
-            $expiration = (int)$this->config->system->auth->refresh_token->expiration;
-        }
-        if ($this->config?->system?->auth?->token_sign) {
-            $sign = $this->config->system->auth->token_sign;
-        }
-
+        $expiration = $this->config?->system?->auth?->refresh_token?->expiration ?? 86400; // Сутки
+        $sign       = $this->config?->system?->auth?->token_sign ?? '';
 
         if ($sign) {
             $configuration = Configuration::forSymmetricSigner(new Sha256(), Key\InMemory::plainText($sign));
         } else {
             $configuration = Configuration::forUnsecuredSigner();
         }
-
-
 
 
         $now   = new \DateTimeImmutable();
@@ -338,6 +496,7 @@ class Rest extends Common {
             // Configures the expiration time of the token (exp claim)
             ->expiresAt($now->modify("+{$expiration} second"))
             ->withHeader('aud', $user_login)
+            ->withHeader('sid', $session_id)
             // Builds a new token
             ->getToken($configuration->signer(), $configuration->signingKey());
     }
@@ -346,28 +505,19 @@ class Rest extends Common {
     /**
      * @param int    $user_id
      * @param string $user_login
+     * @param int    $session_id
      * @return \Lcobucci\JWT\Token\Plain
      */
-    private function getAccessToken(int $user_id, string $user_login): \Lcobucci\JWT\Token\Plain {
+    private function getAccessToken(int $user_id, string $user_login, int $session_id): \Lcobucci\JWT\Token\Plain {
 
-        $expiration = 86400; // Сутки
-        $sign       = '';
-
-        if ($this->config?->system?->auth?->access_token?->expiration) {
-            $expiration = (int)$this->config->system->auth->access_token->expiration;
-        }
-        if ($this->config?->system?->auth?->token_sign) {
-            $sign = (int)$this->config->system->auth->token->token_sign;
-        }
-
+        $expiration = $this->config?->system?->auth?->access_token?->expiration ?? 900; // 15 минут
+        $sign       = $this->config?->system?->auth?->token_sign ?? '';
 
         if ($sign) {
             $configuration = Configuration::forSymmetricSigner(new Sha256(), Key\InMemory::plainText($sign));
         } else {
             $configuration = Configuration::forUnsecuredSigner();
         }
-
-
 
 
         $now   = new \DateTimeImmutable();
@@ -381,7 +531,178 @@ class Rest extends Common {
             // Configures the expiration time of the token (exp claim)
             ->expiresAt($now->modify("+{$expiration} second"))
             ->withHeader('aud', $user_login)
+            ->withHeader('sid', $session_id)
             // Builds a new token
             ->getToken($configuration->signer(), $configuration->signingKey());
+    }
+
+
+
+
+
+
+    /**
+     * Получение контента модуля
+     * @param string $module
+     * @param string $section
+     * @return mixed
+     * @throws \Exception
+     */
+    private function getModuleContent(string $module, string $section) {
+
+        if ( ! $this->isModuleInstalled($module)) {
+            throw new \Exception(sprintf($this->_("Модуль %s не установлен в системе!"), $module));
+        }
+
+        if ( ! $this->checkAcl('mod_' . $module . '_index')) {
+            throw new \Exception(sprintf($this->_("У вас нет доступа к модулю %s!"), $module));
+        }
+
+        if ( ! $this->checkAcl("mod_{$module}_{$section}")) {
+            throw new \Exception(sprintf($this->_("У вас нет доступа к субмодулю %s!"), $section));
+        }
+
+
+        $location        = $this->getModuleLocation($module);
+        $controller_path = "{$location}/Controller.php";
+        if ( ! file_exists($controller_path)) {
+            throw new \Exception(sprintf($this->_("Файл %s не найден"), $controller_path));
+        }
+        require_once $controller_path;
+
+        $class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Controller';
+        if ( ! class_exists($class_name)) {
+            throw new \Exception(sprintf($this->_("Класс %s не найден"), $class_name));
+        }
+
+        $mod_methods    = get_class_methods($class_name);
+        $section_method = 'section' . ucfirst($section);
+        if (array_search($section_method, $mod_methods) === false) {
+            throw new \Exception(sprintf($this->_("В классе %s не найден метод %s"), $class_name, $section_method));
+        }
+
+
+        $controller = new $class_name();
+        return $controller->$section_method();
+    }
+
+
+    /**
+     * Получение контента модуля
+     * @param string $module
+     * @param string $section
+     * @return mixed
+     * @throws \Exception
+     */
+    private function getModuleContentMobile(string $module, string $section) {
+
+        if ( ! $this->isModuleInstalled($module)) {
+            throw new \Exception(sprintf($this->_("Модуль %s не установлен в системе!"), $module));
+        }
+
+        if ( ! $this->checkAcl('mod_' . $module . '_index')) {
+            throw new \Exception(sprintf($this->_("У вас нет доступа к модулю %s!"), $module));
+        }
+
+        if ( ! $this->checkAcl("mod_{$module}_{$section}")) {
+            throw new \Exception(sprintf($this->_("У вас нет доступа к субмодулю %s!"), $section));
+        }
+
+
+        $location        = $this->getModuleLocation($module);
+        $controller_path = "{$location}/Mobile.php";
+        if ( ! file_exists($controller_path)) {
+            throw new \Exception(sprintf($this->_("Файл %s не найден"), $controller_path));
+        }
+        require_once $controller_path;
+
+        $class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Mobile';
+        if ( ! class_exists($class_name)) {
+            throw new \Exception(sprintf($this->_("Класс %s не найден"), $class_name));
+        }
+
+        $mod_methods    = get_class_methods($class_name);
+        $section_method = 'section' . ucfirst($section);
+        if (array_search($section_method, $mod_methods) === false) {
+            throw new \Exception(sprintf($this->_("В классе %s не найден метод %s"), $class_name, $section_method));
+        }
+
+
+        $controller = new $class_name();
+        return $controller->$section_method();
+    }
+
+
+    /**
+     * Сохранение данных в модулях
+     *
+     * @param string   $module
+     * @param string   $method
+     *
+     * @return string
+     * @throws \Exception
+     */
+    private function handlerModule($module, $method) {
+
+        // Подключение файла с обработчиком
+        $location = $this->getModuleLocation($module);
+        $module_save_path = $location . '/Handler.php';
+        if ( ! file_exists($module_save_path)) {
+            throw new \Exception(sprintf($this->_('Не найден файл "%s" в модуле "%s"'), $module_save_path, $module));
+        }
+        require_once $module_save_path;
+
+
+        // Инифиализация обработчика
+        $handler_class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Handler';
+        if ( ! class_exists($handler_class_name)) {
+            throw new \Exception(sprintf($this->_('Не найден класс "%s" в модуле "%s"'), $handler_class_name, $module));
+        }
+
+
+        // Выполнение обработчика
+        $handler_class = new $handler_class_name();
+        if ( ! method_exists($handler_class, $method)) {
+            throw new \Exception(sprintf($this->_('Не найден метод "%s" в классе "%s"'), $method, $handler_class_name));
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] == 'DELETE') {
+            $data = array();
+            parse_str(file_get_contents('php://input'), $data);
+        } elseif ($_SERVER['REQUEST_METHOD'] == 'GET') {
+            $data = $_GET;
+        } else {
+            $data = $_POST;
+        }
+
+        return $handler_class->$method($data);
+    }
+
+
+    /**
+     * @param  string $module
+     * @param  string $method
+     * @return bool
+     * @throws \Exception
+     */
+    private function issetHandlerModule($module, $method) {
+
+        $location = $this->getModuleLocation($module);
+
+        // Подключение файла с обработчиком
+        $module_save_path = $location . '/Handler.php';
+        if ( ! file_exists($module_save_path)) {
+            return false;
+        }
+        require_once $module_save_path;
+
+
+        // Инициализация обработчика
+        $handler_class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Handler';
+        if ( ! class_exists($handler_class_name)) {
+            return false;
+        }
+
+        return method_exists($handler_class_name, $method);
     }
 }

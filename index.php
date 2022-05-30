@@ -2,7 +2,10 @@
 
 try {
     require 'bootstrap.php';
-    echo (new \Core3\Classes\Init())->dispatch();
+    $init = new \Core3\Classes\Init();
+    $init->auth();
+
+    echo $init->dispatch();
 
 } catch (\Exception $e) {
     \Core3\Classes\Error::catchException($e);

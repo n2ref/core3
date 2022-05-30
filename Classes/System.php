@@ -5,7 +5,6 @@ use Laminas\Cache\Storage;
 
 /**
  * @property-read Config $config
- * @property-read Config $core_config
  * @property-read Cache  $cache
  * @property-read Log    $log
  */
@@ -61,13 +60,9 @@ abstract class System {
                     $result = Registry::has('config') ? Registry::get('config') : null;
                     break;
 
-                case 'core_config':
-                    $result = Registry::has('core_config') ? Registry::get('core_config') : null;
-                    break;
-
                 case 'cache':
-                    $adapter_name = $this->core_config?->cache?->adapter ?? 'Filesystem';
-                    $options      = $this->core_config?->cache?->options->toArray() ?? [];
+                    $adapter_name = $this->config?->cache?->adapter ?? 'Filesystem';
+                    $options      = $this->config?->cache?->options->toArray() ?? [];
 
                     if ($this->config?->cache?->adapter) {
                         $adapter_name = $this->config?->cache?->adapter;
@@ -101,7 +96,7 @@ abstract class System {
                     break;
 
                 case 'log':
-                    $name = $this->config?->system?->host ?: ($_SERVER['SERVER_NAME'] ?? '');
+                    $name = $this->config?->system?->host ?: ($_SERVER['SERVER_NAME'] ?? null);
                     $result = new Log($name);
                     break;
             }

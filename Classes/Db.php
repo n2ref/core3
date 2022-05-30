@@ -92,10 +92,6 @@ abstract class Db extends System {
             'charset'  => $option_params['charset'] ?? 'utf8',
         ];
 
-        if ( ! empty($options['adapterNamespace'])) {
-            $config['adapterNamespace'] = $options['adapterNamespace'];
-        }
-
         if ( ! empty($option_params)) {
             $config = array_merge($config, $option_params);
         }

@@ -1,6 +1,6 @@
 <?php
 namespace Core3\Classes;
-
+use Core3\Exceptions\HttpException;
 
 /**
  *

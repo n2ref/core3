@@ -150,7 +150,7 @@ abstract class Common extends Acl {
     function getModel(string $module_name, string $model_name): \Zend_Db_Table_Abstract {
 
         $module_name = strtolower($module_name);
-        $model_name  = ucfirst(strtolower($model_name));
+        $model_name  = ucfirst($model_name);
 
         $location = $this->getModuleLocation($module_name);
 

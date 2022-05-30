@@ -27,7 +27,6 @@ class HttpResponse {
         }
 
         $body = [
-            'status'        => 'error',
             'error_code'    => $error_code,
             'error_message' => $error_message,
         ];
@@ -42,7 +41,7 @@ class HttpResponse {
      * @param array|string[] $headers
      * @return string
      */
-    public static function dataJson($data, int $http_core = 200, array $headers = []): string {
+    public static function dataJson(mixed $data, int $http_core = 200, array $headers = []): string {
 
         http_response_code($http_core);
         header('Content-Type: application/json');

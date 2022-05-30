@@ -57,25 +57,27 @@ $config_inline = [
         'name'     => 'CORE3',
         'https'    => false,
         'cache'    => [
-            'dir'     => realpath(__DIR__ . '/../../cache'),
+            'dir'     => realpath(__DIR__ . '/../../') . '/cache',
             'options' => [],
         ],
         'debug'    => ['on' => false,],
         'database' => [
-            'adapterNamespace'           => '\\Core3\\Classes\\Db_Adapter',
-            'adapter'                    => 'Pdo_Mysql',
-            'params'                     => [
-                'charset' => 'utf8',
+            'adapter' => 'Pdo_Mysql',
+            'params'  => [
+                'charset'          => 'utf8',
+                'adapterNamespace' => '\\Core3\\Classes\\Db_Adapter'
             ],
         ],
         'temp' => sys_get_temp_dir() ?: "/tmp",
     ],
 ];
 
+$core_conf_file = __DIR__ . "/../conf.ini";
 
 $config = new Classes\Config();
 $config->addArray($config_inline);
-$config->addFileIni($conf_file, $_SERVER['SERVER_NAME'] ?? 'production');
+$config->addFileIni($core_conf_file, $_SERVER['SERVER_NAME'] ?? 'production');
+$config->addFileIni($conf_file,      $_SERVER['SERVER_NAME'] ?? 'production');
 $config->setReadOnly();
 
 
@@ -87,14 +89,6 @@ if ($config->system->debug->on) {
     ini_set('display_errors', false);
 }
 
-// Конфиг ядра
-$core_conf_file = __DIR__ . "/../conf.ini";
-if (file_exists($core_conf_file)) {
-    $core_config = new Classes\Config();
-    $core_config->addFileIni($core_conf_file, $_SERVER['SERVER_NAME'] ?? 'production');
-}
 
-
-Registry::set('config',      $config);
-Registry::set('core_config', $core_config);
-Registry::set('translate',   new Classes\Translate($config));
+Registry::set('config',    $config);
+Registry::set('translate', new Classes\Translate($config));

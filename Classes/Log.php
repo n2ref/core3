@@ -14,9 +14,10 @@ use Monolog\Handler\SlackWebhookHandler;
 class Log {
 
     private Logger $log;
-    private Config $core_config;
-    private string $writer_custom;
-    private array  $handlers;
+    private Config $config;
+    private string $writer_default = '';
+    private string $writer_custom  = '';
+    private array  $handlers       = [];
 
 
     /**
@@ -27,16 +28,13 @@ class Log {
      */
     public function __construct(string $name = 'core3') {
 
-        $this->core_config = Registry::has('core_config') ? Registry::get('core_config') : null;
-        $this->log         = new Logger($name);
+        $this->config = Registry::has('config') ? Registry::get('config') : null;
+        $this->log    = new Logger($name);
 
-
-        if ($this->core_config?->log &&
-            $this->core_config?->log?->system &&
-            $this->core_config?->log?->system?->file
+        if ($this->config?->system?->log?->on &&
+            $this->config?->system?->log?->file
         ) {
-            $stream = new StreamHandler($this->core_config->log->system->file);
-            $this->log->pushHandler($stream);
+            $this->writer_default = $this->getAbsolutePath($this->config->system->log->file);
         }
     }
 
@@ -45,13 +43,13 @@ class Log {
      * Обработчик метода не доступного через экземпляр
      * @param string    $name       Имя метода
      * @param array     $arguments  Параметры метода
-     * @return object|null
+     * @return mixed
      */
-    public function __call(string $name, array $arguments = []) {
+    public function __call(string $name, array $arguments = []): mixed {
 
         if ($name == 'slack') {
-            if ( ! $this->core_config?->log ||
-                 ! $this->core_config?->log?->webhook?->slack
+            if ( ! $this->config?->log ||
+                 ! $this->config?->log?->webhook?->slack
             ) {
                 return new \stdClass();
             }
@@ -67,7 +65,7 @@ class Log {
             $excludeFields          = [];
 
             $this->handlers[$name] = [
-                $this->core_config->log->webhook->slack?->url,
+                $this->config->log->webhook->slack?->url,
                 $channel,
                 $username,
                 $useAttachment,
@@ -94,10 +92,7 @@ class Log {
      */
     public function file(string $filename): self {
 
-        if ( ! $this->writer_custom) {
-            $this->log->pushHandler(new StreamHandler($filename));
-            $this->writer_custom = $filename;
-        }
+        $this->writer_custom = $this->getAbsolutePath($filename);
 
         return $this;
     }
@@ -107,6 +102,7 @@ class Log {
      * Информационная запись в лог
      * @param string $message
      * @param array  $context
+     * @throws \Exception
      */
     public function info(string $message, array $context = []): void {
 
@@ -114,8 +110,9 @@ class Log {
             $this->setHandler(Logger::INFO);
         }
 
+        $this->setWriter();
         $this->log->info($message, $context);
-        $this->removeCustomWriter();
+        $this->removeWriter();
     }
 
 
@@ -123,6 +120,7 @@ class Log {
      * Предупреждение в лог
      * @param string $message
      * @param array  $context
+     * @throws \Exception
      */
     public function warning(string $message, array $context = []): void {
 
@@ -130,8 +128,9 @@ class Log {
             $this->setHandler(Logger::WARNING);
         }
 
+        $this->setWriter();
         $this->log->warning($message, $context);
-        $this->removeCustomWriter();
+        $this->removeWriter();
     }
 
 
@@ -139,6 +138,7 @@ class Log {
      * Предупреждение в лог
      * @param string $message
      * @param array  $context
+     * @throws \Exception
      */
     public function error(string $message, array $context = []): void {
 
@@ -146,8 +146,9 @@ class Log {
             $this->setHandler(Logger::ERROR);
         }
 
+        $this->setWriter();
         $this->log->warning($message, $context);
-        $this->removeCustomWriter();
+        $this->removeWriter();
     }
 
 
@@ -155,6 +156,7 @@ class Log {
      * Отладочная информация в лог
      * @param string $message
      * @param array  $context
+     * @throws \Exception
      */
     public function debug(string $message, array $context = []): void {
 
@@ -162,19 +164,38 @@ class Log {
             $this->setHandler(Logger::DEBUG);
         }
 
+        $this->setWriter();
         $this->log->warning($message, $context);
-        $this->removeCustomWriter();
+        $this->removeWriter();
     }
 
 
     /**
-     * Прекращение записи в заданный дополнительный лог
+     * @return void
+     * @throws \Exception
      */
-    private function removeCustomWriter(): void {
+    private function setWriter(): void {
+
+        if ($this->writer_custom) {
+            $this->log->pushHandler(new StreamHandler($this->writer_custom));
+
+        } elseif ($this->writer_default) {
+            $this->log->pushHandler(new StreamHandler($this->writer_default));
+        }
+    }
+
+
+    /**
+     * Прекращение записи в заданный лог
+     */
+    private function removeWriter(): void {
 
         if ($this->writer_custom) {
             $this->log->popHandler();
             $this->writer_custom = '';
+
+        } elseif ($this->writer_default) {
+            $this->log->popHandler();
         }
     }
 
@@ -195,5 +216,21 @@ class Log {
                 $this->log->pushHandler($handler);
             }
         }
+    }
+
+
+    /**
+     * @param string $file_path
+     * @return string
+     */
+    private function getAbsolutePath(string $file_path): string {
+
+        if (substr($file_path, 0, 1) === '/') {
+            return $file_path;
+        }
+
+        $file_path = trim($file_path, '/');
+
+        return DOC_ROOT . "/{$file_path}";
     }
 }

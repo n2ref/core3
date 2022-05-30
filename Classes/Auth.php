@@ -34,9 +34,18 @@ class Auth {
 
 
     /**
+     * @return int
+     */
+    public function getUserId(): int {
+
+        return (int)($this->user['id'] ?? 0);
+    }
+
+
+    /**
      * @return string
      */
-    public function getLogin(): string {
+    public function getUserLogin(): string {
 
         return (string)($this->user['login'] ?? '');
     }
@@ -45,7 +54,7 @@ class Auth {
     /**
      * @return string
      */
-    public function getEmail(): string {
+    public function getUserEmail(): string {
 
         return (string)($this->user['email'] ?? '');
     }
@@ -88,5 +97,14 @@ class Auth {
     public function getRefreshToken(): string {
 
         return (string)($this->session['refresh_token'] ?? '');
+    }
+
+
+    /**
+     * @return int
+     */
+    public function getSessionId(): int {
+
+        return (int)($this->session['id'] ?? 0);
     }
 }

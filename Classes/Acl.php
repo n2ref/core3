@@ -111,7 +111,7 @@ class Acl extends Db {
                 }
 
 
-                $role_privileges = $role['privileges'] ? json_decode($role['privileges']) : [];
+                $role_privileges = $role['privileges'] ? json_decode($role['privileges'], true) : [];
 
                 if ( ! empty($resources)) {
                     foreach ($resources as $resource => $privileges) {

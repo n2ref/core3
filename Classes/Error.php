@@ -10,11 +10,12 @@ class Error {
 
     /**
      * @param \Exception $e
+     * @return void
      */
-    public static function catchException(\Exception $e) {
+    public static function catchException(\Exception $e): void {
 
-        $config   = self::getConfig();
-        $is_debug = empty($config) || $config->system->debug->on;
+        $config   = Registry::has('config') ? Registry::get('config') : [];
+        $is_debug = empty($config) || $config?->system?->debug?->on;
 
         if (PHP_SAPI === 'cli') {
             if ($is_debug) {
@@ -33,6 +34,7 @@ class Error {
             }
 
             $type = Tools::getBestMathType('text/html');
+
             switch ($type) {
                 default:
                 case 'text/html':
@@ -80,21 +82,5 @@ class Error {
 
         $log = new Log();
         $log->error($e->getMessage());
-    }
-
-
-    /**
-     * Получаем экземпляр конфига
-     * @return mixed
-     */
-    private static function getConfig() {
-
-        $config = [];
-
-        if (class_exists('\Zend_Registry') && \Zend_Registry::isRegistered('config')) {
-            $config = Registry::get('config');
-        }
-
-        return $config;
     }
 }
