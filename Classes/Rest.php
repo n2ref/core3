@@ -3,10 +3,9 @@ namespace Core3\Classes;
 use Core3\Mod\Admin;
 use Core3\Exceptions\HttpException;
 
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use JetBrains\PhpStorm\ArrayShape;
-use Lcobucci\JWT\Configuration;
-use Lcobucci\JWT\Signer\Key;
-use Lcobucci\JWT\Signer\Rsa\Sha256;
 
 
 /**
@@ -70,11 +69,7 @@ class Rest extends Common {
             throw new HttpException("Incorrect method", 'incorrect_method', 500);
         }
 
-        ob_start();
-        $result = call_user_func_array([$rest, $rout['method']], $rout['params']);
-        ob_clean();
-
-        return $result;
+        return call_user_func_array([$rest, $rout['method']], $rout['params']);
     }
 
 
@@ -84,6 +79,7 @@ class Rest extends Common {
      * @return array
      * @throws \Exception
      * @throws \Zend_Db_Adapter_Exception|\Zend_Exception
+     * @throws \Psr\Container\ContainerExceptionInterface
      * @OA\Post(
      *   path    = "/client/auth/email",
      *   tags    = { "Доступ" },
@@ -117,10 +113,9 @@ class Rest extends Common {
     public function login(array $params): array {
 
         HttpValidator::testParameters([
-            'login'    => 'req,string(1-255)',
-            'password' => 'req,string(1-255)',
+            'login'    => 'req,string(1-)',
+            'password' => 'req,string(1-)',
         ], $params);
-
 
         $user = $this->modAdmin->modelUsers->getRowByLoginEmail($params['login']);
 
@@ -136,29 +131,51 @@ class Rest extends Common {
             throw new HttpException('Неверный пароль', 'pass_incorrect', 400);
         }
 
-        $user_session = $this->modAdmin->modelUsersSession->createRow([
-            'user_id'            => $user->id,
-            'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
-            'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
-            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
-        ]);
-        $session_id = $user_session->save();
+
+        return $this->createSession($user);
+    }
 
 
-        $refresh_token = $this->getRefreshToken($user->id, $user->login, $session_id);
-        $access_token  = $this->getAccessToken($user->id, $user->login, $session_id);
-        $exp           = $refresh_token->claims()->get('exp');
+    /**
+     * @param array $params
+     * @return array
+     * @throws HttpException
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+    public function refreshToken(array $params): array {
+
+        HttpValidator::testParameters([
+            'refresh_token' => 'req,string(1-)',
+        ], $params);
 
 
-        $user_session->refresh_token = $refresh_token->toString();
-        $user_session->date_expired  = date('Y-m-d H:i:s', $exp->getTimestamp());
-        $user_session->save();
+        $sign      = $this->config?->system?->auth?->token_sign ?: '';
+        $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
+        $decoded    = JWT::decode($params['refresh_token'], new Key($sign, $algorithm));
+        $session_id = $decoded['sid'] ?? 0;
 
-        return [
-            'refresh_token' => $refresh_token->toString(),
-            'access_token'  => $access_token->toString(),
-        ];
+        if (empty($session_id) || ! is_numeric($session_id)) {
+            throw new HttpException('Некорректный токен', 'token_incorrect', 400);
+        }
+
+        $session = $this->modAdmin->modelUsersSession->find($session_id)->current();
+
+        if (empty($session)) {
+            throw new HttpException('Сессия не найдена', 'session_not_found', 400);
+        }
+
+        if ($session->is_active_sw == 'N' || $session->date_expired < date('Y-m-d H:i:s')) {
+            throw new HttpException('Эта сессия больше не активна. Войдите заново', 'session_inactive', 403);
+        }
+
+        $session->is_active_sw = 'N';
+        $session->save();
+
+        $user = $this->modAdmin->modelUsers->find($session->user_id)->current();
+
+        return $this->createSession($user);
     }
 
 
@@ -256,7 +273,7 @@ class Rest extends Common {
         ])->save();
 
 
-        $refresh_token = $this->getRefreshToken($user->id, $user->login);
+        $refresh_token = $this->createToken($user->id, $user->login);
         $access_token  = $this->getAccessToken($user->id, $user->login);
         $exp           = $refresh_token->claims()->get('exp');
 
@@ -321,9 +338,56 @@ class Rest extends Common {
                 'avatar' => '',
             ],
             'system'  => [
-                'name' => $this->config->system->name
+                'name' => $this->config?->system?->name ?? ''
             ],
             'modules' => [],
+        ];
+    }
+
+
+    /**
+     * @param \Zend_Db_Table_Row_Abstract $user
+     * @return array
+     * @throws HttpException
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+    private function createSession(\Zend_Db_Table_Row_Abstract $user): array {
+
+        $user_session = $this->modAdmin->modelUsersSession->createRow([
+            'user_id'            => $user->id,
+            'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
+            'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
+            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
+        ]);
+        $session_id = $user_session->save();
+
+
+        $refresh_token_exp = $this->config?->system?->auth?->refresh_token?->expiration ?: 5184000; // 90 дней
+        $access_token_exp  = $this->config?->system?->auth?->access_token?->expiration  ?: 1800;    // 30 минут
+
+        if ( ! is_numeric($refresh_token_exp)) {
+            throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.refresh_token.expiration'), 'error_refresh_token', 500);
+        }
+        if ( ! is_numeric($access_token_exp)) {
+            throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.access_token.expiration'), 'error_access_token', 500);
+        }
+
+
+        $date_refresh_token_exp = (new \DateTime())->modify("+{$refresh_token_exp} second");
+        $date_access_token_exp  = (new \DateTime())->modify("+{$access_token_exp} second");
+
+        $refresh_token = $this->createToken($user->id, $user->login, $session_id, $date_refresh_token_exp);
+        $access_token  = $this->createToken($user->id, $user->login, $session_id, $date_access_token_exp);
+
+        $user_session->refresh_token = $refresh_token;
+        $user_session->date_expired  = $date_refresh_token_exp->format('Y-m-d H:i:s');
+        $user_session->save();
+
+
+        return [
+            'refresh_token' => $refresh_token,
+            'access_token'  => $access_token,
         ];
     }
 
@@ -468,77 +532,27 @@ class Rest extends Common {
 
 
     /**
-     * @param int    $user_id
-     * @param string $user_login
-     * @param int    $session_id
-     * @return \Lcobucci\JWT\Token\Plain
+     * @param int       $user_id
+     * @param string    $user_login
+     * @param int       $session_id
+     * @param \DateTime $date_expired
+     * @return string
      */
-    private function getRefreshToken(int $user_id, string $user_login, int $session_id): \Lcobucci\JWT\Token\Plain {
+    private function createToken(int $user_id, string $user_login, int $session_id, \DateTime $date_expired): string {
 
-        $expiration = $this->config?->system?->auth?->refresh_token?->expiration ?? 86400; // Сутки
-        $sign       = $this->config?->system?->auth?->token_sign ?? '';
+        $sign      = $this->config?->system?->auth?->token_sign ?: '';
+        $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
-        if ($sign) {
-            $configuration = Configuration::forSymmetricSigner(new Sha256(), Key\InMemory::plainText($sign));
-        } else {
-            $configuration = Configuration::forUnsecuredSigner();
-        }
-
-
-        $now   = new \DateTimeImmutable();
-        return $configuration->builder()
-            // Configures the issuer (iss claim)
-            ->issuedBy($_SERVER['SERVER_NAME'] ?? '')
-            // Configures the id (jti claim)
-            ->identifiedBy($user_id)
-            // Configures the time that the token was issue (iat claim)
-            ->issuedAt($now)
-            // Configures the expiration time of the token (exp claim)
-            ->expiresAt($now->modify("+{$expiration} second"))
-            ->withHeader('aud', $user_login)
-            ->withHeader('sid', $session_id)
-            // Builds a new token
-            ->getToken($configuration->signer(), $configuration->signingKey());
+        return JWT::encode([
+            'iss' => $_SERVER['SERVER_NAME'] ?? '',
+            'aud' => $user_login,
+            'uid' => $user_id,
+            'sid' => $session_id,
+            'iat' => time(),
+            'nbf' => time(),
+            'exp' => $date_expired->getTimestamp(),
+        ], $sign, $algorithm);
     }
-
-
-    /**
-     * @param int    $user_id
-     * @param string $user_login
-     * @param int    $session_id
-     * @return \Lcobucci\JWT\Token\Plain
-     */
-    private function getAccessToken(int $user_id, string $user_login, int $session_id): \Lcobucci\JWT\Token\Plain {
-
-        $expiration = $this->config?->system?->auth?->access_token?->expiration ?? 900; // 15 минут
-        $sign       = $this->config?->system?->auth?->token_sign ?? '';
-
-        if ($sign) {
-            $configuration = Configuration::forSymmetricSigner(new Sha256(), Key\InMemory::plainText($sign));
-        } else {
-            $configuration = Configuration::forUnsecuredSigner();
-        }
-
-
-        $now   = new \DateTimeImmutable();
-        return $configuration->builder()
-            // Configures the issuer (iss claim)
-            ->issuedBy($_SERVER['SERVER_NAME'] ?? '')
-            // Configures the id (jti claim)
-            ->identifiedBy($user_id)
-            // Configures the time that the token was issue (iat claim)
-            ->issuedAt($now)
-            // Configures the expiration time of the token (exp claim)
-            ->expiresAt($now->modify("+{$expiration} second"))
-            ->withHeader('aud', $user_login)
-            ->withHeader('sid', $session_id)
-            // Builds a new token
-            ->getToken($configuration->signer(), $configuration->signingKey());
-    }
-
-
-
-
 
 
     /**

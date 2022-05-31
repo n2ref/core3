@@ -51,7 +51,7 @@
     "monolog/monolog": "1.23.*",
     "guzzlehttp/guzzle": "6.5.0",
     "phpseclib/phpseclib": "~2.0",
-    "lcobucci/jwt": "^4.1.4"
+    "firebase/php-jwt": "v6.*"
   },
   "replace": {
     "laminas/laminas-cache-storage-adapter-apc": "*",
