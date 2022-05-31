@@ -153,21 +153,26 @@ class Rest extends Common {
         $sign      = $this->config?->system?->auth?->token_sign ?: '';
         $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
-        $decoded    = JWT::decode($params['refresh_token'], new Key($sign, $algorithm));
-        $session_id = $decoded['sid'] ?? 0;
+        try {
+            $decoded    = JWT::decode($params['refresh_token'], new Key($sign, $algorithm));
+            $session_id = $decoded['sid'] ?? 0;
+
+        } catch (\Exception $e) {
+            throw new HttpException($this->_('Токен не прошел валидацию'), 'token_invalid', 403);
+        }
 
         if (empty($session_id) || ! is_numeric($session_id)) {
-            throw new HttpException('Некорректный токен', 'token_incorrect', 400);
+            throw new HttpException($this->_('Некорректный токен'), 'token_incorrect', 400);
         }
 
         $session = $this->modAdmin->modelUsersSession->find($session_id)->current();
 
         if (empty($session)) {
-            throw new HttpException('Сессия не найдена', 'session_not_found', 400);
+            throw new HttpException($this->_('Сессия не найдена'), 'session_not_found', 400);
         }
 
         if ($session->is_active_sw == 'N' || $session->date_expired < date('Y-m-d H:i:s')) {
-            throw new HttpException('Эта сессия больше не активна. Войдите заново', 'session_inactive', 403);
+            throw new HttpException($this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive', 403);
         }
 
         $session->is_active_sw = 'N';
