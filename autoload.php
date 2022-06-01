@@ -20,9 +20,12 @@ spl_autoload_register(function ($class) {
             }
         }
 
+        $class_path[0] = lcfirst($class_path[0]);
+
         $class_path_implode = implode('/', $class_path);
-        $class_path_implode = $class_path_implode ? "/{$class_path_implode}" : '';
+        $class_path_implode = $class_path_implode ? "{$class_path_implode}" : '';
         $class_name         = end($class_explode);
+
 
         $file_path = __DIR__ . "/{$class_path_implode}/{$class_name}.php";
 

@@ -48,11 +48,6 @@ class Acl extends Db {
      */
 	public function setupAcl(): bool {
 
-        if ( ! $this->auth) {
-            return false;
-        }
-
-
         $cache_key = 'core3_acl_' . $this->auth->getRoleId();
 
 		if ($this->cache->test($cache_key)) {
@@ -68,11 +63,11 @@ class Acl extends Db {
                     ORDER BY m.seq
                 ");
 
-                $submodules = $this->db->fetchAll("
+                $sections = $this->db->fetchAll("
                     SELECT ms.name, 
                            m.privileges,
                            m.name AS module_name
-                    FROM core_modules_submodules AS ms
+                    FROM core_modules_sections AS ms
                         JOIN core_modules AS m ON ms.module_id = m.id
                     WHERE ms.is_active_sw = 'Y' 
                       AND m.is_active_sw = 'Y'
@@ -101,13 +96,13 @@ class Acl extends Db {
                     self::$acl->addResource(new Permissions\Acl\Resource\GenericResource($module['name']));
                 }
 
-                foreach ($submodules as $submodule) {
-                    $resource             = "{$submodule['module_name']}_{$submodule['name']}";
-                    $resources[$resource] = $submodule['privileges']
-                        ? json_decode($submodule['privileges'], true)
+                foreach ($sections as $section) {
+                    $resource             = "{$section['module_name']}_{$section['name']}";
+                    $resources[$resource] = $section['privileges']
+                        ? json_decode($section['privileges'], true)
                         : [];
 
-                    self::$acl->addResource(new Permissions\Acl\Resource\GenericResource($resource), $submodule['module_name']);
+                    self::$acl->addResource(new Permissions\Acl\Resource\GenericResource($resource), $section['module_name']);
                 }
 
 

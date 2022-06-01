@@ -100,7 +100,7 @@ class Handler extends Handlers {
             $module_action = $this->db->fetchRow("
                 SELECT a.name, 
                        a.module_id 
-                FROM core_modules_submodules AS a
+                FROM core_modules_sections AS a
                 WHERE a.id = ?
             ", $record_id);
 
@@ -154,7 +154,7 @@ class Handler extends Handlers {
             $module_action = $this->db->fetchRow("
                 SELECT a.name, 
                        a.module_id 
-                FROM core_modules_submodules AS a
+                FROM core_modules_sections AS a
                 WHERE a.id = ?
             ", $record_id);
 

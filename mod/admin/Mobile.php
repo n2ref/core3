@@ -322,7 +322,7 @@ class Mobile extends Common {
 
 		$mods = $this->db->fetchAll("SELECT m.module_id, m.m_name, sm.sm_key, sm.sm_name
 							 FROM core_modules AS m
-							 LEFT JOIN core_modules_submodules AS sm ON sm.m_id = m.m_id AND sm.visible = 'Y'
+							 LEFT JOIN core_modules_sections AS sm ON sm.m_id = m.m_id AND sm.visible = 'Y'
 							 WHERE m.visible = 'Y' ORDER BY sm.seq");
 
 		$selectMods = '';

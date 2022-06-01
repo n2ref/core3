@@ -19,8 +19,11 @@ class Init extends Db {
      *
      */
     public function __construct() {
-        if (empty($_SERVER['HTTPS']) && $this->config?->system?->https) {
-            header('Location: https://' . $_SERVER['SERVER_NAME']);
+
+        if (PHP_SAPI != 'cli') {
+            if (empty($_SERVER['HTTPS']) && $this->config?->system?->https) {
+                header('Location: https://' . $_SERVER['SERVER_NAME']);
+            }
         }
 
         $tz = $this->config?->system?->timezone;
@@ -39,6 +42,10 @@ class Init extends Db {
      * @throws \Exception
      */
     public function auth(): bool {
+
+        if (PHP_SAPI === 'cli') {
+            return false;
+        }
 
         $this->auth = (new Rest())->getAuth();
 
@@ -65,9 +72,11 @@ class Init extends Db {
 
 
         try {
-            $this->logRequest();
+            if ($this->auth) {
+                $this->logRequest();
 
-            (new Acl())->setupAcl();
+                (new Acl())->setupAcl();
+            }
 
 
             // Disable
@@ -199,10 +208,6 @@ class Init extends Db {
      * @throws \Exception|\Psr\Container\ContainerExceptionInterface
      */
     private function logRequest(): bool {
-
-        if ( ! $this->auth) {
-            return false;
-        }
 
         if ($this->config?->system?->log?->on &&
             $this->config?->system?->log?->access_file

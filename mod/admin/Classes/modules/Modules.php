@@ -793,7 +793,7 @@ class Modules extends \Common  {
 				   ma.name  AS action_name,
 				   ma.title AS action_title
 			FROM core_modules AS m
-				LEFT JOIN core_modules_submodules AS ma ON m.id = ma.module_id 
+				LEFT JOIN core_modules_sections AS ma ON m.id = ma.module_id 
 				                                    AND ma.is_active_sw = 'Y'
 			WHERE m.is_active_sw = 'Y'
 			  AND m.is_visible_sw = 'Y'

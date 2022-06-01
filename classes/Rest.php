@@ -3,9 +3,9 @@ namespace Core3\Classes;
 use Core3\Mod\Admin;
 use Core3\Exceptions\HttpException;
 
+use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use JetBrains\PhpStorm\ArrayShape;
 
 
 /**
@@ -25,7 +25,7 @@ class Rest extends Common {
                 'POST' => ['method' => 'login', 'params' => ['$php://input/json']],
             ],
             '~^/core/auth/logout$~' => [
-                'POST' => ['method' => 'login', 'params' => ['$php://input/json']],
+                'PUT' => ['method' => 'login', 'params' => ['$php://input/json']],
             ],
             '~^/core/auth/refresh$~' => [
                 'POST' => ['method' => 'refreshToken', 'params' => ['$php://input/json']],
@@ -47,6 +47,10 @@ class Rest extends Common {
 
             '~^/core/cabinet$~' => [
                 'GET' => ['method' => 'getCabinet', 'params' => []],
+            ],
+
+            '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)~' => [
+                'GET' => ['method' => 'getModule', 'params' => [1, 2]],
             ],
         ];
 
@@ -113,30 +117,32 @@ class Rest extends Common {
     public function login(array $params): array {
 
         HttpValidator::testParameters([
-            'login'    => 'req,string(1-)',
-            'password' => 'req,string(1-)',
+            'login'    => 'req,string',
+            'password' => 'req,string',
+            'fp'       => 'req,string',
         ], $params);
 
         $user = $this->modAdmin->modelUsers->getRowByLoginEmail($params['login']);
 
         if ( ! $user) {
-            throw new HttpException('Пользователя с таким логином нет', 'login_not_found', 400);
+            throw new HttpException($this->_('Пользователя с таким логином нет'), 'login_not_found', 400);
         }
 
         if ($user->is_active_sw == 'N') {
-            throw new HttpException('Этот пользователь деактивирован', 'user_inactive', 400);
+            throw new HttpException($this->_('Этот пользователь деактивирован'), 'user_inactive', 400);
         }
 
         if ($user->pass != Tools::passSalt($params['password'])) {
-            throw new HttpException('Неверный пароль', 'pass_incorrect', 400);
+            throw new HttpException($this->_('Неверный пароль'), 'pass_incorrect', 400);
         }
 
 
-        return $this->createSession($user);
+        return $this->createSession($user, $params['fp']);
     }
 
 
     /**
+     * Обновление токена
      * @param array $params
      * @return array
      * @throws HttpException
@@ -146,7 +152,8 @@ class Rest extends Common {
     public function refreshToken(array $params): array {
 
         HttpValidator::testParameters([
-            'refresh_token' => 'req,string(1-)',
+            'refresh_token' => 'req,string',
+            'fp'            => 'req,string',
         ], $params);
 
 
@@ -156,6 +163,8 @@ class Rest extends Common {
         try {
             $decoded    = JWT::decode($params['refresh_token'], new Key($sign, $algorithm));
             $session_id = $decoded['sid'] ?? 0;
+            $token_iss  = $decoded['iss'] ?? 0;
+            $token_exp  = $decoded['ext'] ?? 0;
 
         } catch (\Exception $e) {
             throw new HttpException($this->_('Токен не прошел валидацию'), 'token_invalid', 403);
@@ -165,10 +174,23 @@ class Rest extends Common {
             throw new HttpException($this->_('Некорректный токен'), 'token_incorrect', 400);
         }
 
+        if ($token_exp < time() ||
+            $token_iss != $_SERVER['SERVER_NAME']
+        ) {
+            throw new HttpException($this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive', 403);
+        }
+
+
+
         $session = $this->modAdmin->modelUsersSession->find($session_id)->current();
 
         if (empty($session)) {
             throw new HttpException($this->_('Сессия не найдена'), 'session_not_found', 400);
+        }
+
+        if ($session->fingerprint != $params['fp']) {
+            // TODO Добавить оповещение о перехвате токена
+            throw new HttpException($this->_('Некорректный отпечаток системы'), 'fingerprint_incorrect', 403);
         }
 
         if ($session->is_active_sw == 'N' || $session->date_expired < date('Y-m-d H:i:s')) {
@@ -176,11 +198,12 @@ class Rest extends Common {
         }
 
         $session->is_active_sw = 'N';
+        //$session->date_expired = 'N';
         $session->save();
 
         $user = $this->modAdmin->modelUsers->find($session->user_id)->current();
 
-        return $this->createSession($user);
+        return $this->createSession($user, $params['fp']);
     }
 
 
@@ -308,15 +331,9 @@ class Rest extends Common {
     public function getAuth():? Auth {
 
         // проверяем, есть ли в запросе токен
-        $access_token = '';
-        if ( ! empty($_SERVER['HTTP_AUTHORIZATION'])) {
-            if (strpos('Bearer', $_SERVER['HTTP_AUTHORIZATION']) === 0) {
-                $access_token = $_SERVER['HTTP_AUTHORIZATION'];
-            }
-
-        } else if ( ! empty($_SERVER['HTTP_ACCESS_TOKEN'])) {
-            $access_token = $_SERVER['HTTP_ACCESS_TOKEN'];
-        }
+        $access_token = ! empty($_SERVER['HTTP_ACCESS_TOKEN'])
+            ? $_SERVER['HTTP_ACCESS_TOKEN']
+            : '';
 
         $auth = $access_token
             ? $this->getAuthByToken($access_token)
@@ -352,15 +369,17 @@ class Rest extends Common {
 
     /**
      * @param \Zend_Db_Table_Row_Abstract $user
+     * @param string                      $fingerprint
      * @return array
      * @throws HttpException
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    private function createSession(\Zend_Db_Table_Row_Abstract $user): array {
+    private function createSession(\Zend_Db_Table_Row_Abstract $user, string $fingerprint): array {
 
         $user_session = $this->modAdmin->modelUsersSession->createRow([
             'user_id'            => $user->id,
+            'fingerprint'        => $fingerprint,
             'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
             'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
             'date_last_activity' => new \Zend_Db_Expr('NOW()'),
@@ -385,8 +404,7 @@ class Rest extends Common {
         $refresh_token = $this->createToken($user->id, $user->login, $session_id, $date_refresh_token_exp);
         $access_token  = $this->createToken($user->id, $user->login, $session_id, $date_access_token_exp);
 
-        $user_session->refresh_token = $refresh_token;
-        $user_session->date_expired  = $date_refresh_token_exp->format('Y-m-d H:i:s');
+        $user_session->date_expired = $date_refresh_token_exp->format('Y-m-d H:i:s');
         $user_session->save();
 
 
@@ -401,37 +419,40 @@ class Rest extends Common {
      * Авторизация по токену
      * @param string $access_token
      * @return Auth|null
+     * @throws HttpException
      */
     private function getAuthByToken(string $access_token): ?Auth {
 
         try {
-            $sign = $this->config?->system?->auth?->token_sign ?? '';
+            $sign      = $this->config?->system?->auth?->token_sign ?: '';
+            $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
-            if ($sign) {
-                $configuration = Configuration::forSymmetricSigner(new Sha256(), Key\InMemory::plainText($sign));
-            } else {
-                $configuration = Configuration::forUnsecuredSigner();
-            }
+            $decoded    = JWT::decode($access_token, new Key($sign, $algorithm));
+            $session_id = $decoded['sid'] ?? 0;
+            $token_iss  = $decoded['iss'] ?? 0;
+            $token_exp  = $decoded['exp'] ?? 0;
 
-            $token_jwt  = $configuration->parser()->parse((string)$access_token);
-            $session_id = $token_jwt->headers()->get('sid');
-            $token_exp  = $token_jwt->claims()->get('exp');
 
-            if (empty($token_exp) || empty($session_id)) {
+            if (empty($token_exp) ||
+                empty($session_id) ||
+                ! is_numeric($session_id) ||
+                $token_exp < time() ||
+                $token_iss != $_SERVER['SERVER_NAME']
+            ) {
                 return null;
             }
 
-            $now = date_create();
-            if ($now > $token_exp) {
-                return null;
-            }
 
 
             $session = $this->modAdmin->modelUsersSession->find($session_id)->current();
 
-            if (empty($session) || $session->is_active_sw == 'N') {
+            if (empty($session) ||
+                $session->is_active_sw == 'N' ||
+                $session->date_expired < date('Y-m-d H:i:s')
+            ) {
                 return null;
             }
+
 
             $user = $this->modAdmin->modelUsers->find($session->user_id)->current();
 
@@ -445,9 +466,6 @@ class Rest extends Common {
             return new Auth($user->toArray(), $session->toArray());
 
         } catch (\Exception $e) {
-            echo '<pre>';
-            print_r($e->getMessage());
-            echo '</pre>';
             // ignore
         }
 
@@ -573,11 +591,11 @@ class Rest extends Common {
             throw new \Exception(sprintf($this->_("Модуль %s не установлен в системе!"), $module));
         }
 
-        if ( ! $this->checkAcl('mod_' . $module . '_index')) {
+        if ( ! $this->isAllowed("{$module}_index")) {
             throw new \Exception(sprintf($this->_("У вас нет доступа к модулю %s!"), $module));
         }
 
-        if ( ! $this->checkAcl("mod_{$module}_{$section}")) {
+        if ( ! $this->isAllowed("{$module}_{$section}")) {
             throw new \Exception(sprintf($this->_("У вас нет доступа к субмодулю %s!"), $section));
         }
 

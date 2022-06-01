@@ -7,9 +7,9 @@ use Core3\Mod;
  */
 abstract class Common extends Acl {
 
-    protected $module    = '';
-    protected $submodule = '';
-    protected $recource  = '';
+    protected $module   = '';
+    protected $section  = '';
+    protected $recource = '';
 
 	private static array $params = [];
 
@@ -26,9 +26,9 @@ abstract class Common extends Acl {
             ? $match[1]
             : '';
 
-        $this->module    = strtolower($child_class_name);
-        $this->submodule = Registry::has('submodule') ? Registry::get('submodule') : null;
-        $this->recource  = $this->module && $this->submodule ? "{$this->module}_{$this->submodule}" : $this->module;
+        $this->module   = strtolower($child_class_name);
+        $this->section  = Registry::has('section') ? Registry::get('section') : null;
+        $this->recource = $this->module && $this->section ? "{$this->module}_{$this->section}" : $this->module;
     }
 
 
