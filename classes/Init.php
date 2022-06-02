@@ -207,7 +207,7 @@ class Init extends Db {
      * Логирование активности пользователей
      * @throws \Exception|\Psr\Container\ContainerExceptionInterface
      */
-    private function logRequest(): bool {
+    private function logRequest(): void {
 
         if ($this->config?->system?->log?->on &&
             $this->config?->system?->log?->access_file
@@ -222,19 +222,6 @@ class Init extends Db {
                     'user_id' => $this->auth->getUserId()
                 ]);
         }
-
-
-        // обновление записи о последней активности
-        $where = [
-            $this->db->quoteInto("refresh_token = ?", $this->auth->getRefreshToken()),
-            $this->db->quoteInto("user_id = ?",       $this->auth->getUserId()),
-        ];
-        $this->db->update('core_users_sessions', [
-            'count_requests'     => new \Zend_Db_Expr('count_requests + 1'),
-            'date_last_activity' => new \Zend_Db_Expr('NOW()')
-        ], $where);
-
-        return true;
     }
 
 

@@ -65,7 +65,7 @@ $config_inline = [
             'adapter' => 'Pdo_Mysql',
             'params'  => [
                 'charset'          => 'utf8',
-                'adapterNamespace' => '\\Core3\\Classes\\Db_Adapter'
+                'adapterNamespace' => '\\Core3\\Classes\\Db\\Adapter'
             ],
         ],
         'temp' => sys_get_temp_dir() ?: "/tmp",

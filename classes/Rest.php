@@ -50,7 +50,11 @@ class Rest extends Common {
             ],
 
             '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)~' => [
-                'GET' => ['method' => 'getModule', 'params' => [1, 2]],
+                '*'  => ['method' => 'getModuleSection', 'params' => [1, 2]],
+            ],
+
+            '~^/core/handler/([a-z0-9_]+)/([a-z0-9_]+)~' => [
+                '*' => ['method' => 'getModuleHandler', 'params' => [1, 2]],
             ],
         ];
 
@@ -66,297 +70,15 @@ class Rest extends Common {
         $_POST    = [];
         $_REQUEST = [];
         $_FILES   = [];
+        $_COOKIE  = [];
 
-        $rest = new Rest();
+        $methods = new Rest\Methods();
 
-        if ( ! method_exists($rout['method'], '__call') && ! is_callable([$rest, $rout['method']])) {
+        if ( ! method_exists($rout['method'], '__call') && ! is_callable([$methods, $rout['method']])) {
             throw new HttpException("Incorrect method", 'incorrect_method', 500);
         }
 
-        return call_user_func_array([$rest, $rout['method']], $rout['params']);
-    }
-
-
-    /**
-     * Авторизация по email
-     * @param array $params
-     * @return array
-     * @throws \Exception
-     * @throws \Zend_Db_Adapter_Exception|\Zend_Exception
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @OA\Post(
-     *   path    = "/client/auth/email",
-     *   tags    = { "Доступ" },
-     *   summary = "Авторизация по email",
-     *   @OA\RequestBody(
-     *     description = "Данные для входа",
-     *     required    = true,
-     *     @OA\MediaType(
-     *       mediaType = "application/json",
-     *       @OA\Schema(type = "object", example = { "email" = "client@gmail.com", "password" = "197nmy4t70yn3v285v2n30304m3v204304" })
-     *     )
-     *   ),
-     *   @OA\Response(
-     *     response    = "200",
-     *     description = "Вебтокен клиента",
-     *     @OA\MediaType(
-     *       mediaType = "application/json",
-     *       @OA\Schema(type = "object", example = { "wetoken" = "xxxxxxxxxxxxxx" } )
-     *     )
-     *   ),
-     *   @OA\Response(
-     *     response    = "400",
-     *     description = "Отправленные данные некорректны",
-     *     @OA\MediaType(
-     *       mediaType = "application/json",
-     *       @OA\Schema(ref = "#/components/schemas/Error")
-     *     )
-     *   )
-     * )
-     */
-    public function login(array $params): array {
-
-        HttpValidator::testParameters([
-            'login'    => 'req,string',
-            'password' => 'req,string',
-            'fp'       => 'req,string',
-        ], $params);
-
-        $user = $this->modAdmin->modelUsers->getRowByLoginEmail($params['login']);
-
-        if ( ! $user) {
-            throw new HttpException($this->_('Пользователя с таким логином нет'), 'login_not_found', 400);
-        }
-
-        if ($user->is_active_sw == 'N') {
-            throw new HttpException($this->_('Этот пользователь деактивирован'), 'user_inactive', 400);
-        }
-
-        if ($user->pass != Tools::passSalt($params['password'])) {
-            throw new HttpException($this->_('Неверный пароль'), 'pass_incorrect', 400);
-        }
-
-
-        $user_session = $this->modAdmin->modelUsersSession->createRow([
-            'user_id'            => $user->id,
-            'fingerprint'        => $params['fp'],
-            'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
-            'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
-            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
-        ]);
-        $session_id = $user_session->save();
-
-
-        $refresh_token = $this->getRefreshToken($user->login, $session_id);
-        $access_token  = $this->getAccessToken($user->login, $session_id);
-
-        $user_session->token_hash   = crc32($refresh_token->toString());
-        $user_session->date_expired = $refresh_token->format('Y-m-d H:i:s');
-        $user_session->save();
-
-
-        return [
-            'refresh_token' => $refresh_token->toString(),
-            'access_token'  => $access_token->toString(),
-        ];
-    }
-
-
-    /**
-     * Обновление токена
-     * @param array $params
-     * @return array
-     * @throws HttpException
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     */
-    public function refreshToken(array $params): array {
-
-        HttpValidator::testParameters([
-            'refresh_token' => 'req,string',
-            'fp'            => 'req,string',
-        ], $params);
-
-
-        $sign      = $this->config?->system?->auth?->token_sign ?: '';
-        $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
-
-        try {
-            $decoded    = JWT::decode($params['refresh_token'], new Key($sign, $algorithm));
-            $session_id = $decoded['sid'] ?? 0;
-            $token_iss  = $decoded['iss'] ?? 0;
-            $token_exp  = $decoded['ext'] ?? 0;
-
-        } catch (\Exception $e) {
-            throw new HttpException($this->_('Токен не прошел валидацию'), 'token_invalid', 403);
-        }
-
-        if (empty($session_id) || ! is_numeric($session_id)) {
-            throw new HttpException($this->_('Некорректный токен'), 'token_incorrect', 400);
-        }
-
-        if ($token_exp < time() ||
-            $token_iss != $_SERVER['SERVER_NAME']
-        ) {
-            throw new HttpException($this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive', 403);
-        }
-
-
-
-        $session = $this->modAdmin->modelUsersSession->find($session_id)->current();
-
-        if (empty($session)) {
-            throw new HttpException($this->_('Сессия не найдена'), 'session_not_found', 400);
-        }
-
-        if ($session->fingerprint != $params['fp']) {
-            // TODO Добавить оповещение о перехвате токена
-            throw new HttpException($this->_('Некорректный отпечаток системы'), 'fingerprint_invalid', 403);
-        }
-
-        if ($session->token_hash != crc32($params['refresh_token'])) {
-            // TODO Добавить оповещение о перехвате токена
-            throw new HttpException($this->_('Токен не активен'), 'token_invalid', 403);
-        }
-
-        if ($session->is_active_sw == 'N' || $session->date_expired < date('Y-m-d H:i:s')) {
-            throw new HttpException($this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive', 403);
-        }
-
-
-        $user = $this->modAdmin->modelUsers->find($session->user_id)->current();
-
-        $refresh_token = $this->getRefreshToken($user->login, $session_id);
-        $access_token  = $this->getAccessToken($user->login, $session_id);
-
-        $session->client_ip    = $_SERVER['REMOTE_ADDR'] ?? null;
-        $session->agent_name   = $_SERVER['HTTP_USER_AGENT'] ?? null;
-        $session->token_hash   = crc32($refresh_token->toString());
-        $session->date_expired = $refresh_token->dateExpired()->format('Y-m-d H:i:s');
-        $session->save();
-
-
-
-        return [
-            'refresh_token' => $refresh_token->toString(),
-            'access_token'  => $access_token->toString(),
-        ];
-    }
-
-
-    /**
-     * Регистрация с помощью email
-     * @param $params
-     * @return string[]
-     * @throws HttpException
-     * @throws \Zend_Db_Adapter_Exception
-     * @throws \Zend_Exception
-     *
-     * @OA\Post(
-     *   path    = "/client/registration/email",
-     *   tags    = { "Доступ" },
-     *   summary = "Регистрация с помощью email",
-     *   @OA\RequestBody(
-     *     required = true,
-     *     @OA\MediaType(
-     *       mediaType = "application/json",
-     *       @OA\Schema(type = "object", example =
-     *         {
-     *           "email": "client@gmail.com",
-     *           "lname": "Фамилия",
-     *           "code": "100500",
-     *           "password": "nty0473vy24t7ynv2304t750vm3t5"
-     *         }
-     *       )
-     *     )
-     *   ),
-     *   @OA\Response(
-     *     response    = "200",
-     *     description = "Успешное выполнение",
-     *     @OA\MediaType(
-     *       mediaType = "application/json",
-     *       @OA\Schema(type = "object", example = { "webtoken" = "xxxxxxxxx" } )
-     *     )
-     *   ),
-     *   @OA\Response(
-     *     response    = "400",
-     *     description = "Отправленные данные некорректны",
-     *     @OA\MediaType(
-     *       mediaType = "application/json",
-     *       @OA\Schema(ref = "#/components/schemas/Error")
-     *     )
-     *   )
-     * )
-     */
-    public function registrationEmail(array $params) : array {
-
-        HttpValidator::testParameters([
-            'email'    => 'req,string(1-255),email',
-            'login'    => 'req,string(1-255)',
-            'name'     => 'string(1-255)',
-            'password' => 'req,string(1-255)',
-        ], $params);
-
-        $params['lname'] = htmlspecialchars($params['lname']);
-
-        $client = $this->modClients->getClientByEmail($params['email']);
-
-        if ($client instanceof Clients\Client) {
-            if ($client->status !== 'new') {
-                throw new HttpException('Пользователь с таким email уже зарегистрирован', 'email_isset', 400);
-            }
-
-            if ( ! $client->reg_code ||
-                ! $client->reg_expired ||
-                $client->reg_code != $params['code'] ||
-                $client->reg_expired <= date('Y-m-d H:i:s')
-            ) {
-                throw new HttpException('Указан некорректный код, либо его действие закончилось', 'code_incorrect', 400);
-            }
-
-        } else {
-            throw new HttpException('Введите email и получите код регистрации', 'email_not_found', 400);
-        }
-
-        $client->update([
-            'status'      => 'active',
-            'lastname'    => $params['lname'],
-            'pass'        => \Tool::pass_salt($params['password']),
-            'reg_code'    => null,
-            'reg_expired' => null,
-        ]);
-
-
-
-        $user_session = $this->modAdmin->dataUsers->createRow([
-            'user_id'            => $user->id,
-            'refresh_token'      => $refresh_token->toString(),
-            'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
-            'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
-            'date_expired'       => date('Y-m-d H:i:s', $exp->getTimestamp()),
-            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
-        ])->save();
-
-
-        $refresh_token = $this->createToken($user->id, $user->login);
-        $access_token  = $this->getAccessToken($user->id, $user->login);
-        $exp           = $refresh_token->claims()->get('exp');
-
-        $user_session = $this->modAdmin->dataUsersSession->createRow([
-            'user_id'            => $user->id,
-            'refresh_token'      => $refresh_token->toString(),
-            'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
-            'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
-            'date_expired'       => date('Y-m-d H:i:s', $exp->getTimestamp()),
-            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
-        ])->save();
-
-        setcookie("Core-Refresh-Token", $refresh_token, time() + 157680000, '/core', null, false);
-
-        return [
-            'refresh_token' => $refresh_token->toString(),
-            'access_token'  => $access_token->toString(),
-        ];
+        return call_user_func_array([$methods, $rout['method']], $rout['params']);
     }
 
 
@@ -372,6 +94,11 @@ class Rest extends Common {
             ? $_SERVER['HTTP_ACCESS_TOKEN']
             : '';
 
+        // проверяем, есть ли в запросе токен
+        $access_token = empty($access_token) && ! empty($_COOKIE['Core-Access-Token'])
+            ? $_COOKIE['Core-Access-Token']
+            : $access_token;
+
         $auth = $access_token
             ? $this->getAuthByToken($access_token)
             : null;
@@ -385,76 +112,9 @@ class Rest extends Common {
 
 
     /**
-     * @return array[]
-     */
-    public function getCabinet(): array {
-
-        return [
-            'user' => [
-                'id'     => $this->auth->getUserId(),
-                'name'   => $this->auth->getUserName(),
-                'login'   => $this->auth->getUserLogin(),
-                'avatar' => '',
-            ],
-            'system'  => [
-                'name' => $this->config?->system?->name ?? ''
-            ],
-            'modules' => [],
-        ];
-    }
-
-
-    /**
-     * @param string $user_login
-     * @param int    $session_id
-     * @return string
-     * @throws HttpException
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     */
-    private function getRefreshToken(string $user_login, int $session_id): string {
-
-        $refresh_token_exp = $this->config?->system?->auth?->refresh_token?->expiration ?: 5184000; // 90 дней
-
-        if ( ! is_numeric($refresh_token_exp)) {
-            throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.refresh_token.expiration'), 'error_refresh_token', 500);
-        }
-
-        $date_refresh_token_exp = (new \DateTime())->modify("+{$refresh_token_exp} second");
-        $refresh_token          = $this->createToken($user_login, $session_id, $date_refresh_token_exp);
-
-        return $refresh_token;
-    }
-
-
-    /**
-     * @param string $user_login
-     * @param int    $session_id
-     * @return string
-     * @throws HttpException
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     */
-    private function getAccessToken(string $user_login, int $session_id): string {
-
-        $access_token_exp  = $this->config?->system?->auth?->access_token?->expiration  ?: 1800; // 30 минут
-
-        if ( ! is_numeric($access_token_exp)) {
-            throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.access_token.expiration'), 'error_access_token', 500);
-        }
-
-        $date_access_token_exp = (new \DateTime())->modify("+{$access_token_exp} second");
-        $access_token          = $this->createToken($user_login, $session_id, $date_access_token_exp);
-
-        return $access_token;
-    }
-
-
-    /**
      * Авторизация по токену
      * @param string $access_token
      * @return Auth|null
-     * @throws HttpException
      */
     private function getAuthByToken(string $access_token): ?Auth {
 
@@ -462,7 +122,8 @@ class Rest extends Common {
             $sign      = $this->config?->system?->auth?->token_sign ?: '';
             $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
-            $decoded    = JWT::decode($access_token, new Key($sign, $algorithm));
+            $decoded    = Rest\Token::decode($access_token, $sign, $algorithm);
+
             $session_id = $decoded['sid'] ?? 0;
             $token_iss  = $decoded['iss'] ?? 0;
             $token_exp  = $decoded['exp'] ?? 0;
@@ -495,6 +156,7 @@ class Rest extends Common {
                 return null;
             }
 
+            $session->count_requests     = new \Zend_Db_Expr('count_requests + 1');
             $session->date_last_activity = new \Zend_Db_Expr('NOW()');
             $session->save();
 
@@ -586,193 +248,5 @@ class Rest extends Common {
         }
 
         return $result;
-    }
-
-
-    /**
-     * @param string    $user_login
-     * @param int       $session_id
-     * @param \DateTime $date_expired
-     * @return string
-     */
-    private function createToken(string $user_login, int $session_id, \DateTime $date_expired): string {
-
-        $sign      = $this->config?->system?->auth?->token_sign ?: '';
-        $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
-
-        return JWT::encode([
-            'iss' => $_SERVER['SERVER_NAME'] ?? '',
-            'aud' => $user_login,
-            'sid' => $session_id,
-            'iat' => time(),
-            'nbf' => time(),
-            'exp' => $date_expired->getTimestamp(),
-        ], $sign, $algorithm);
-    }
-
-
-    /**
-     * Получение контента модуля
-     * @param string $module
-     * @param string $section
-     * @return mixed
-     * @throws \Exception
-     */
-    private function getModuleContent(string $module, string $section) {
-
-        if ( ! $this->isModuleInstalled($module)) {
-            throw new \Exception(sprintf($this->_("Модуль %s не установлен в системе!"), $module));
-        }
-
-        if ( ! $this->isAllowed("{$module}_index")) {
-            throw new \Exception(sprintf($this->_("У вас нет доступа к модулю %s!"), $module));
-        }
-
-        if ( ! $this->isAllowed("{$module}_{$section}")) {
-            throw new \Exception(sprintf($this->_("У вас нет доступа к субмодулю %s!"), $section));
-        }
-
-
-        $location        = $this->getModuleLocation($module);
-        $controller_path = "{$location}/Controller.php";
-        if ( ! file_exists($controller_path)) {
-            throw new \Exception(sprintf($this->_("Файл %s не найден"), $controller_path));
-        }
-        require_once $controller_path;
-
-        $class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Controller';
-        if ( ! class_exists($class_name)) {
-            throw new \Exception(sprintf($this->_("Класс %s не найден"), $class_name));
-        }
-
-        $mod_methods    = get_class_methods($class_name);
-        $section_method = 'section' . ucfirst($section);
-        if (array_search($section_method, $mod_methods) === false) {
-            throw new \Exception(sprintf($this->_("В классе %s не найден метод %s"), $class_name, $section_method));
-        }
-
-
-        $controller = new $class_name();
-        return $controller->$section_method();
-    }
-
-
-    /**
-     * Получение контента модуля
-     * @param string $module
-     * @param string $section
-     * @return mixed
-     * @throws \Exception
-     */
-    private function getModuleContentMobile(string $module, string $section) {
-
-        if ( ! $this->isModuleInstalled($module)) {
-            throw new \Exception(sprintf($this->_("Модуль %s не установлен в системе!"), $module));
-        }
-
-        if ( ! $this->checkAcl('mod_' . $module . '_index')) {
-            throw new \Exception(sprintf($this->_("У вас нет доступа к модулю %s!"), $module));
-        }
-
-        if ( ! $this->checkAcl("mod_{$module}_{$section}")) {
-            throw new \Exception(sprintf($this->_("У вас нет доступа к субмодулю %s!"), $section));
-        }
-
-
-        $location        = $this->getModuleLocation($module);
-        $controller_path = "{$location}/Mobile.php";
-        if ( ! file_exists($controller_path)) {
-            throw new \Exception(sprintf($this->_("Файл %s не найден"), $controller_path));
-        }
-        require_once $controller_path;
-
-        $class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Mobile';
-        if ( ! class_exists($class_name)) {
-            throw new \Exception(sprintf($this->_("Класс %s не найден"), $class_name));
-        }
-
-        $mod_methods    = get_class_methods($class_name);
-        $section_method = 'section' . ucfirst($section);
-        if (array_search($section_method, $mod_methods) === false) {
-            throw new \Exception(sprintf($this->_("В классе %s не найден метод %s"), $class_name, $section_method));
-        }
-
-
-        $controller = new $class_name();
-        return $controller->$section_method();
-    }
-
-
-    /**
-     * Сохранение данных в модулях
-     *
-     * @param string   $module
-     * @param string   $method
-     *
-     * @return string
-     * @throws \Exception
-     */
-    private function handlerModule($module, $method) {
-
-        // Подключение файла с обработчиком
-        $location = $this->getModuleLocation($module);
-        $module_save_path = $location . '/Handler.php';
-        if ( ! file_exists($module_save_path)) {
-            throw new \Exception(sprintf($this->_('Не найден файл "%s" в модуле "%s"'), $module_save_path, $module));
-        }
-        require_once $module_save_path;
-
-
-        // Инифиализация обработчика
-        $handler_class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Handler';
-        if ( ! class_exists($handler_class_name)) {
-            throw new \Exception(sprintf($this->_('Не найден класс "%s" в модуле "%s"'), $handler_class_name, $module));
-        }
-
-
-        // Выполнение обработчика
-        $handler_class = new $handler_class_name();
-        if ( ! method_exists($handler_class, $method)) {
-            throw new \Exception(sprintf($this->_('Не найден метод "%s" в классе "%s"'), $method, $handler_class_name));
-        }
-
-        if ($_SERVER['REQUEST_METHOD'] == 'DELETE') {
-            $data = array();
-            parse_str(file_get_contents('php://input'), $data);
-        } elseif ($_SERVER['REQUEST_METHOD'] == 'GET') {
-            $data = $_GET;
-        } else {
-            $data = $_POST;
-        }
-
-        return $handler_class->$method($data);
-    }
-
-
-    /**
-     * @param  string $module
-     * @param  string $method
-     * @return bool
-     * @throws \Exception
-     */
-    private function issetHandlerModule($module, $method) {
-
-        $location = $this->getModuleLocation($module);
-
-        // Подключение файла с обработчиком
-        $module_save_path = $location . '/Handler.php';
-        if ( ! file_exists($module_save_path)) {
-            return false;
-        }
-        require_once $module_save_path;
-
-
-        // Инициализация обработчика
-        $handler_class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Handler';
-        if ( ! class_exists($handler_class_name)) {
-            return false;
-        }
-
-        return method_exists($handler_class_name, $method);
     }
 }

@@ -233,14 +233,9 @@ class Acl extends Db {
      */
 	public function isAllowed(string $resource, string $privilege = self::PRIVILEGE_READ): bool {
 
-        if ($this->auth) {
+        if ( ! $this->auth) {
             return false;
         }
-
-		if (($separator_pos = strrpos($resource, '___')) > 0) {
-			$resource = substr($resource, 0, $separator_pos);
-		}
-
 
 		if ($this->auth->isAdmin()) {
 			return true;

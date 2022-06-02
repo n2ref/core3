@@ -1,11 +1,11 @@
 <?php
-namespace Core3\Classes;
+namespace Core3\Classes\Db;
 
 
 /**
  *
  */
-class Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mysql {
+class Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mysql {
 
 	/**
 	 * Current Transaction Level
