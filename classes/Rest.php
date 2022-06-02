@@ -137,7 +137,28 @@ class Rest extends Common {
         }
 
 
-        return $this->createSession($user, $params['fp']);
+        $user_session = $this->modAdmin->modelUsersSession->createRow([
+            'user_id'            => $user->id,
+            'fingerprint'        => $params['fp'],
+            'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
+            'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
+            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
+        ]);
+        $session_id = $user_session->save();
+
+
+        $refresh_token = $this->getRefreshToken($user->login, $session_id);
+        $access_token  = $this->getAccessToken($user->login, $session_id);
+
+        $user_session->token_hash   = crc32($refresh_token->toString());
+        $user_session->date_expired = $refresh_token->format('Y-m-d H:i:s');
+        $user_session->save();
+
+
+        return [
+            'refresh_token' => $refresh_token->toString(),
+            'access_token'  => $access_token->toString(),
+        ];
     }
 
 
@@ -190,20 +211,36 @@ class Rest extends Common {
 
         if ($session->fingerprint != $params['fp']) {
             // TODO Добавить оповещение о перехвате токена
-            throw new HttpException($this->_('Некорректный отпечаток системы'), 'fingerprint_incorrect', 403);
+            throw new HttpException($this->_('Некорректный отпечаток системы'), 'fingerprint_invalid', 403);
+        }
+
+        if ($session->token_hash != crc32($params['refresh_token'])) {
+            // TODO Добавить оповещение о перехвате токена
+            throw new HttpException($this->_('Токен не активен'), 'token_invalid', 403);
         }
 
         if ($session->is_active_sw == 'N' || $session->date_expired < date('Y-m-d H:i:s')) {
             throw new HttpException($this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive', 403);
         }
 
-        $session->is_active_sw = 'N';
-        //$session->date_expired = 'N';
-        $session->save();
 
         $user = $this->modAdmin->modelUsers->find($session->user_id)->current();
 
-        return $this->createSession($user, $params['fp']);
+        $refresh_token = $this->getRefreshToken($user->login, $session_id);
+        $access_token  = $this->getAccessToken($user->login, $session_id);
+
+        $session->client_ip    = $_SERVER['REMOTE_ADDR'] ?? null;
+        $session->agent_name   = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        $session->token_hash   = crc32($refresh_token->toString());
+        $session->date_expired = $refresh_token->dateExpired()->format('Y-m-d H:i:s');
+        $session->save();
+
+
+
+        return [
+            'refresh_token' => $refresh_token->toString(),
+            'access_token'  => $access_token->toString(),
+        ];
     }
 
 
@@ -368,50 +405,48 @@ class Rest extends Common {
 
 
     /**
-     * @param \Zend_Db_Table_Row_Abstract $user
-     * @param string                      $fingerprint
-     * @return array
+     * @param string $user_login
+     * @param int    $session_id
+     * @return string
      * @throws HttpException
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    private function createSession(\Zend_Db_Table_Row_Abstract $user, string $fingerprint): array {
-
-        $user_session = $this->modAdmin->modelUsersSession->createRow([
-            'user_id'            => $user->id,
-            'fingerprint'        => $fingerprint,
-            'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
-            'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
-            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
-        ]);
-        $session_id = $user_session->save();
-
+    private function getRefreshToken(string $user_login, int $session_id): string {
 
         $refresh_token_exp = $this->config?->system?->auth?->refresh_token?->expiration ?: 5184000; // 90 дней
-        $access_token_exp  = $this->config?->system?->auth?->access_token?->expiration  ?: 1800;    // 30 минут
 
         if ( ! is_numeric($refresh_token_exp)) {
             throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.refresh_token.expiration'), 'error_refresh_token', 500);
         }
+
+        $date_refresh_token_exp = (new \DateTime())->modify("+{$refresh_token_exp} second");
+        $refresh_token          = $this->createToken($user_login, $session_id, $date_refresh_token_exp);
+
+        return $refresh_token;
+    }
+
+
+    /**
+     * @param string $user_login
+     * @param int    $session_id
+     * @return string
+     * @throws HttpException
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+    private function getAccessToken(string $user_login, int $session_id): string {
+
+        $access_token_exp  = $this->config?->system?->auth?->access_token?->expiration  ?: 1800; // 30 минут
+
         if ( ! is_numeric($access_token_exp)) {
             throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.access_token.expiration'), 'error_access_token', 500);
         }
 
+        $date_access_token_exp = (new \DateTime())->modify("+{$access_token_exp} second");
+        $access_token          = $this->createToken($user_login, $session_id, $date_access_token_exp);
 
-        $date_refresh_token_exp = (new \DateTime())->modify("+{$refresh_token_exp} second");
-        $date_access_token_exp  = (new \DateTime())->modify("+{$access_token_exp} second");
-
-        $refresh_token = $this->createToken($user->id, $user->login, $session_id, $date_refresh_token_exp);
-        $access_token  = $this->createToken($user->id, $user->login, $session_id, $date_access_token_exp);
-
-        $user_session->date_expired = $date_refresh_token_exp->format('Y-m-d H:i:s');
-        $user_session->save();
-
-
-        return [
-            'refresh_token' => $refresh_token,
-            'access_token'  => $access_token,
-        ];
+        return $access_token;
     }
 
 
@@ -555,13 +590,12 @@ class Rest extends Common {
 
 
     /**
-     * @param int       $user_id
      * @param string    $user_login
      * @param int       $session_id
      * @param \DateTime $date_expired
      * @return string
      */
-    private function createToken(int $user_id, string $user_login, int $session_id, \DateTime $date_expired): string {
+    private function createToken(string $user_login, int $session_id, \DateTime $date_expired): string {
 
         $sign      = $this->config?->system?->auth?->token_sign ?: '';
         $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
@@ -569,7 +603,6 @@ class Rest extends Common {
         return JWT::encode([
             'iss' => $_SERVER['SERVER_NAME'] ?? '',
             'aud' => $user_login,
-            'uid' => $user_id,
             'sid' => $session_id,
             'iat' => time(),
             'nbf' => time(),
