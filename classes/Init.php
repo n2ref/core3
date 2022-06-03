@@ -172,7 +172,7 @@ class Init extends Db {
             $result = $this->config?->system?->version ?? '--';
 
         // Getting information about installed modules
-        } elseif (isset($options['d']) || isset($options['info-installed-modules'])) {
+        } elseif (isset($options['n']) || isset($options['modules'])) {
             $result = $cli->getInstalledModules();
 
         // Control composer
@@ -187,8 +187,12 @@ class Init extends Db {
             }
 
         // Getting information about available system methods
-        } elseif (isset($options['n']) || isset($options['scan-cli-methods'])) {
+        } elseif (isset($options['l']) || isset($options['cli-methods'])) {
             $result = $cli->getCliMethods();
+
+        // Getting information about available system methods
+        } elseif (isset($options['a']) || isset($options['openapi'])) {
+            $result = $cli->getGenerateOpenapi();
 
         // Module run method
         } elseif ((isset($options['m']) || isset($options['module'])) &&

@@ -13,14 +13,15 @@ class Cli extends Db {
      */
     public function getOptions(): array {
 
-        $options = getopt('m:e:p:t:ndcvh', [
+        $options = getopt('m:e:p:l:nctavh', [
             'module:',
             'method:',
             'param:',
-            'host:',
-            'scan-cli-methods',
-            'info-installed-modules',
+            'cli-methods',
+            'modules',
             'composer',
+            'host',
+            'openapi',
             'version',
             'help',
         ]);
@@ -44,9 +45,10 @@ class Cli extends Db {
             " -e    --method                 Cli method name",
             " -p    --param                  Parameter in command",
             " -t    --host                   Section name in config file",
-            " -n    --scan-cli-methods       Getting information about available system methods",
-            " -d    --info-installed-modules Getting information about installed modules",
+            " -l    --cli-methods            Getting information about available system methods",
+            " -n    --modules                Getting information about installed modules",
             " -c    --composer               Control composer",
+            " -a    --openapi                Generate openapi-core3.json file",
             " -h    --help                   Help info",
             " -v    --version                Version info",
             '',
@@ -57,7 +59,7 @@ class Cli extends Db {
             "php index.php --composer --param update",
             "php index.php --composer --param search --param monolog",
             "php index.php --version",
-            "php index.php --scan-cli-methods",
+            "php index.php --cli-methods",
         ]);
     }
 
@@ -214,6 +216,15 @@ class Cli extends Db {
         }
 
         return $result;
+    }
+
+
+    /**
+     * @return string
+     */
+    public function getGenerateOpenapi(): string {
+
+        return '';
     }
 
 

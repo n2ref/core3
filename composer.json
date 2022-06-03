@@ -47,6 +47,7 @@
 
     "zf1/zend-config": "~1.12",
     "belhard/zend-db": "dev-master",
+    "zircote/swagger-php": "4.*",
 
     "monolog/monolog": "1.23.*",
     "guzzlehttp/guzzle": "6.5.0",

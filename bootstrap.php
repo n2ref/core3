@@ -18,21 +18,22 @@ if ( ! file_exists($conf_file)) {
 
 if (PHP_SAPI === 'cli') {
     //определяем имя секции для cli режима
-    $options = getopt('m:a:p:s:ndcvh', [
+    $options = getopt('m:e:p:l:nctavh', [
         'module:',
-        'action:',
+        'method:',
         'param:',
-        'scan-cli-actions',
-        'info-installed-modules',
+        'cli-methods',
+        'modules',
         'composer',
-        'section:',
+        'host',
+        'openapi',
         'version',
         'help',
     ]);
-    if (( ! empty($options['section']) && is_string($options['section'])) ||
-        ( ! empty($options['s']) && is_string($options['s']))
+    if (( ! empty($options['host']) && is_string($options['host'])) ||
+        ( ! empty($options['t']) && is_string($options['t']))
     ) {
-        $_SERVER['SERVER_NAME'] = ! empty($options['section']) ? $options['section'] : $options['s'];
+        $_SERVER['SERVER_NAME'] = ! empty($options['host']) ? $options['host'] : $options['t'];
     }
 
     // если выполняется действие с кампоузером, то дальше исполнять код не нужно

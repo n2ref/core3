@@ -1,0 +1,233 @@
+{
+    "openapi": "3.0.0",
+    "paths": {
+        "/core/auth/login": {
+            "post": {
+                "tags": [
+                    "Получение данных для выхода"
+                ],
+                "summary": "Авторизация по логину или email",
+                "description": "Авторизация по логину или email",
+                "operationId": "3a4ca229a5b277c2b6bf87db927387c6",
+                "requestBody": {
+                    "description": "Данные для входа",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "example": {
+                                    "login": "client@gmail.com",
+                                    "password": "197nmy4t70yn3v285v2n30304m3v204304",
+                                    "fp": "983r834jtyr0923v84ty0v234tmy"
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Токены для использования системы",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "example": {
+                                        "refresh_token": "xxxxxxxxxxxxxx",
+                                        "access_token": "xxxxxxxxxxxxxx"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Отправленные данные некорректны",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/core/auth/refresh": {
+            "post": {
+                "tags": [
+                    "Обновление ключей данных для использования системы"
+                ],
+                "summary": "Авторизация по логину или email",
+                "description": "Обновление токенов",
+                "operationId": "f2a0c77da9380490e239b939a3b12fc3",
+                "requestBody": {
+                    "description": "Данные для входа",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "example": {
+                                    "refresh_token": "197nmy4t70yn3v285v2n30304m3v204304",
+                                    "fp": "983r834jtyr0923v84ty0v234tmy"
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Токены для использования системы",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "example": {
+                                        "refresh_token": "xxxxxxxxxxxxxx",
+                                        "access_token": "xxxxxxxxxxxxxx"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Отправленные данные некорректны",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Отправленные данные не прошли валидацию",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/core/registration/email": {
+            "post": {
+                "tags": [
+                    "Доступ"
+                ],
+                "summary": "Регистрация с помощью email",
+                "description": "Регистрация с помощью email",
+                "operationId": "b0bb905d612c366623bab3f32c406910",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "example": {
+                                    "email": "client@gmail.com",
+                                    "lname": "Фамилия",
+                                    "code": "100500",
+                                    "password": "nty0473vy24t7ynv2304t750vm3t5",
+                                    "fp": "n7rtvy2tyv023tmyv3434"
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Токены для использования системы",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "example": {
+                                        "refresh_token": "xxxxxxxxxxxxxx",
+                                        "access_token": "xxxxxxxxxxxxxx"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Отправленные данные некорректны",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/core/mod/{name}/{section}": {
+            "get": {
+                "tags": [
+                    "Кабинет"
+                ],
+                "summary": "Запрос получения данных раздела модуля",
+                "description": "Запрос получения данных раздела модуля",
+                "operationId": "a1f8b66dcbd3741b5654264e0d3da523",
+                "parameters": [
+                    {
+                        "name": "Access-token",
+                        "in": "header",
+                        "description": "Токен доступа",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "path",
+                        "description": "Название модуля",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "section",
+                        "in": "path",
+                        "description": "Название раздела",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Данные модуля",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "example": []
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Отправленные данные не прошли валидацию",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

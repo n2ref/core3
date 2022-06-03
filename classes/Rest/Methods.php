@@ -3,7 +3,36 @@ namespace Core3\Classes\Rest;
 use Core3\Classes\Tools;
 use Core3\Classes\HttpValidator;
 use Core3\Exceptions\HttpException;
+use OpenApi\Annotations as OA;
 
+/**
+ * @url http://zircote.github.io/swagger-php/Getting-started.html
+ *
+ * @OA\Info(
+ *   title       = "Core3",
+ *   version     = "3.0",
+ *   description = "Система управления"
+ * )
+ * @OA\Server(
+ *   url = ""
+ * )
+ * @OA\Tag(
+ *   name        = "Доступ",
+ *   description = "Вход и регистрация"
+ * )
+ * @OA\Tag(
+ *   name        = "Кабинет",
+ *   description = "Управление личным кабинетом"
+ * )
+ * @OA\Schema(
+ *   schema   = "Error",
+ *   title    = "Ошибка",
+ *   required = { "status", "error_message", "error_code"},
+ *   @OA\Property(property = "status", type = "string"),
+ *   @OA\Property(property = "error_message", type = "string"),
+ *   @OA\Property(property = "error_code", type = "string")
+ * )
+ */
 
 
 /**
@@ -13,30 +42,30 @@ class Methods extends Common {
 
 
     /**
-     * Авторизация по email
+     * Авторизация по логину или email
      * @param array $params
      * @return array
      * @throws \Exception
      * @throws \Zend_Db_Adapter_Exception|\Zend_Exception
      * @throws \Psr\Container\ContainerExceptionInterface
      * @OA\Post(
-     *   path    = "/client/auth/email",
-     *   tags    = { "Доступ" },
-     *   summary = "Авторизация по email",
+     *   path    = "/core/auth/login",
+     *   tags    = { "Получение данных для выхода" },
+     *   summary = "Авторизация по логину или email",
      *   @OA\RequestBody(
      *     description = "Данные для входа",
      *     required    = true,
      *     @OA\MediaType(
      *       mediaType = "application/json",
-     *       @OA\Schema(type = "object", example = { "email" = "client@gmail.com", "password" = "197nmy4t70yn3v285v2n30304m3v204304" })
+     *       @OA\Schema(type = "object", example = { "login" = "client@gmail.com", "password" = "197nmy4t70yn3v285v2n30304m3v204304", "fp" = "983r834jtyr0923v84ty0v234tmy"})
      *     )
      *   ),
      *   @OA\Response(
      *     response    = "200",
-     *     description = "Вебтокен клиента",
+     *     description = "Токены для использования системы",
      *     @OA\MediaType(
      *       mediaType = "application/json",
-     *       @OA\Schema(type = "object", example = { "wetoken" = "xxxxxxxxxxxxxx" } )
+     *       @OA\Schema(type = "object", example = { "refresh_token" = "xxxxxxxxxxxxxx", "access_token" = "xxxxxxxxxxxxxx" } )
      *     )
      *   ),
      *   @OA\Response(
@@ -98,12 +127,49 @@ class Methods extends Common {
 
 
     /**
-     * Обновление токена
+     * Обновление токенов
      * @param array $params
      * @return array
-     * @throws HttpException
+     * @throws \Exception
+     * @throws \Zend_Db_Adapter_Exception|\Zend_Exception
      * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
+     * @OA\Post(
+     *   path    = "/core/auth/refresh",
+     *   tags    = { "Обновление ключей данных для использования системы" },
+     *   summary = "Авторизация по логину или email",
+     *   @OA\RequestBody(
+     *     description = "Данные для входа",
+     *     required    = true,
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(type = "object", example = { "refresh_token" = "197nmy4t70yn3v285v2n30304m3v204304", "fp" = "983r834jtyr0923v84ty0v234tmy"})
+     *     )
+     *   ),
+     *   @OA\Response(
+     *     response    = "200",
+     *     description = "Токены для использования системы",
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(type = "object", example = { "refresh_token" = "xxxxxxxxxxxxxx", "access_token" = "xxxxxxxxxxxxxx" } )
+     *     )
+     *   ),
+     *   @OA\Response(
+     *     response    = "400",
+     *     description = "Отправленные данные некорректны",
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(ref = "#/components/schemas/Error")
+     *     )
+     *   ),
+     *   @OA\Response(
+     *     response    = "403",
+     *     description = "Отправленные данные не прошли валидацию",
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(ref = "#/components/schemas/Error")
+     *     )
+     *   )
+     * )
      */
     public function refreshToken(array $params): array {
 
@@ -127,7 +193,7 @@ class Methods extends Common {
         }
 
         if (empty($session_id) || ! is_numeric($session_id)) {
-            throw new HttpException($this->_('Некорректный токен'), 'token_incorrect', 400);
+            throw new HttpException($this->_('Некорректный токен'), 'token_incorrect', 403);
         }
 
         if ($token_exp < time() ||
@@ -141,7 +207,7 @@ class Methods extends Common {
         $session = $this->modAdmin->modelUsersSession->find($session_id)->current();
 
         if (empty($session)) {
-            throw new HttpException($this->_('Сессия не найдена'), 'session_not_found', 400);
+            throw new HttpException($this->_('Сессия не найдена'), 'session_not_found', 403);
         }
 
         if ($session->fingerprint != $params['fp']) {
@@ -181,14 +247,13 @@ class Methods extends Common {
 
     /**
      * Регистрация с помощью email
-     * @param $params
-     * @return string[]
+     * @param array $params
+     * @return array
      * @throws HttpException
-     * @throws \Zend_Db_Adapter_Exception
-     * @throws \Zend_Exception
-     *
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      * @OA\Post(
-     *   path    = "/client/registration/email",
+     *   path    = "/core/registration/email",
      *   tags    = { "Доступ" },
      *   summary = "Регистрация с помощью email",
      *   @OA\RequestBody(
@@ -200,17 +265,18 @@ class Methods extends Common {
      *           "email": "client@gmail.com",
      *           "lname": "Фамилия",
      *           "code": "100500",
-     *           "password": "nty0473vy24t7ynv2304t750vm3t5"
+     *           "password": "nty0473vy24t7ynv2304t750vm3t5",
+     *           "fp": "n7rtvy2tyv023tmyv3434"
      *         }
      *       )
      *     )
      *   ),
      *   @OA\Response(
      *     response    = "200",
-     *     description = "Успешное выполнение",
+     *     description = "Токены для использования системы",
      *     @OA\MediaType(
      *       mediaType = "application/json",
-     *       @OA\Schema(type = "object", example = { "webtoken" = "xxxxxxxxx" } )
+     *       @OA\Schema(type = "object", example = { "refresh_token" = "xxxxxxxxxxxxxx", "access_token" = "xxxxxxxxxxxxxx" } )
      *     )
      *   ),
      *   @OA\Response(
@@ -230,6 +296,7 @@ class Methods extends Common {
             'login'    => 'req,string(1-255)',
             'name'     => 'string(1-255)',
             'password' => 'req,string(1-255)',
+            'fp'       => 'req,string(1-255)',
         ], $params);
 
         $params['lname'] = htmlspecialchars($params['lname']);
@@ -296,10 +363,45 @@ class Methods extends Common {
 
 
     /**
+     * Запрос получения данных о содержимом личного кабинета
      * @return array
      * @throws HttpException
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
+     * @OA\Get(
+     *   path    = "/core/cabinet",
+     *   tags    = { "Кабинет" },
+     *   summary = "Запрос получения данных о содержимом личного кабинета",
+     *   @OA\Parameter(
+     *     in = "header",
+     *     required = true,
+     *     name = "Access-token",
+     *     description = "Токен доступа",
+     *     @OA\Schema(type = "string")
+     *   ),
+     *   @OA\Response(
+     *     response    = "200",
+     *     description = "Токены для использования системы",
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(type = "object", example =
+     *          {
+     *              "user"    = { "id" = "", "name" = "", "login" = "", "avatar" = "", },
+     *              "system"  = { "name" = "NAME" },
+     *              "modules" = [ { "name" = "", "title" = "" } ]
+     *          }
+     *       )
+     *     )
+     *   ),
+     *   @OA\Response(
+     *     response    = "403",
+     *     description = "Отправленные данные не прошли валидацию",
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(ref = "#/components/schemas/Error")
+     *     )
+     *   )
+     * )
      */
     public function getCabinet(): array {
 
@@ -325,13 +427,55 @@ class Methods extends Common {
 
 
     /**
+     * Запрос получения данных раздела модуля
      * @param string $module_name
      * @param string $section_name
-     * @param array  $params
-     * @return int[]
+     * @return array
      * @throws HttpException
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
+     * @OA\Get(
+     *   path    = "/core/mod/{name}/{section}",
+     *   tags    = { "Кабинет" },
+     *   summary = "Запрос получения данных раздела модуля",
+     *   @OA\Parameter(
+     *     in = "header",
+     *     required = true,
+     *     name = "Access-token",
+     *     description = "Токен доступа",
+     *     @OA\Schema(type = "string")
+     *   ),
+     *   @OA\Parameter(
+     *     in = "path",
+     *     required = true,
+     *     name = "name",
+     *     description = "Название модуля",
+     *     @OA\Schema(type = "string")
+     *   ),
+     *   @OA\Parameter(
+     *     in = "path",
+     *     required = true,
+     *     name = "section",
+     *     description = "Название раздела",
+     *     @OA\Schema(type = "string")
+     *   ),
+     *   @OA\Response(
+     *     response    = "200",
+     *     description = "Данные модуля",
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(type = "object", example = { } )
+     *     )
+     *   ),
+     *   @OA\Response(
+     *     response    = "403",
+     *     description = "Отправленные данные не прошли валидацию",
+     *     @OA\MediaType(
+     *       mediaType = "application/json",
+     *       @OA\Schema(ref = "#/components/schemas/Error")
+     *     )
+     *   )
+     * )
      */
     public function getModuleSection(string $module_name, string $section_name): array {
 
