@@ -59,7 +59,12 @@ abstract class Common extends Acl {
 
             } elseif (strpos($param_name, 'mod') === 0) {
                 $module_name = strtolower(substr($param_name, 3));
-                $result      = $this->getModuleConstructor($module_name);
+                $result      = $this->getModuleController($module_name);
+
+
+            } elseif (strpos($param_name, 'handler') === 0) {
+                $module_name = strtolower(substr($param_name, 3));
+                $result      = $this->getModuleHandler($module_name);
 
             } elseif (strpos($param_name, 'worker') === 0) {
                 $worker_name = substr($param_name, 6);
@@ -93,7 +98,7 @@ abstract class Common extends Acl {
      * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
-    public function getModuleConstructor(string $module_name): mixed {
+    private function getModuleController(string $module_name): mixed {
 
         $location = $this->getModuleLocation($module_name);
 
@@ -147,7 +152,7 @@ abstract class Common extends Acl {
      * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
-    function getModel(string $module_name, string $model_name): \Zend_Db_Table_Abstract {
+    private function getModel(string $module_name, string $model_name): \Zend_Db_Table_Abstract {
 
         $module_name = strtolower($module_name);
         $model_name  = ucfirst($model_name);
@@ -187,5 +192,52 @@ abstract class Common extends Acl {
         }
 
         return $model_instance;
+    }
+
+
+    /**
+     * Обработчик модуля
+     * @param string $module
+     * @param string $method
+     * @return mixed
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws \Exception
+     */
+    private function getModuleHandler(string $module_name): mixed {
+
+        $location = $this->getModuleLocation($module_name);
+
+        if ( ! $location) {
+            throw new \Exception($this->_("Модуль \"%s\" не найден", [$module_name]));
+        }
+
+        if ($module_name === 'admin') {
+            require_once "{$location}/Handler.php";
+            $result = new Mod\Admin\Handler();
+
+        } else {
+            // Подключение файла с обработчиком
+            $location         = $this->getModuleLocation($module_name);
+            $module_save_path = "{$location}/Handler.php";
+
+            if ( ! file_exists($module_save_path)) {
+                throw new \Exception($this->_('Не найден файл "%s" в модуле "%s"', [$module_save_path, $module_name]));
+            }
+            require_once $module_save_path;
+
+
+            // Инициализация обработчика
+            $handler_class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module_name) . '\\Handler';
+            if ( ! class_exists($handler_class_name)) {
+                throw new \Exception($this->_('Не найден класс "%s" в модуле "%s"', [$handler_class_name, $module_name]));
+            }
+
+
+            // Выполнение обработчика
+            $result = new $handler_class_name();
+        }
+
+        return $result;
     }
 }

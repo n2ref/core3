@@ -25,7 +25,7 @@ class Rest extends Common {
                 'POST' => ['method' => 'login', 'params' => ['$php://input/json']],
             ],
             '~^/core/auth/logout$~' => [
-                'PUT' => ['method' => 'login', 'params' => ['$php://input/json']],
+                'PUT' => ['method' => 'logout', 'params' => []],
             ],
             '~^/core/auth/refresh$~' => [
                 'POST' => ['method' => 'refreshToken', 'params' => ['$php://input/json']],
@@ -190,6 +190,8 @@ class Rest extends Common {
                     if ( ! is_array($route)) {
                         break;
                     }
+
+                    $http_method = ! empty($route[$http_method]) ? $http_method : '*';
 
                     if ( ! isset($route[$http_method])) {
                         throw new HttpException("Incorrect http method", 'incorrect_http_method', 405);

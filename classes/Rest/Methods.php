@@ -127,6 +127,25 @@ class Methods extends Common {
 
 
     /**
+     * Выход из системы
+     * @return array
+     * @throws HttpException
+     */
+    public function logout(): array {
+
+        if (empty($this->auth)) {
+            throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
+        }
+
+        $session = $this->modAdmin->modelUsersSession->find($this->auth->getSessionId())->current();
+        $session->is_active_sw  = 'N';
+        $session->save();
+
+        return [];
+    }
+
+
+    /**
      * Обновление токенов
      * @param array $params
      * @return array
@@ -186,7 +205,7 @@ class Methods extends Common {
             $decoded    = Token::decode($params['refresh_token'], $sign, $algorithm);
             $session_id = $decoded['sid'] ?? 0;
             $token_iss  = $decoded['iss'] ?? 0;
-            $token_exp  = $decoded['ext'] ?? 0;
+            $token_exp  = $decoded['exp'] ?? 0;
 
         } catch (\Exception $e) {
             throw new HttpException($this->_('Токен не прошел валидацию'), 'token_invalid', 403);
@@ -291,6 +310,7 @@ class Methods extends Common {
      */
     public function registrationEmail(array $params) : array {
 
+        // TODO Доделать
         HttpValidator::testParameters([
             'email'    => 'req,string(1-255),email',
             'login'    => 'req,string(1-255)',
@@ -363,7 +383,43 @@ class Methods extends Common {
 
 
     /**
-     * Запрос получения данных о содержимом личного кабинета
+     * Отправка проверочного кода на email
+     * @param array $params
+     * @return array
+     */
+    public function registrationEmailCheck(array $params): array {
+
+        // TODO Доделать
+        return [];
+    }
+
+
+    /**
+     * Восстановление пароля при помощи email
+     * @param array $params
+     * @return array
+     */
+    public function restorePass(array $params): array {
+
+        // TODO Доделать
+        return [];
+    }
+
+
+    /**
+     * Отправка проверочного кода на email для восстановления пароля
+     * @param array $params
+     * @return array
+     */
+    public function restorePassCheck(array $params): array {
+
+        // TODO Доделать
+        return [];
+    }
+
+
+    /**
+     * Данные о содержимом личного кабинета
      * @return array
      * @throws HttpException
      * @throws \Psr\Container\ContainerExceptionInterface
@@ -416,7 +472,7 @@ class Methods extends Common {
                 'id'     => $this->auth->getUserId(),
                 'name'   => $this->auth->getUserName(),
                 'login'  => $this->auth->getUserLogin(),
-                'avatar' => '',
+                'avatar' => 'https://www.gravatar.com/avatar/9dd10adaa1333208b4cf36935c73bbd7',
             ],
             'system'  => [
                 'name' => $this->config?->system?->name ?: ''
@@ -427,7 +483,7 @@ class Methods extends Common {
 
 
     /**
-     * Запрос получения данных раздела модуля
+     * Данные о разделе модуля
      * @param string $module_name
      * @param string $section_name
      * @return array
@@ -491,7 +547,20 @@ class Methods extends Common {
             throw new HttpException($this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden', 403);
         }
 
+        // TODO Доделать
         return [11111];
+    }
+
+
+    /**
+     * Вызов метода для обработки данных
+     * @param array $params
+     * @return array
+     */
+    public function getModuleHandler(array $params): array {
+
+        // TODO Доделать
+        return [];
     }
 
 
@@ -540,6 +609,7 @@ class Methods extends Common {
             $modules[] = [
                 'name'            => $module['name'],
                 'title'           => $module['title'],
+                'icon'            => 'text_snippet',
                 'isset_home_page' => $module['is_home_page_sw'] == 'Y',
                 'sections'        => $sections,
             ];
