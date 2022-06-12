@@ -15,7 +15,7 @@ class Common extends Classes\Common {
      */
     protected function getRefreshToken(string $user_login, int $session_id): Token {
 
-        $refresh_token_exp = $this->config?->system?->auth?->refresh_token?->expiration ?: 5184000; // 90 дней
+        $refresh_token_exp = $this->config?->system?->auth?->refresh_token?->expiration ?: 7776000; // 90 дней
 
         if ( ! is_numeric($refresh_token_exp)) {
             throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.refresh_token.expiration'), 'error_refresh_token', 500);
