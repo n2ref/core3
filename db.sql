@@ -64,7 +64,7 @@ CREATE TABLE `core_modules_available` (
     KEY `last_user_id` (`last_user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE `core_modules_submodules` (
+CREATE TABLE `core_modules_sections` (
     `id` int unsigned NOT NULL AUTO_INCREMENT,
     `module_id` int unsigned NOT NULL,
     `name` varchar(255) NOT NULL,
@@ -135,19 +135,20 @@ CREATE TABLE `core_users` (
     CONSTRAINT `fk1_core_users` FOREIGN KEY (`role_id`) REFERENCES `core_roles` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-
-
 CREATE TABLE `core_users_sessions` (
-    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-    `user_id` int(11) unsigned NOT NULL,
-    `refresh_token` text NOT NULL,
-    `client_ip` varchar(60) NULL DEFAULT NULL,
-    `agent_name` varchar(500) NULL DEFAULT NULL,
+    `id` int unsigned NOT NULL AUTO_INCREMENT,
+    `user_id` int unsigned NOT NULL,
+    `fingerprint` varchar(255) NOT NULL,
+    `token_hash` varchar(100) DEFAULT NULL,
+    `client_ip` varchar(60) DEFAULT NULL,
+    `agent_name` varchar(500) DEFAULT NULL,
+    `count_requests` int unsigned DEFAULT '0',
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
-    `date_expired` timestamp NOT NULL,
+    `date_expired` timestamp NULL DEFAULT NULL,
     `date_last_activity` timestamp NULL DEFAULT NULL,
     `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     KEY `user_id` (`user_id`),
     CONSTRAINT `fk1_core_users_sessions` FOREIGN KEY (`user_id`) REFERENCES `core_users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
