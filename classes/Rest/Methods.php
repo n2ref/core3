@@ -467,6 +467,24 @@ class Methods extends Common {
 
         $modules = $this->getModules();
 
+        if ($this->auth->isAdmin()) {
+            $modules[] = [
+                'name'            => "admin",
+                'title'           => "Админ",
+                'icon'            => "",
+                'isset_home_page' => true,
+                'sections'        => [
+                    ["name" => "modules",  'title' => $this->_("Модули")],
+                    ["name" => "settings", 'title' => $this->_("Конфигурация")],
+                    ["name" => "enums",    'title' => $this->_("Справочники")],
+                    ["name" => "users",    'title' => $this->_("Пользователи")],
+                    ["name" => "roles",    'title' => $this->_("Роли")],
+                    ["name" => "monitor",  'title' => $this->_("Мониторинг")],
+                    ["name" => "audit",    'title' => $this->_("Аудит")],
+                ],
+            ];
+        }
+
         return [
             'user'    => [
                 'id'     => $this->auth->getUserId(),
