@@ -67,9 +67,9 @@ class Auth {
 
         $fname = $this->user['fname'] ?? '';
         $lname = $this->user['lname'] ?? '';
-        $mname = $this->user['mname'] ?? '';
+        //$mname = $this->user['mname'] ?? '';
 
-        return trim("{$lname} {$fname} {$mname}");
+        return trim("{$lname} {$fname}");
     }
 
 
