@@ -49,6 +49,10 @@ class Rest extends Common {
                 'GET' => ['method' => 'getCabinet', 'params' => []],
             ],
 
+            '~^/core/home$~' => [
+                'GET' => ['method' => 'getHome', 'params' => []],
+            ],
+
             '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)~' => [
                 '*'  => ['method' => 'getModuleSection', 'params' => [1, 2]],
             ],

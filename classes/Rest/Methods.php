@@ -501,6 +501,24 @@ class Methods extends Common {
 
 
     /**
+     * Домашняя страница
+     * @return array
+     * @throws HttpException
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+    public function getHome(): array {
+
+        if (empty($this->auth)) {
+            throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
+        }
+
+        // TODO Доделать
+        return ['home'];
+    }
+
+
+    /**
      * Данные о разделе модуля
      * @param string $module_name
      * @param string $section_name

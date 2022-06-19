@@ -218,12 +218,12 @@ class Init extends Db {
         ) {
             $this->log->file($this->config->system->log->access_file)
                 ->info($this->auth->getUserLogin(), [
-                    'ip'      => $_SERVER['REMOTE_ADDR'] ?? '',
-                    'sid'     => $this->auth->getSessionId(),
-                    'method'  => $_SERVER['REQUEST_METHOD'] ?? '',
-                    'port'    => $_SERVER['REMOTE_PORT'] ?? '',
-                    'query'   => $_SERVER['QUERY_STRING'] ?? '',
-                    'user_id' => $this->auth->getUserId()
+                    'ip'     => $_SERVER['REMOTE_ADDR'] ?? '',
+                    'sid'    => $this->auth->getSessionId(),
+                    'uid'    => $this->auth->getUserId(),
+                    'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+                    'uri'    => $_SERVER['REQUEST_URI'] ?? '',
+                    'query'  => $_SERVER['QUERY_STRING'] ?? '',
                 ]);
         }
     }
