@@ -788,7 +788,7 @@ class Modules extends \Common  {
 			SELECT m.id,
 				   m.name,
 				   m.title,
-				   m.is_home_page_sw,
+				   m.is_index_page_sw,
 				   ma.id    AS action_id,
 				   ma.name  AS action_name,
 				   ma.title AS action_title

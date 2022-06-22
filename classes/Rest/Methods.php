@@ -469,11 +469,11 @@ class Methods extends Common {
 
         if ($this->auth->isAdmin()) {
             $modules[] = [
-                'name'            => "admin",
-                'title'           => "Админ",
-                'icon'            => "",
-                'isset_home_page' => true,
-                'sections'        => [
+                'name'             => "admin",
+                'title'            => "Админ",
+                'icon'             => "",
+                'isset_index_page' => true,
+                'sections'         => [
                     ["name" => "modules",  'title' => $this->_("Модули")],
                     ["name" => "settings", 'title' => $this->_("Конфигурация")],
                     ["name" => "enums",    'title' => $this->_("Справочники")],
@@ -610,7 +610,7 @@ class Methods extends Common {
         $modules_raw = $this->db->fetchAll("
   			SELECT m.name,
   			       m.title,
-  			       m.is_home_page_sw,
+  			       m.is_index_page_sw,
 				   sm.name AS section_name,
 				   sm.title AS section_title
 			FROM core_modules AS m
@@ -643,11 +643,11 @@ class Methods extends Common {
             }
 
             $modules[] = [
-                'name'            => $module['name'],
-                'title'           => $module['title'],
-                'icon'            => 'text_snippet',
-                'isset_home_page' => $module['is_home_page_sw'] == 'Y',
-                'sections'        => $sections,
+                'name'             => $module['name'],
+                'title'            => $module['title'],
+                'icon'             => 'text_snippet',
+                'isset_index_page' => $module['is_index_page_sw'] == 'Y',
+                'sections'         => $sections,
             ];
         }
 
