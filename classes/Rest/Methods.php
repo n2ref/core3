@@ -645,7 +645,7 @@ class Methods extends Common {
             $modules[] = [
                 'name'             => $module['name'],
                 'title'            => $module['title'],
-                'icon'             => 'text_snippet',
+                'icon'             => 'fa-solid fa-file-lines',
                 'isset_index_page' => $module['is_index_page_sw'] == 'Y',
                 'sections'         => $sections,
             ];
