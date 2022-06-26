@@ -52,31 +52,10 @@ require_once $vendor_autoload_file;
 require_once 'autoload.php';
 
 
-// Конфиг приложения
-$config_inline = [
-    'system' => [
-        'name'     => 'CORE3',
-        'https'    => false,
-        'cache'    => [
-            'dir'     => realpath(__DIR__ . '/../../') . '/cache',
-            'options' => [],
-        ],
-        'debug'    => ['on' => false,],
-        'database' => [
-            'adapter' => 'Pdo_Mysql',
-            'params'  => [
-                'charset'          => 'utf8',
-                'adapterNamespace' => '\\Core3\\Classes\\Db\\Adapter'
-            ],
-        ],
-        'temp' => sys_get_temp_dir() ?: "/tmp",
-    ],
-];
 
 $core_conf_file = __DIR__ . "/../conf.ini";
 
 $config = new Classes\Config();
-$config->addArray($config_inline);
 $config->addFileIni($core_conf_file, $_SERVER['SERVER_NAME'] ?? 'production');
 $config->addFileIni($conf_file,      $_SERVER['SERVER_NAME'] ?? 'production');
 $config->setReadOnly();
