@@ -24,10 +24,10 @@ class Common extends Classes\Common {
         $sign      = $this->config?->system?->auth?->token_sign ?: '';
         $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
-        return new Token($user_login, $session_id, $refresh_token_exp, [
-            'sign'      => $sign,
-            'algorithm' => $algorithm,
-        ]);
+        $token = new Token((string)$sign, (string)$algorithm);
+        $token->set($user_login, $session_id, $refresh_token_exp);
+
+        return $token;
     }
 
 
@@ -50,9 +50,9 @@ class Common extends Classes\Common {
         $sign      = $this->config?->system?->auth?->token_sign ?: '';
         $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
-        return new Token($user_login, $session_id, $access_token_exp, [
-            'sign'      => $sign,
-            'algorithm' => $algorithm,
-        ]);
+        $token = new Token($sign, $algorithm);
+        $token->set($user_login, $session_id, $access_token_exp);
+
+        return $token;
     }
 }

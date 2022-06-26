@@ -9,31 +9,42 @@ use Firebase\JWT\Key;
 class Token {
 
     private \DateTime $date_expired;
-    private string    $token = '';
+    private string    $token     = '';
+    private string    $sign      = '';
+    private string    $algorithm = 'HS256';
+
+
+    /**
+     * @param string $sign
+     * @param string $algorithm
+     * @param string $iss
+     */
+    public function __construct(string $sign, string $algorithm = 'HS256', string $iss = '') {
+
+        $this->sign      = $sign;
+        $this->algorithm = $algorithm;
+        $this->iss       = $iss ?: ($_SERVER['SERVER_NAME'] ?? '');
+    }
 
 
     /**
      * @param string $user_login
      * @param int    $session_id
      * @param int    $expires_seconds
-     * @param array  $options
+     * @return void
      */
-    public function __construct(string $user_login, int $session_id, int $expires_seconds, array $options = []) {
+    public function set(string $user_login, int $session_id, int $expires_seconds): void {
 
         $this->date_expired = (new \DateTime())->modify("+{$expires_seconds} second");
 
-        $sign      = $options['sign'] ?? null;
-        $algorithm = $options['algorithm'] ?? 'HS256';
-        $issuer    = $options['iss'] ?? ($_SERVER['SERVER_NAME'] ?? '');
-
         $this->token = self::encode([
-            'iss' => $issuer,
+            'iss' => $this->iss,
             'aud' => $user_login,
             'sid' => $session_id,
             'iat' => time(),
             'nbf' => time(),
             'exp' => $this->date_expired->getTimestamp(),
-        ], $sign, $algorithm);
+        ], $this->sign ?? null, $this->algorithm);
     }
 
 
