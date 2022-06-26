@@ -135,6 +135,23 @@ CREATE TABLE `core_users` (
     CONSTRAINT `fk1_core_users` FOREIGN KEY (`role_id`) REFERENCES `core_roles` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE `core_users_files` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT,
+    `user_id` int unsigned NOT NULL,
+    `file_name` varchar(255) NOT NULL,
+    `file_size` int unsigned NOT NULL,
+    `file_hash` varchar(128) NOT NULL,
+    `file_type` varchar(255) DEFAULT NULL,
+    `field_name` varchar(255) DEFAULT NULL,
+    `thumb` longblob,
+    `content` longblob,
+    `date_last_activity` timestamp NULL DEFAULT NULL,
+    `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `user_id` (`user_id`),
+    CONSTRAINT `fk1_core_users_files` FOREIGN KEY (`user_id`) REFERENCES `core_users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE `core_users_sessions` (
     `id` int unsigned NOT NULL AUTO_INCREMENT,
     `user_id` int unsigned NOT NULL,
