@@ -1,0 +1,19 @@
+
+.php_scripts:
+  script:
+    - '! find . -type f -name "*.php" -exec php -d error_reporting=32767 -l {} \; | grep "^No syntax errors" -v'
+
+stages:
+  - test
+
+
+test_php_7.4:
+  stage: test
+  image: php:7.4
+  extends: .php_scripts
+
+
+test_php_8.0:
+  stage: test
+  image: php:8.0
+  extends: .php_scripts
