@@ -23,7 +23,9 @@ class Controller extends Common {
      * @throws \Exception
      * @return string
      */
-    public function sectionIndex() {
+    public function sectionIndex(): mixed {
+
+        return ["222", "111"];
 
         $panel = new Panel('admin');
         $panel->setTitle($this->_("События аудита"));

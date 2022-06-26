@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes\Rest;
+use Core3\Classes\HttpResponse;
 use Core3\Classes\Tools;
 use Core3\Classes\HttpValidator;
 use Core3\Exceptions\HttpException;
@@ -506,15 +507,42 @@ class Methods extends Common {
      * @throws HttpException
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws \Exception
      */
-    public function getHome(): array {
+    public function getHome(): mixed {
 
         if (empty($this->auth)) {
             throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
         }
 
-        // TODO Доделать
-        return ['home'];
+        $location        = DOC_ROOT . "/mod/home";
+        $controller_file = "{$location}/Controller.php";
+
+        if ( ! file_exists($controller_file)) {
+            throw new \Exception($this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", ['home']));
+        }
+
+        $autoload_file = "{$location}/vendor/autoload.php";
+
+        if (file_exists($autoload_file)) {
+            require_once $autoload_file;
+        }
+
+        require_once $controller_file;
+
+        $module_class_name = "\\Core3\\Mod\\Home\\Controller";
+
+        if ( ! class_exists($module_class_name)) {
+            throw new \Exception($this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", ['home']));
+        }
+
+        $controller = new $module_class_name();
+
+        if ( ! method_exists($controller, 'index')) {
+            throw new \Exception($this->_("Модуль \"%s\" сломан. Не найден метод index.", ['home']));
+        }
+
+        return $controller->index();
     }
 
 
@@ -522,10 +550,11 @@ class Methods extends Common {
      * Данные о разделе модуля
      * @param string $module_name
      * @param string $section_name
-     * @return array
+     * @return mixed
      * @throws HttpException
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
      * @OA\Get(
      *   path    = "/core/mod/{name}/{section}",
      *   tags    = { "Кабинет" },
@@ -560,6 +589,14 @@ class Methods extends Common {
      *     )
      *   ),
      *   @OA\Response(
+     *     response    = "200",
+     *     description = "Данные модуля",
+     *     @OA\MediaType(
+     *       mediaType = "text/html",
+     *       @OA\Schema(type = "object", example = { } )
+     *     )
+     *   ),
+     *   @OA\Response(
      *     response    = "403",
      *     description = "Отправленные данные не прошли валидацию",
      *     @OA\MediaType(
@@ -569,7 +606,7 @@ class Methods extends Common {
      *   )
      * )
      */
-    public function getModuleSection(string $module_name, string $section_name): array {
+    public function getModSection(string $module_name, string $section_name): mixed {
 
         if (empty($this->auth)) {
             throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
@@ -583,20 +620,40 @@ class Methods extends Common {
             throw new HttpException($this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden', 403);
         }
 
-        // TODO Доделать
-        return [11111];
+
+        $section_name = ucfirst(strtolower($section_name));
+
+        $controller = $this->getModuleController($module_name);
+        return $controller->{"section{$section_name}"}();
     }
 
 
     /**
      * Вызов метода для обработки данных
-     * @param array $params
+     * @param string $module_name
+     * @param string $section_name
      * @return array
+     * @throws HttpException
      */
-    public function getModuleHandler(array $params): array {
+    public function getModHandler(string $module_name, string $section_name): array {
 
-        // TODO Доделать
-        return [];
+        if (empty($this->auth)) {
+            throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
+        }
+
+        if ( ! $this->isAllowed($module_name)) {
+            throw new HttpException($this->_("У вас нет доступа к модулю %s!", [$module_name]), 'forbidden', 403);
+        }
+
+        if ( ! $this->isAllowed("{$module_name}_{$section_name}")) {
+            throw new HttpException($this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden', 403);
+        }
+
+
+        $section_name = ucfirst(strtolower($section_name));
+
+        $handler = $this->getModuleHandler($module_name);
+        return $handler->{"action{$section_name}"}();
     }
 
 

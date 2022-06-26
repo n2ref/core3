@@ -54,11 +54,11 @@ class Rest extends Common {
             ],
 
             '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)~' => [
-                '*'  => ['method' => 'getModuleSection', 'params' => [1, 2]],
+                '*'  => ['method' => 'getModSection', 'params' => [1, 2]],
             ],
 
             '~^/core/handler/([a-z0-9_]+)/([a-z0-9_]+)~' => [
-                '*' => ['method' => 'getModuleHandler', 'params' => [1, 2]],
+                '*' => ['method' => 'getModHandler', 'params' => [1, 2]],
             ],
         ];
 

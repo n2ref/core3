@@ -98,7 +98,7 @@ abstract class Common extends Acl {
      * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
-    private function getModuleController(string $module_name): mixed {
+    protected function getModuleController(string $module_name): mixed {
 
         $location = $this->getModuleLocation($module_name);
 
@@ -152,7 +152,7 @@ abstract class Common extends Acl {
      * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
-    private function getModel(string $module_name, string $model_name): \Zend_Db_Table_Abstract {
+    protected function getModel(string $module_name, string $model_name): \Zend_Db_Table_Abstract {
 
         $module_name = strtolower($module_name);
         $model_name  = ucfirst($model_name);
@@ -204,7 +204,7 @@ abstract class Common extends Acl {
      * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
-    private function getModuleHandler(string $module_name): mixed {
+    protected function getModuleHandler(string $module_name): mixed {
 
         $location = $this->getModuleLocation($module_name);
 
