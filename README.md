@@ -2,7 +2,17 @@ core3
 =====
 PHP framework for business application.
 
-NOTE: Currently it's russian framework. So you'll get no way to translate any inner locutions. In the future the translator will be available as a system module.
+
+TODO
+------------
+- Отправка email сообщений
+- Отправка логов в телеграм
+- Отслеживание обновления Access токена
+- Авторизация через соц сети
+- Добавление заголовка с Access токеном в запросы от клиента
+- Передача настроек на страницу логина
+- Добавить директорию логов по умолчанию
+
 
 Minimum Server Requirements
 ---------------------------
