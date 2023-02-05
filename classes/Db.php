@@ -1,13 +1,20 @@
 <?php
 namespace Core3\Classes;
+use Core3\Exceptions\DbException;
+use \Laminas\Db\Adapter\Adapter;
+use Laminas\Db\Adapter\Driver\Pdo\Result;
+use Laminas\Db\ResultSet\ResultSet;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
+use Laminas\Cache\Exception\ExceptionInterface;
 
 
 /**
- * @property \Zend_Db_Adapter_Abstract $db
+ * @property Adapter $db
  */
 abstract class Db extends System {
 
-	private static array $params = [];
+    private static array $params = [];
 
 
     /**
@@ -21,9 +28,10 @@ abstract class Db extends System {
 
     /**
      * @param string $param_name
-     * @return mixed|\Zend_Db_Adapter_Abstract|\Zend_Db_Table_Row_Abstract|null
-     * @throws \Zend_Db_Exception
-     * @throws \Exception
+     * @return Cache|Log|Adapter|mixed|null
+     * @throws ContainerExceptionInterface
+     * @throws ExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
 	public function __get(string $param_name) {
 
@@ -59,35 +67,35 @@ abstract class Db extends System {
 
 
     /**
-     * @return \Zend_Db_Adapter_Abstract
-     * @throws \Zend_Db_Exception
+     * @return Adapter
+     * @throws ContainerExceptionInterface
      */
-    public function initConnection(): \Zend_Db_Adapter_Abstract {
+    public function initConnection(): Adapter {
 
-        $settings = $this->config->system->database->toArray();
+        $settings = $this->config?->system?->database?->toArray();
 
-        return $this->setupConnection($settings);
+        return $this->setupConnection((array)$settings);
     }
 
 
     /**
      * Установка соединения с произвольной базой MySQL
-     * @param string $dbname
+     * @param string $database
      * @param string $username
      * @param string $password
      * @param array  $options
-     * @return \Zend_Db_Adapter_Abstract
-     * @throws \Zend_Db_Exception
+     * @return Adapter
      */
-    public function getConnection(string $dbname, string $username, string $password, array $options = []): \Zend_Db_Adapter_Abstract {
+    public function getConnection(string $database, string $username, string $password, array $options = []): Adapter {
 
         $option_params = $options['params'] ?? [];
 
         $config = [
-            'dbname'   => $dbname,
+            'driver'   => 'Pdo_Mysql',
+            'database' => $database,
             'username' => $username,
             'password' => $password,
-            'host'     => $option_params['host'] ?? 'localhost',
+            'hostname' => $option_params['host'] ?? 'localhost',
             'port'     => $option_params['port'] ?? 3306,
             'charset'  => $option_params['charset'] ?? 'utf8',
         ];
@@ -96,17 +104,19 @@ abstract class Db extends System {
             $config = array_merge($config, $option_params);
         }
 
-        $db = \Zend_Db::factory($options['adapter'] ?? 'Pdo_Mysql', $config);
-        $db->getConnection();
+        $adapter = new Adapter($config);
 
-        return $db;
+        // Снимает ограничение перебора данных
+        $adapter->getQueryResultSetPrototype()->buffer();
+
+        return $adapter;
     }
 
 
     /**
      * @param string $module_name
      * @return bool
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws ExceptionInterface
      */
     final public function isModuleActive(string $module_name): bool {
 
@@ -114,16 +124,18 @@ abstract class Db extends System {
             $is_active = true;
 
         } else {
-            $host = $this->config?->system?->database?->params?->dbname;
+            $host = $this->config?->system?->database?->params?->database;
             $key  = "core2_mod_is_active{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $is_active = (bool)$this->db->fetchOne("
-                    SELECT 1 
+                $module = $this->db->query("
+                    SELECT is_active_sw 
                     FROM core_modules 
                     WHERE name = ? 
                       AND is_active_sw = 'Y'
-                ", $module_name);
+                ", [$module_name])->current();
+
+                $is_active = (bool)$module?->is_active_sw;
 
                 $this->cache->save($key, $is_active, ['core3_mod']);
             } else {
@@ -138,7 +150,7 @@ abstract class Db extends System {
     /**
      * @param string $module_name
      * @return bool
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws ExceptionInterface
      */
     final public function isModuleInstalled(string $module_name): bool {
 
@@ -146,17 +158,18 @@ abstract class Db extends System {
 	        return true;
 
         } else {
-            $host = $this->config?->system?->database?->params?->dbname;
-            $key  = "core3_mod_installed_{$host}_{$module_name}";
+            $module_name = trim(strtolower($module_name));
+            $host        = $this->config?->system?->database?->params?->database;
+            $key         = "core3_mod_installed_{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $module_name = trim(strtolower($module_name));
-
-                $is_install = (bool)$this->db->fetchOne("
-                    SELECT 1 
+                $module = $this->db->query("
+                    SELECT 1 AS is_install
                     FROM core_modules 
                     WHERE name = ?
-                ", $module_name);
+                ", [$module_name])->current();
+
+                $is_install = (bool)$module?->is_install;
 
                 $this->cache->save($key, $is_install, ['core3_mod']);
 
@@ -172,8 +185,10 @@ abstract class Db extends System {
     /**
      * Возврат абсолютного пути до директории в которой находится модуль
      * @param string $module_name
-     * @return mixed
-     * @throws \Exception
+     * @return string
+     * @throws ContainerExceptionInterface
+     * @throws DbException
+     * @throws ExceptionInterface
      */
     final public function getModuleLocation(string $module_name): string {
 
@@ -185,39 +200,39 @@ abstract class Db extends System {
      * Возврат пути до директории в которой находится модуль
      * @param string $module_name
      * @return string
-     * @throws \Exception
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws DbException
+     * @throws ContainerExceptionInterface
+     * @throws ExceptionInterface
      */
     final public function getModuleFolder(string $module_name): string {
 
         $module_name = trim(strtolower($module_name));
 
         if ( ! $module_name) {
-            throw new \Exception($this->_("Не определено название модуля."));
+            throw new DbException($this->_("Не определено название модуля."));
         }
 
         if ($module_name == 'admin') {
             $folder = "core3/mod/admin";
 
         } else {
-            $host = $this->config?->system?->database?->params?->dbname;
+            $host = $this->config?->system?->database?->params?->database;
             $key  = "core3_mod_folder_{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $module = $this->db->fetchRow("
+                $module = $this->db->query("
                     SELECT is_system_sw, 
                            version 
                     FROM core_modules 
                     WHERE name = ?
-                ", $module_name);
+                ", [$module_name])->current();
 
                 if ($module) {
-                    $folder = $module['is_system_sw'] == "Y"
-                        ? "core3/mod/{$module_name}/v{$module['version']}"
-                        : "mod/{$module_name}/v{$module['version']}";
+                    $folder = $module->is_system_sw == "Y"
+                        ? "core3/mod/{$module_name}/v{$module->version}"
+                        : "mod/{$module_name}/v{$module->version}";
                 } else {
-                    throw new \Exception($this->_("Модуль %s не существует", [$module_name]), 404);
+                    throw new DbException($this->_("Модуль %s не существует", [$module_name]), 404);
                 }
 
                 $this->cache->save($key, $folder, ['core3_mod']);
@@ -237,21 +252,21 @@ abstract class Db extends System {
      * Возврат версии модуля
      * @param string $module_name
      * @return string
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws ExceptionInterface
      */
     final public function getModuleVersion(string $module_name): string {
 
-        $host = $this->config?->system?->database?->params?->dbname;
+        $host = $this->config?->system?->database?->params?->database;
         $key  = "core3_mod_version_{$host}_{$module_name}";
 
         if ( ! $this->cache->test($key)) {
-            $version = $this->db->fetchOne("
+            $module = $this->db->query("
                 SELECT version
                 FROM core_modules
                 WHERE name = ?
-            ", $module_name);
+            ", [$module_name])->current();
 
-            $this->cache->save($key, $version, ['core3_mod']);
+            $this->cache->save($key, $module?->version, ['core3_mod']);
 
         } else {
             $version = $this->cache->load($key);
@@ -262,51 +277,79 @@ abstract class Db extends System {
 
 
     /**
-     * @param array $settings
-     * @return \Zend_Db_Adapter_Abstract
-     * @throws \Zend_Db_Exception
-     * @throws \Exception
+     * @return void
      */
-    protected function setupConnection(array $settings): \Zend_Db_Adapter_Abstract {
+    public function beginTransaction(): void {
+
+        $this->db->driver->getConnection()->beginTransaction();
+    }
+
+
+    /**
+     * @return void
+     */
+    public function commit(): void {
+
+        $this->db->driver->getConnection()->commit();
+    }
+
+
+    /**
+     * @return void
+     */
+    public function rollback(): void {
+
+        $this->db->driver->getConnection()->rollback();
+    }
+
+
+    /**
+     * @param array $settings
+     * @return Adapter
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws DbException
+     */
+    protected function setupConnection(array $settings): Adapter {
 
         if (empty($settings['params'])) {
-            throw new \Exception($this->_('Не указано название базы данных'));
+            throw new DbException($this->_('Не указано название базы данных'));
         }
-        if (empty($settings['params']['dbname'])) {
-            throw new \Exception($this->_('Не указано название базы данных'));
+        if (empty($settings['params']['database'])) {
+            throw new DbException($this->_('Не указано название базы данных'));
         }
         if (empty($settings['params']['username'])) {
-            throw new \Exception($this->_('Не указано логин для подключения к базе данных'));
+            throw new DbException($this->_('Не указано логин для подключения к базе данных'));
         }
         if ( ! isset($settings['params']['password'])) {
-            throw new \Exception($this->_('Не указан пароль для подключения базе данных'));
+            throw new DbException($this->_('Не указан пароль для подключения базе данных'));
         }
 
-        $dbname   = $settings['params']['dbname'];
+        $database = $settings['params']['database'];
         $username = $settings['params']['username'];
         $password = $settings['params']['password'];
 
-        $db = $this->getConnection($dbname, $username, $password, $settings);
+        $db = $this->getConnection($database, $username, $password, $settings);
 
         if ($this->config?->system?->timezone) {
-            $db->query("SET time_zone = '{$this->config->system->timezone}'");
+            $db->query("SET time_zone = ?", [$this->config->system->timezone]);
         }
 
         if ( ! empty($settings['sql_mode'])) {
-            $db->query("SET SESSION sql_mode = ?", $settings['sql_mode']);
+            $db->query("SET SESSION sql_mode = ?", [$settings['sql_mode']]);
         }
 
         if ($this->config?->log?->profile?->on &&
             $this->config?->log?->profile?->mysql
         ) {
-            $db->query("set profiling=1");
+            $db->query("set profiling = 1");
             $db->query("set profiling_history_size = 100");
         }
 
-
-        \Zend_Db_Table::setDefaultAdapter($db);
-
+        // elsewhere in code, in a bootstrap
+        \Laminas\Db\TableGateway\Feature\GlobalAdapterFeature::setStaticAdapter($db);
         Registry::set('db', $db);
+
         return $db;
     }
 }

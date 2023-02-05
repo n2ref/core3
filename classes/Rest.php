@@ -1,11 +1,7 @@
 <?php
 namespace Core3\Classes;
-use Core3\Mod\Admin;
 use Core3\Exceptions\HttpException;
-
-use Firebase\JWT\ExpiredException;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+use Laminas\Db\Sql\Expression;
 
 
 /**
@@ -144,7 +140,7 @@ class Rest extends Common {
 
 
 
-            $session = $this->modAdmin->modelUsersSession->find($session_id)->current();
+            $session = $this->modAdmin->tableUsersSession->getRowById($session_id);
 
             if (empty($session) ||
                 $session->is_active_sw == 'N' ||
@@ -154,14 +150,14 @@ class Rest extends Common {
             }
 
 
-            $user = $this->modAdmin->modelUsers->find($session->user_id)->current();
+            $user = $this->modAdmin->tableUsers->getRowById($session->user_id);
 
             if (empty($user) && $user->is_active_sw == 'N') {
                 return null;
             }
 
-            $session->count_requests     = new \Zend_Db_Expr('count_requests + 1');
-            $session->date_last_activity = new \Zend_Db_Expr('NOW()');
+            $session->count_requests     = (int)$session->count_requests + 1;
+            $session->date_last_activity = new Expression('NOW()');
             $session->save();
 
             return new Auth($user->toArray(), $session->toArray());

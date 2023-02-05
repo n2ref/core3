@@ -272,7 +272,7 @@ class ModAjax extends ajaxFunc {
                 $is_duplicate_enum = $this->db->fetchOne("
                     SELECT 1
                     FROM core_enum
-                    WHERE global_name = ?
+                    WHERE code_name = ?
                       AND id != ?
                 ", array(
                     $data['control']['global_id'],

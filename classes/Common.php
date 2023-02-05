@@ -1,6 +1,12 @@
 <?php
 namespace Core3\Classes;
+use Core3\Exceptions\DbException;
+use Core3\Exceptions\RuntimeException;
 use Core3\Mod;
+use Laminas\Cache\Exception\ExceptionInterface;
+use Laminas\Db\TableGateway\AbstractTableGateway;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
 /**
  * @property Mod\Admin\Controller $modAdmin
@@ -43,9 +49,10 @@ abstract class Common extends Acl {
 
     /**
      * @param string $param_name
-     * @return mixed|void|\Zend_Db_Adapter_Abstract|\Zend_Db_Table_Row_Abstract|null
+     * @return Cache|Log|\Laminas\Db\Adapter\Adapter|AbstractTableGateway|mixed|null
      * @throws \Laminas\Cache\Exception\ExceptionInterface
-     * @throws \Zend_Db_Exception
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
     public function __get(string $param_name) {
 
@@ -53,9 +60,9 @@ abstract class Common extends Acl {
             $result = self::$params[$param_name];
 
         } else {
-            if (strpos($param_name, 'model') === 0) {
-                $model_name = substr($param_name, 5);
-                $result     = $this->getModel($this->module, $model_name);
+            if (strpos($param_name, 'table') === 0) {
+                $table_name = substr($param_name, 5);
+                $result     = $this->getTable($this->module, $table_name);
 
             } elseif (strpos($param_name, 'mod') === 0) {
                 $module_name = strtolower(substr($param_name, 3));
@@ -68,8 +75,12 @@ abstract class Common extends Acl {
 
             } elseif (strpos($param_name, 'worker') === 0) {
                 $worker_name = substr($param_name, 6);
-                $result      = $this->getModel($this->module, $worker_name);
+                $result      = $this->getTable($this->module, $worker_name);
 
+            }
+
+            if ( ! empty($result)) {
+                self::$params[$param_name] = $result;
             } else {
                 $result = parent::__get($param_name);
             }
@@ -103,7 +114,7 @@ abstract class Common extends Acl {
         $location = $this->getModuleLocation($module_name);
 
         if ( ! $location) {
-            throw new \Exception($this->_("Модуль \"%s\" не найден", [$module_name]));
+            throw new RuntimeException($this->_("Модуль \"%s\" не найден", [$module_name]));
         }
 
 
@@ -113,13 +124,13 @@ abstract class Common extends Acl {
 
         } else {
             if ( ! $this->isModuleActive($module_name)) {
-                throw new \Exception($this->_("Модуль \"%s\" не активен", [$module_name]));
+                throw new RuntimeException($this->_("Модуль \"%s\" не активен", [$module_name]));
             }
 
             $controller_file = "{$location}/Controller.php";
 
             if ( ! file_exists($controller_file)) {
-                throw new \Exception($this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", [$module_name]));
+                throw new RuntimeException($this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", [$module_name]));
             }
 
             $autoload_file = "{$location}/vendor/autoload.php";
@@ -133,7 +144,7 @@ abstract class Common extends Acl {
             $module_class_name = "\\Core3\\Mod\\" . ucfirst($module_name) . "\\Controller";
 
             if ( ! class_exists($module_class_name)) {
-                throw new \Exception($this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", [$module_name]));
+                throw new RuntimeException($this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", [$module_name]));
             }
 
             $result = new $module_class_name();
@@ -146,13 +157,13 @@ abstract class Common extends Acl {
     /**
      * @param string $module_name
      * @param string $model_name
-     * @return \Zend_Db_Table_Abstract
+     * @return AbstractTableGateway
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
-    protected function getModel(string $module_name, string $model_name): \Zend_Db_Table_Abstract {
+    protected function getTable(string $module_name, string $model_name): AbstractTableGateway {
 
         $module_name = strtolower($module_name);
         $model_name  = ucfirst($model_name);
@@ -160,24 +171,24 @@ abstract class Common extends Acl {
         $location = $this->getModuleLocation($module_name);
 
         if ( ! $location) {
-            throw new \Exception($this->_('Модуль "%s" не найден', [$module_name]));
+            throw new RuntimeException($this->_('Модуль "%s" не найден', [$module_name]));
         }
 
         if ( ! $this->isModuleActive($module_name)) {
-            throw new \Exception($this->_('Модуль "%s" не активен', [$module_name]));
+            throw new RuntimeException($this->_('Модуль "%s" не активен', [$module_name]));
         }
 
-        $model_class = '\\Core3\\Mod\\' . ucfirst($module_name). '\\Model\\' . $model_name;
-        $model_file  = "{$location}/Model/{$model_name}.php";
+        $table_class = '\\Core3\\Mod\\' . ucfirst($module_name). '\\Tables\\' . $model_name;
+        $table_file  = "{$location}/tables/{$model_name}.php";
 
-        if ( ! file_exists($model_file)) {
-            throw new \Exception($this->_('Не найден файл модели: %s', [$model_file]));
+        if ( ! file_exists($table_file)) {
+            throw new RuntimeException($this->_('Не найден файл таблицы: %s', [$table_file]));
         }
 
-        require_once $model_file;
+        require_once $table_file;
 
-        if ( ! class_exists($model_class)) {
-            throw new \Exception($this->_('Не найден класс модели %s', [$model_class]));
+        if ( ! class_exists($table_class)) {
+            throw new RuntimeException($this->_('Не найден класс таблицы %s', [$table_class]));
         }
 
 
@@ -185,31 +196,32 @@ abstract class Common extends Acl {
             $this->initConnection();
         }
 
-        $model_instance = new $model_class();
+        $table_instance = new $table_class();
 
-        if ( ! $model_instance instanceof \Zend_Db_Table_Abstract) {
-            throw new \Exception($this->_('Некорректный класс модели %s', [$model_class]));
+        if ( ! $table_instance instanceof AbstractTableGateway) {
+            throw new RuntimeException($this->_('Некорректный класс таблицы %s', [$table_class]));
         }
 
-        return $model_instance;
+        return $table_instance;
     }
 
 
     /**
      * Обработчик модуля
-     * @param string $module
-     * @param string $method
+     * @param string $module_name
      * @return mixed
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     * @throws \Exception
+     * @throws ExceptionInterface
+     * @throws RuntimeException
+     * @throws DbException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     protected function getModuleHandler(string $module_name): mixed {
 
         $location = $this->getModuleLocation($module_name);
 
         if ( ! $location) {
-            throw new \Exception($this->_("Модуль \"%s\" не найден", [$module_name]));
+            throw new RuntimeException($this->_("Модуль \"%s\" не найден", [$module_name]));
         }
 
         if ($module_name === 'admin') {
@@ -222,7 +234,7 @@ abstract class Common extends Acl {
             $module_save_path = "{$location}/Handler.php";
 
             if ( ! file_exists($module_save_path)) {
-                throw new \Exception($this->_('Не найден файл "%s" в модуле "%s"', [$module_save_path, $module_name]));
+                throw new RuntimeException($this->_('Не найден файл "%s" в модуле "%s"', [$module_save_path, $module_name]));
             }
             require_once $module_save_path;
 
@@ -230,7 +242,7 @@ abstract class Common extends Acl {
             // Инициализация обработчика
             $handler_class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module_name) . '\\Handler';
             if ( ! class_exists($handler_class_name)) {
-                throw new \Exception($this->_('Не найден класс "%s" в модуле "%s"', [$handler_class_name, $module_name]));
+                throw new RuntimeException($this->_('Не найден класс "%s" в модуле "%s"', [$handler_class_name, $module_name]));
             }
 
 

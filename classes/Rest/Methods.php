@@ -1,9 +1,12 @@
 <?php
 namespace Core3\Classes\Rest;
-use Core3\Classes\HttpResponse;
 use Core3\Classes\Tools;
 use Core3\Classes\HttpValidator;
+use Core3\Exceptions\DbException;
 use Core3\Exceptions\HttpException;
+use Core3\Exceptions\RuntimeException;
+use Laminas\Db\Sql\Expression;
+use Laminas\Db\Sql\Select;
 use OpenApi\Annotations as OA;
 
 /**
@@ -47,7 +50,6 @@ class Methods extends Common {
      * @param array $params
      * @return array
      * @throws \Exception
-     * @throws \Zend_Db_Adapter_Exception|\Zend_Exception
      * @throws \Psr\Container\ContainerExceptionInterface
      * @OA\Post(
      *   path    = "/core/auth/login",
@@ -87,7 +89,7 @@ class Methods extends Common {
             'fp'       => 'req,string',
         ], $params);
 
-        $user = $this->modAdmin->modelUsers->getRowByLoginEmail($params['login']);
+        $user = $this->modAdmin->tableUsers->getRowByLoginEmail($params['login']);
 
         if ( ! $user) {
             throw new HttpException($this->_('Пользователя с таким логином нет'), 'login_not_found', 400);
@@ -102,19 +104,19 @@ class Methods extends Common {
         }
 
 
-        $user_session = $this->modAdmin->modelUsersSession->createRow([
+        $this->modAdmin->tableUsersSession->insert([
             'user_id'            => $user->id,
             'fingerprint'        => $params['fp'],
             'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
             'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
-            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
+            'date_last_activity' => new Expression('NOW()'),
         ]);
-        $session_id = $user_session->save();
-
+        $session_id = $this->modAdmin->tableUsersSession->getLastInsertValue();
 
         $refresh_token = $this->getRefreshToken($user->login, $session_id);
         $access_token  = $this->getAccessToken($user->login, $session_id);
 
+        $user_session = $this->modAdmin->tableUsersSession->getRowById($session_id);
         $user_session->token_hash   = crc32($refresh_token->toString());
         $user_session->date_expired = $refresh_token->dateExpired()->format('Y-m-d H:i:s');
         $user_session->save();
@@ -138,7 +140,7 @@ class Methods extends Common {
             throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
         }
 
-        $session = $this->modAdmin->modelUsersSession->find($this->auth->getSessionId())->current();
+        $session = $this->modAdmin->tableUsersSession->find($this->auth->getSessionId())->current();
         $session->is_active_sw  = 'N';
         $session->save();
 
@@ -151,7 +153,6 @@ class Methods extends Common {
      * @param array $params
      * @return array
      * @throws \Exception
-     * @throws \Zend_Db_Adapter_Exception|\Zend_Exception
      * @throws \Psr\Container\ContainerExceptionInterface
      * @OA\Post(
      *   path    = "/core/auth/refresh",
@@ -224,7 +225,7 @@ class Methods extends Common {
 
 
 
-        $session = $this->modAdmin->modelUsersSession->find($session_id)->current();
+        $session = $this->modAdmin->tableUsersSession->getRowById($session_id);
 
         if (empty($session)) {
             throw new HttpException($this->_('Сессия не найдена'), 'session_not_found', 403);
@@ -245,7 +246,11 @@ class Methods extends Common {
         }
 
 
-        $user = $this->modAdmin->modelUsers->find($session->user_id)->current();
+        $user = $this->modAdmin->tableUsers->find($session->user_id)->current();
+
+        if (empty($user)) {
+            throw new HttpException($this->_('Пользователь не найден'), 'session_user_not_found', 403);
+        }
 
         $refresh_token = $this->getRefreshToken($user->login, $session_id);
         $access_token  = $this->getAccessToken($user->login, $session_id);
@@ -322,17 +327,17 @@ class Methods extends Common {
 
         $params['lname'] = htmlspecialchars($params['lname']);
 
-        $client = $this->modClients->getClientByEmail($params['email']);
+        $user = $this->modAdmin->tableUsers->getRowByEmail($params['email']);
 
-        if ($client instanceof Clients\Client) {
-            if ($client->status !== 'new') {
+        if ($user instanceof Clients\Client) {
+            if ($user->status !== 'new') {
                 throw new HttpException('Пользователь с таким email уже зарегистрирован', 'email_isset', 400);
             }
 
-            if ( ! $client->reg_code ||
-                ! $client->reg_expired ||
-                $client->reg_code != $params['code'] ||
-                $client->reg_expired <= date('Y-m-d H:i:s')
+            if ( ! $user->reg_code ||
+                ! $user->reg_expired ||
+                $user->reg_code != $params['code'] ||
+                $user->reg_expired <= date('Y-m-d H:i:s')
             ) {
                 throw new HttpException('Указан некорректный код, либо его действие закончилось', 'code_incorrect', 400);
             }
@@ -341,38 +346,37 @@ class Methods extends Common {
             throw new HttpException('Введите email и получите код регистрации', 'email_not_found', 400);
         }
 
-        $client->update([
+        $user->update([
             'status'      => 'active',
             'lastname'    => $params['lname'],
-            'pass'        => \Tool::pass_salt($params['password']),
+            'pass'        => Tools::passSalt($params['password']),
             'reg_code'    => null,
             'reg_expired' => null,
         ]);
 
 
 
-        $user_session = $this->modAdmin->dataUsers->createRow([
+        $this->modAdmin->tableUsers->insert([
             'user_id'            => $user->id,
             'refresh_token'      => $refresh_token->toString(),
             'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
             'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
             'date_expired'       => date('Y-m-d H:i:s', $exp->getTimestamp()),
-            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
-        ])->save();
-
-
+            'date_last_activity' => new Expression('NOW()'),
+        ]);
+        
         $refresh_token = $this->createToken($user->id, $user->login);
         $access_token  = $this->getAccessToken($user->id, $user->login);
         $exp           = $refresh_token->claims()->get('exp');
 
-        $user_session = $this->modAdmin->dataUsersSession->createRow([
+        $this->modAdmin->tableUsersSession->insert([
             'user_id'            => $user->id,
             'refresh_token'      => $refresh_token->toString(),
             'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
             'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
             'date_expired'       => date('Y-m-d H:i:s', $exp->getTimestamp()),
-            'date_last_activity' => new \Zend_Db_Expr('NOW()'),
-        ])->save();
+            'date_last_activity' => new Expression('NOW()'),
+        ]);
 
         setcookie("Core-Refresh-Token", $refresh_token, time() + 157680000, '/core', null, false);
 
@@ -519,7 +523,7 @@ class Methods extends Common {
         $controller_file = "{$location}/Controller.php";
 
         if ( ! file_exists($controller_file)) {
-            throw new \Exception($this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", ['home']));
+            throw new HttpException($this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", ['home']));
         }
 
         $autoload_file = "{$location}/vendor/autoload.php";
@@ -533,13 +537,13 @@ class Methods extends Common {
         $module_class_name = "\\Core3\\Mod\\Home\\Controller";
 
         if ( ! class_exists($module_class_name)) {
-            throw new \Exception($this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", ['home']));
+            throw new HttpException($this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", ['home']));
         }
 
         $controller = new $module_class_name();
 
         if ( ! method_exists($controller, 'index')) {
-            throw new \Exception($this->_("Модуль \"%s\" сломан. Не найден метод index.", ['home']));
+            throw new HttpException($this->_("Модуль \"%s\" сломан. Не найден метод index.", ['home']));
         }
 
         return $controller->index();
@@ -622,8 +626,12 @@ class Methods extends Common {
 
 
         $section_name = ucfirst(strtolower($section_name));
+        $controller   = $this->getModuleController($module_name);
 
-        $controller = $this->getModuleController($module_name);
+        if ( ! is_callable([$controller, "section{$section_name}"])) {
+            throw new HttpException($this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]), 'broken_section', 403);
+        }
+
         return $controller->{"section{$section_name}"}();
     }
 
@@ -631,29 +639,37 @@ class Methods extends Common {
     /**
      * Вызов метода для обработки данных
      * @param string $module_name
-     * @param string $section_name
+     * @param string $method_name
      * @return array
      * @throws HttpException
+     * @throws RuntimeException
+     * @throws DbException
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function getModHandler(string $module_name, string $section_name): array {
+    public function getModHandler(string $module_name, string $method_name): array {
 
         if (empty($this->auth)) {
             throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
+        }
+
+        if (substr($method_name, 0, 1) == '_') {
+            throw new HttpException($this->_("Некорректное название обработчика %s, не может начинаться на \"_\"!", [$method_name]), 'forbidden', 403);
         }
 
         if ( ! $this->isAllowed($module_name)) {
             throw new HttpException($this->_("У вас нет доступа к модулю %s!", [$module_name]), 'forbidden', 403);
         }
 
-        if ( ! $this->isAllowed("{$module_name}_{$section_name}")) {
-            throw new HttpException($this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden', 403);
+        $handler = $this->getModuleHandler($module_name);
+
+        if ( ! is_callable([$handler, $method_name]) ||
+             ! in_array($method_name, get_class_methods($handler))
+        ) {
+            throw new HttpException($this->_("Ошибка. Не найден метод обработчика %s!", [$method_name]), 'incorrect_handler_method', 403);
         }
 
-
-        $section_name = ucfirst(strtolower($section_name));
-
-        $handler = $this->getModuleHandler($module_name);
-        return $handler->{"action{$section_name}"}();
+        return $handler->$method_name();
     }
 
 
@@ -663,47 +679,36 @@ class Methods extends Common {
      */
     private function getModules(): array {
 
-        $modules     = [];
-        $modules_raw = $this->db->fetchAll("
-  			SELECT m.name,
-  			       m.title,
-  			       m.is_index_page_sw,
-				   sm.name AS section_name,
-				   sm.title AS section_title
-			FROM core_modules AS m
-				LEFT JOIN core_modules_sections AS sm ON m.id = sm.module_id AND sm.is_active_sw = 'Y'
-			WHERE m.is_active_sw = 'Y'
-			  AND m.is_visible_sw = 'Y'
-			ORDER BY m.seq, 
-			         sm.seq
-        ");
+        $modules      = [];
+        $module_rows  = $this->modAdmin->tableModules->getRowsByActiveVisible();
+        $section_rows = $this->modAdmin->tableModulesSections->getRowsByActive();
 
-        foreach ($modules_raw as $module) {
-            if ( ! $this->isAllowed($module['name'], self::PRIVILEGE_READ)) {
+        foreach ($module_rows as $module_row) {
+            if ( ! $this->isAllowed($module_row->name, self::PRIVILEGE_READ)) {
                 continue;
             }
 
             $sections = [];
 
-            foreach ($modules_raw as $module_sections) {
-                if ( ! $module_sections['section_name'] ||
-                    $module_sections['name'] != $module['name'] ||
-                    ! $this->isAllowed("{$module['name']}_{$module_sections['section_name']}", self::PRIVILEGE_READ)
+            foreach ($section_rows as $section_row) {
+                if ( ! $section_row->title ||
+                    $section_row->module_id != $module_row->id ||
+                    ! $this->isAllowed("{$module_row->name}_{$section_row->name}", self::PRIVILEGE_READ)
                 ) {
                     continue;
                 }
 
                 $sections[] = [
-                    'name'  => $module_sections['section_name'],
-                    'title' => $module_sections['section_title'],
+                    'name'  => $section_row->name,
+                    'title' => $section_row->title,
                 ];
             }
 
             $modules[] = [
-                'name'             => $module['name'],
-                'title'            => $module['title'],
+                'name'             => $module_row->name,
+                'title'            => $module_row->title,
                 'icon'             => 'fa-solid fa-file-lines',
-                'isset_index_page' => $module['is_index_page_sw'] == 'Y',
+                'isset_index_page' => $module_row->is_index_page_sw == 'Y',
                 'sections'         => $sections,
             ];
         }

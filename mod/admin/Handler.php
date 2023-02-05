@@ -1,6 +1,6 @@
 <?php
 namespace Core3\Mod\Admin;
-use Core\Handlers;
+use Core3\Classes\Handlers;
 
 require_once DOC_ROOT . "/core3/classes/Handlers.php";
 

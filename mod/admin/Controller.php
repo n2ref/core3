@@ -7,14 +7,16 @@ use \CoreUI\Alert;
 use \CoreUI\Panel;
 use CoreUI\Tabs;
 
+require_once 'classes/autoload.php';
+
 
 /**
- * @property Model\Modules           $modelModules
- * @property Model\ModulesSubmodules $modelModulesSubmodules
- * @property Model\Roles             $modelRoles
- * @property Model\Users             $modelUsers
- * @property Model\UsersSession      $modelUsersSession
- * @property Model\Enum              $modelEnum
+ * @property Tables\Modules         $tableModules
+ * @property Tables\ModulesSections $tableModulesSections
+ * @property Tables\Roles           $tableRoles
+ * @property Tables\Users           $tableUsers
+ * @property Tables\UsersSession    $tableUsersSession
+ * @property Tables\Enum            $tableEnum
  */
 class Controller extends Common {
 
@@ -306,7 +308,7 @@ class Controller extends Common {
 
         // Редактирование справочника
         if (isset($_GET['edit'])) {
-            $panel->addContent($this->getModel('admin', 'enum')->formEnum());
+            $panel->addContent($this->getTable('admin', 'enum')->formEnum());
 
             if ($_GET['edit']) {
                 $name = $this->db->fetchOne("
@@ -321,11 +323,11 @@ class Controller extends Common {
 
                 // Редактирование значения
                 if ($_GET['edit_value']) {
-                    $panel_value->addContent($this->getModel('admin', 'enum')->formValue());
+                    $panel_value->addContent($this->getTable('admin', 'enum')->formValue());
                 }
 
                 // Таблица значений
-                $panel_value->addContent($this->getModel('admin', 'enum')->tableValues());
+                $panel_value->addContent($this->getTable('admin', 'enum')->tableValues());
                 $panel->addContent($panel_value->render());
 
             } else {
@@ -336,7 +338,7 @@ class Controller extends Common {
         // Таблица справочников
         } else {
             $panel->setTitle($this->_("Справочники"));
-            $panel->addContent($this->getModel('admin', 'enum')->tableEnums());
+            $panel->addContent($this->getTable('admin', 'enum')->tableEnums());
         }
 
         $this->printJs(DOC_PATH . "core3/mod/admin/enum.js");

@@ -1,10 +1,12 @@
 <?php
 namespace Core3\Exceptions;
 
+require_once 'RuntimeException.php';
+
 /**
  *
  */
-class HttpException extends \Exception {
+class HttpException extends RuntimeException {
 
     protected string $error_code = '';
 

@@ -31,7 +31,7 @@ class HttpResponse {
             'error_message' => $error_message,
         ];
 
-        return json_encode($body);
+        return json_encode($body, JSON_UNESCAPED_UNICODE);
     }
 
 

@@ -1,6 +1,7 @@
 <?php
 namespace Core3\Classes;
 
+use Laminas\Db\Sql\Expression;
 use Laminas\Mail;
 use Laminas\Mail\Transport;
 use Laminas\Mime\Message as MimeMessage;
@@ -228,7 +229,7 @@ class Email extends Db {
                     }
 
                     $this->mail_data['date_send'] = $immediately
-                        ? new \Zend_Db_Expr('NOW()')
+                        ? new Expression('NOW()')
                         : null;
 
                     $queue->createEmail(
@@ -279,7 +280,7 @@ class Email extends Db {
                     $queue = new \modQueueController();
 
                     $this->mail_data['date_send'] = $immediately
-                        ? new \Zend_Db_Expr('NOW()')
+                        ? new Expression('NOW()')
                         : null;
 
                     $queue->createMail($this->mail_data);
