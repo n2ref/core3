@@ -9,34 +9,6 @@ class Tools {
 
 
 	/**
-	 * Проверка на существование файла
-	 * @param  string $filename
-	 * @return bool
-	 */
-	public static function file_exists_ip($filename) {
-        if (function_exists("get_include_path")) {
-            $include_path = get_include_path();
-        } elseif (false !== ($ip = ini_get("include_path"))) {
-            $include_path = $ip;
-        } else {return false;}
-        if (false !== strpos($include_path, PATH_SEPARATOR)) {
-            if (false !== ($temp = explode(PATH_SEPARATOR, $include_path)) && count($temp) > 0) {
-                for ($n = 0; $n < count($temp); $n++) {
-                    if (false !== @file_exists($temp[$n] . $filename)) {
-                        return true;
-                    }
-                }
-                return false;
-            } else {return false;}
-        } elseif (!empty($include_path)) {
-            if (false !== @file_exists($include_path)) {
-                return true;
-            } else {return false;}
-        } else {return false;}
-    }
-
-
-	/**
 	 * HTTP аутентификация
      *
 	 * @param string $realm
@@ -411,41 +383,6 @@ class Tools {
 
 
     /**
-     * Делаем запрос через CURL и отдаем ответ
-     *
-     * @param   string $url URL
-     *
-     * @return  array       ответ запроса + http-код ответа
-     */
-    public static function doCurlRequest($url, $data = '', $headers = false)
-    {
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT_MS, 7000);
-        curl_setopt($curl, CURLOPT_HEADER, $headers);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-		if ($data) {
-			curl_setopt($curl, CURLOPT_POST, true);
-			curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-		}
-
-        $curl_out = curl_exec($curl);
-        //если возникла ошибка
-        if (curl_errno($curl) > 0) {
-            return array(
-                'error' => curl_errno($curl) . ": " . curl_error($curl)
-            );
-        }
-        $http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        curl_close($curl);
-        return array(
-            'answer'    => $curl_out,
-            'http_code' => $http_code
-        );
-    }
-
-
-    /**
      * Форматирование размера из байт в человеко-понятный вид
      * @param  int    $bytes
      * @return string
@@ -475,10 +412,12 @@ class Tools {
      * который можно загрузить на сервер. Размер в байтах.
      * @return int
      */
-    public static function getUploadMaxFileSize() {
-        $ini = self::convertIniSizeToBytes(trim(ini_get('post_max_size')));
-        $max = self::convertIniSizeToBytes(trim(ini_get('upload_max_filesize')));
+    public static function getUploadMaxFileSize(): int {
+
+        $ini = self::convertSizeToBytes(trim(ini_get('post_max_size')));
+        $max = self::convertSizeToBytes(trim(ini_get('upload_max_filesize')));
         $min = max($ini, $max);
+
         if ($ini > 0) {
             $min = min($min, $ini);
         }
@@ -488,6 +427,26 @@ class Tools {
         }
 
         return $min >= 0 ? $min : 0;
+    }
+
+
+    /**
+     * @param int    $bytes
+     * @param string $unit
+     * @return float
+     */
+    public static function convertBytes(int $bytes, string $unit): float {
+
+        $result = 0;
+
+        switch ($unit) {
+            case 'k':  $result = round($bytes / 1024, 2); break;
+            case 'm':  $result = round($bytes / 1024 / 1024, 2); break;
+            case 'gb': $result = round($bytes / 1024 / 1024 / 1024, 2); break;
+            case 'tb': $result = round($bytes / 1024 / 1024 / 1024 / 1024, 2); break;
+        }
+
+        return $result;
     }
 
 
@@ -545,7 +504,8 @@ class Tools {
      * @param  string $size
      * @return int
      */
-    private static function convertIniSizeToBytes($size) {
+    public static function convertSizeToBytes(string $size): int {
+
         if ( ! is_numeric($size)) {
             $type = strtoupper(substr($size, -1));
             $size = (int)substr($size, 0, -1);

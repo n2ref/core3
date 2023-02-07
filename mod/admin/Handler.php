@@ -15,7 +15,7 @@ class Handler extends Handlers {
      * @param $data
      * @return string
      */
-    public function saveModule($data) {
+    public function indexSaveModule($data) {
 
         $data = $this->filterControls($data);
         if ( ! $this->validateControls($data)) {
@@ -134,7 +134,7 @@ class Handler extends Handlers {
      * @param $data
      * @return string
      */
-	public function saveModuleAction($data) {
+	public function indexSaveModuleAction($data) {
 
         $data = $this->filterControls($data);
         if ( ! $this->validateControls($data)) {

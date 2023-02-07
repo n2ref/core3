@@ -2,15 +2,13 @@
 namespace Core3\Classes;
 use Core3\Exceptions\DbException;
 use \Laminas\Db\Adapter\Adapter;
-use Laminas\Db\Adapter\Driver\Pdo\Result;
-use Laminas\Db\ResultSet\ResultSet;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Laminas\Cache\Exception\ExceptionInterface;
 
 
 /**
- * @property Adapter $db
+ * @property Db\Adapter $db
  */
 abstract class Db extends System {
 
@@ -21,7 +19,7 @@ abstract class Db extends System {
      * @param string $k
      * @return bool
      */
-    public function __isset($k) {
+    public function __isset(string $k) {
         return isset(self::$params[$k]);
     }
 
@@ -31,7 +29,7 @@ abstract class Db extends System {
      * @return Cache|Log|Adapter|mixed|null
      * @throws ContainerExceptionInterface
      * @throws ExceptionInterface
-     * @throws NotFoundExceptionInterface
+     * @throws NotFoundExceptionInterface|DbException
      */
 	public function __get(string $param_name) {
 
@@ -69,6 +67,7 @@ abstract class Db extends System {
     /**
      * @return Adapter
      * @throws ContainerExceptionInterface
+     * @throws DbException
      */
     public function initConnection(): Adapter {
 
@@ -91,7 +90,7 @@ abstract class Db extends System {
         $option_params = $options['params'] ?? [];
 
         $config = [
-            'driver'   => 'Pdo_Mysql',
+            'driver'   => $options['adapter'] ?? 'Pdo_Mysql',
             'database' => $database,
             'username' => $username,
             'password' => $password,
@@ -104,12 +103,7 @@ abstract class Db extends System {
             $config = array_merge($config, $option_params);
         }
 
-        $adapter = new Adapter($config);
-
-        // Снимает ограничение перебора данных
-        $adapter->getQueryResultSetPrototype()->buffer();
-
-        return $adapter;
+        return new Db\Adapter($config);
     }
 
 
@@ -128,12 +122,12 @@ abstract class Db extends System {
             $key  = "core2_mod_is_active{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $module = $this->db->query("
+                $module = $this->db->fetchRow("
                     SELECT is_active_sw 
                     FROM core_modules 
                     WHERE name = ? 
                       AND is_active_sw = 'Y'
-                ", [$module_name])->current();
+                ", $module_name);
 
                 $is_active = (bool)$module?->is_active_sw;
 
@@ -163,11 +157,11 @@ abstract class Db extends System {
             $key         = "core3_mod_installed_{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $module = $this->db->query("
+                $module = $this->db->fetchRow("
                     SELECT 1 AS is_install
                     FROM core_modules 
                     WHERE name = ?
-                ", [$module_name])->current();
+                ", $module_name);
 
                 $is_install = (bool)$module?->is_install;
 
@@ -220,12 +214,12 @@ abstract class Db extends System {
             $key  = "core3_mod_folder_{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $module = $this->db->query("
+                $module = $this->db->fetchRow("
                     SELECT is_system_sw, 
                            version 
                     FROM core_modules 
                     WHERE name = ?
-                ", [$module_name])->current();
+                ", $module_name);
 
                 if ($module) {
                     $folder = $module->is_system_sw == "Y"
@@ -260,11 +254,11 @@ abstract class Db extends System {
         $key  = "core3_mod_version_{$host}_{$module_name}";
 
         if ( ! $this->cache->test($key)) {
-            $module = $this->db->query("
+            $module = $this->db->fetchRow("
                 SELECT version
                 FROM core_modules
                 WHERE name = ?
-            ", [$module_name])->current();
+            ", $module_name);
 
             $this->cache->save($key, $module?->version, ['core3_mod']);
 

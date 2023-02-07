@@ -5,9 +5,12 @@ use Core3\Classes\HttpValidator;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\HttpException;
 use Core3\Exceptions\RuntimeException;
+use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Select;
 use OpenApi\Annotations as OA;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
 /**
  * @url http://zircote.github.io/swagger-php/Getting-started.html
@@ -629,7 +632,7 @@ class Methods extends Common {
         $controller   = $this->getModuleController($module_name);
 
         if ( ! is_callable([$controller, "section{$section_name}"])) {
-            throw new HttpException($this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]), 'broken_section', 403);
+            throw new HttpException($this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]), 'broken_section', 500);
         }
 
         return $controller->{"section{$section_name}"}();
@@ -639,37 +642,42 @@ class Methods extends Common {
     /**
      * Вызов метода для обработки данных
      * @param string $module_name
+     * @param string $section_name
      * @param string $method_name
      * @return array
+     * @throws DbException
      * @throws HttpException
      * @throws RuntimeException
-     * @throws DbException
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws ExceptionInterface
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
-    public function getModHandler(string $module_name, string $method_name): array {
+    public function getModHandler(string $module_name, string $section_name, string $method_name): array {
 
         if (empty($this->auth)) {
             throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
-        }
-
-        if (substr($method_name, 0, 1) == '_') {
-            throw new HttpException($this->_("Некорректное название обработчика %s, не может начинаться на \"_\"!", [$method_name]), 'forbidden', 403);
         }
 
         if ( ! $this->isAllowed($module_name)) {
             throw new HttpException($this->_("У вас нет доступа к модулю %s!", [$module_name]), 'forbidden', 403);
         }
 
-        $handler = $this->getModuleHandler($module_name);
+        if ( ! $this->isAllowed("{$module_name}_{$section_name}")) {
+            throw new HttpException($this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden', 403);
+        }
 
-        if ( ! is_callable([$handler, $method_name]) ||
-             ! in_array($method_name, get_class_methods($handler))
+        $handler        = $this->getModuleHandler($module_name);
+        $handler_method = $section_name . ucfirst($method_name);
+
+
+        if ( ! is_callable([$handler, $handler_method]) ||
+             ! in_array($method_name, get_class_methods($handler_method))
         ) {
             throw new HttpException($this->_("Ошибка. Не найден метод обработчика %s!", [$method_name]), 'incorrect_handler_method', 403);
         }
 
-        return $handler->$method_name();
+
+        return $handler->$handler_method();
     }
 
 

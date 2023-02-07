@@ -42,7 +42,7 @@ abstract class Common extends Acl {
      * @param string $k
      * @return bool
      */
-	public function __isset($k) {
+	public function __isset(string $k) {
 		return isset(self::$params[$k]);
 	}
 
@@ -76,7 +76,6 @@ abstract class Common extends Acl {
             } elseif (strpos($param_name, 'worker') === 0) {
                 $worker_name = substr($param_name, 6);
                 $result      = $this->getTable($this->module, $worker_name);
-
             }
 
             if ( ! empty($result)) {

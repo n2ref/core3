@@ -53,8 +53,8 @@ class Rest extends Common {
                 '*'  => ['method' => 'getModSection', 'params' => [1, 2]],
             ],
 
-            '~^/core/handler/([a-z0-9_]+)/([a-z0-9_]+)~' => [
-                '*' => ['method' => 'getModHandler', 'params' => [1, 2]],
+            '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)/handler/([a-z0-9_]+)~' => [
+                '*' => ['method' => 'getModHandler', 'params' => [1, 2, 3]],
             ],
         ];
 

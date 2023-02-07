@@ -1,7 +1,7 @@
 <?php
 namespace Core3\Mod\Admin;
 use \Core3\Classes\Common;
-use \Core3\Classes\Email;
+use Core3\Mod\Admin\Index;
 
 use \CoreUI\Alert;
 use \CoreUI\Panel;
@@ -22,12 +22,14 @@ class Controller extends Common {
 
     /**
      * События аудита
-     * @throws \Exception
      * @return string
+     * @throws \Exception|\Psr\Container\ContainerExceptionInterface
      */
     public function sectionIndex(): mixed {
 
-        return ["222", "111"];
+        $model = new Index\Model();
+
+        return $model->getServerInfo();
 
         $panel = new Panel('admin');
         $panel->setTitle($this->_("События аудита"));

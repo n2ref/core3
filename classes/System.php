@@ -10,7 +10,17 @@ use Laminas\Cache\Storage;
  */
 abstract class System {
 
-    private static array $params = [];
+    private string       $version = '3.0.0';
+    private static array $params  = [];
+
+
+    /**
+     * @return string
+     */
+    protected function getSystemVersion(): string {
+
+        return $this->version;
+    }
 
 
     /**

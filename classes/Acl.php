@@ -55,15 +55,15 @@ class Acl extends Db {
 
         } else {
             if ( ! $this->auth->isAdmin()) {
-                $modules = $this->db->query("
+                $modules = $this->db->fetchRow("
                     SELECT m.name, 
                            m.privileges
                     FROM core_modules AS m
                     WHERE m.is_active_sw = 'Y'
                     ORDER BY m.seq
-                ")->toArray();
+                ");
 
-                $sections = $this->db->query("
+                $sections = $this->db->fetchRow("
                     SELECT ms.name, 
                            m.privileges,
                            m.name AS module_name
@@ -72,14 +72,14 @@ class Acl extends Db {
                     WHERE ms.is_active_sw = 'Y' 
                       AND m.is_active_sw = 'Y'
                     ORDER BY m.seq, ms.seq
-                ")->toArray();
+                ");
 
-                $role = $this->db->query("
+                $role = $this->db->fetchRow("
                     SELECT name, 
                            privileges
                     FROM core_roles
                     WHERE id = ?
-                ", $this->auth->getRoleId())->toArray();
+                ", $this->auth->getRoleId());
 
 
                 self::$acl = new Permissions\Acl\Acl();
