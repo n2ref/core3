@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes;
+use Core3\Classes\Http\Response;
 use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin;
 
@@ -35,33 +36,11 @@ class Init extends Db {
 
 
     /**
-     * @return bool
-     * @throws HttpException
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     * @throws \Exception
-     */
-    public function auth(): bool {
-
-        if (PHP_SAPI === 'cli') {
-            return false;
-        }
-
-        $this->auth = (new Rest())->getAuth();
-
-        if ($this->auth) {
-            Registry::set('auth', $this->auth);
-            return true;
-        }
-
-        return false;
-    }
-
-
-    /**
      * @return string
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws \ReflectionException
      * @throws \Exception
      */
     public function dispatch(): string {
@@ -91,20 +70,44 @@ class Init extends Db {
                 $result = (new Rest())->dispatch();
             }
 
-            $output = HttpResponse::dataJson($result);
+            $output = Response::dataJson($result);
 
 
         } catch (HttpException $e) {
-            $output = HttpResponse::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
+            $output = Response::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
 
         } catch (\Exception $e) {
-            $output = HttpResponse::errorJson($e->getMessage(), $e->getCode(), 500);
+            $output = Response::errorJson($e->getMessage(), $e->getCode(), 500);
         }
 
 
         $this->logOutput($output);
 
         return $output;
+    }
+
+
+    /**
+     * @return bool
+     * @throws HttpException
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws \Exception
+     */
+    public function auth(): bool {
+
+        if (PHP_SAPI === 'cli') {
+            return false;
+        }
+
+        $this->auth = (new Rest())->getAuth();
+
+        if ($this->auth) {
+            Registry::set('auth', $this->auth);
+            return true;
+        }
+
+        return false;
     }
 
 
@@ -155,7 +158,7 @@ class Init extends Db {
     /**
      * Cli
      * @return string
-     * @throws \Exception
+     * @throws \ReflectionException
      */
     private function dispatchCli(): string {
 

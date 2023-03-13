@@ -18,43 +18,47 @@ class Rest extends Common {
 
         $router = [
             '~^/core/auth/login$~' => [
-                'POST' => ['method' => 'login', 'params' => ['$php://input/json']],
+                'POST' => ['action' => 'login', 'params' => ['$php://input/json']],
             ],
             '~^/core/auth/logout$~' => [
-                'PUT' => ['method' => 'logout', 'params' => []],
+                'PUT' => ['action' => 'logout', 'params' => []],
             ],
             '~^/core/auth/refresh$~' => [
-                'POST' => ['method' => 'refreshToken', 'params' => ['$php://input/json']],
+                'POST' => ['action' => 'refreshToken', 'params' => ['$php://input/json']],
             ],
 
             '~^/core/registration/email$~'        => [
-                'POST' => ['method' => 'registrationEmail', 'params' => ['$php://input/json']],
+                'POST' => ['action' => 'registrationEmail', 'params' => ['$php://input/json']],
             ],
             '~^/core/registration/email/check$~' => [
-                'POST' => ['method' => 'registrationEmailCheck', 'params' => ['$php://input/json']],
+                'POST' => ['action' => 'registrationEmailCheck', 'params' => ['$php://input/json']],
             ],
 
-            '~^/core/restore$~'        => [
-                'POST' => ['method' => 'restorePass', 'params' => ['$php://input/json']],
+            '~^/core/restore$~' => [
+                'POST' => ['action' => 'restorePass', 'params' => ['$php://input/json']],
             ],
             '~^/core/restore/check$~' => [
-                'POST' => ['method' => 'restorePassCheck', 'params' => ['$php://input/json']],
+                'POST' => ['action' => 'restorePassCheck', 'params' => ['$php://input/json']],
+            ],
+
+            '~^/core/theme~' => [
+                'GET' => ['action' => 'getTheme', 'params' => []],
             ],
 
             '~^/core/cabinet$~' => [
-                'GET' => ['method' => 'getCabinet', 'params' => []],
+                'GET' => ['action' => 'getCabinet', 'params' => []],
             ],
 
             '~^/core/home$~' => [
-                'GET' => ['method' => 'getHome', 'params' => []],
+                'GET' => ['action' => 'getHome', 'params' => []],
             ],
 
-            '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)~' => [
-                '*'  => ['method' => 'getModSection', 'params' => [1, 2]],
+            '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)(?:(/[a-z0-9_\/]+)|)~' => [
+                '*'  => ['action' => 'getModSection', 'params' => [1, 2, 3]],
             ],
 
-            '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)/handler/([a-z0-9_]+)~' => [
-                '*' => ['method' => 'getModHandler', 'params' => [1, 2, 3]],
+            '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)/handler/([a-z0-9_\/]+)~' => [
+                '*' => ['action' => 'getModHandler', 'params' => [1, 2, 3]],
             ],
         ];
 
@@ -65,20 +69,13 @@ class Rest extends Common {
             throw new HttpException('404 Not found', 'not_found', 404);
         }
 
-        // Обнуление
-        $_GET     = [];
-        $_POST    = [];
-        $_REQUEST = [];
-        $_FILES   = [];
-        $_COOKIE  = [];
+        $actions = new Http\Actions();
 
-        $methods = new Rest\Methods();
-
-        if ( ! method_exists($rout['method'], '__call') && ! is_callable([$methods, $rout['method']])) {
-            throw new HttpException("Incorrect method", 'incorrect_method', 500);
+        if ( ! is_callable([$actions, $rout['action']]) && ! method_exists($rout['action'], '__call')) {
+            throw new HttpException("Incorrect action", 'incorrect_action', 500);
         }
 
-        return call_user_func_array([$methods, $rout['method']], $rout['params']);
+        return call_user_func_array([$actions, $rout['action']], $rout['params']);
     }
 
 
@@ -122,7 +119,7 @@ class Rest extends Common {
             $sign      = $this->config?->system?->auth?->token_sign ?: '';
             $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
-            $decoded    = Rest\Token::decode($access_token, $sign, $algorithm);
+            $decoded    = Http\Token::decode($access_token, $sign, $algorithm);
 
             $session_id = $decoded['sid'] ?? 0;
             $token_iss  = $decoded['iss'] ?? 0;
@@ -197,11 +194,11 @@ class Rest extends Common {
                         throw new HttpException("Incorrect http method", 'incorrect_http_method', 405);
                     }
 
-                    if (empty($route[$http_method]['method'])) {
-                        throw new HttpException("Incorrect method", 'incorrect_method', 500);
+                    if (empty($route[$http_method]['action'])) {
+                        throw new HttpException("Incorrect action", 'incorrect_action', 500);
                     }
 
-                    $result['method'] = $route[$http_method]['method'];
+                    $result['action'] = $route[$http_method]['action'];
                     $result['params'] = [];
 
                     if ( ! empty($route[$http_method]['params']) && is_array($route[$http_method]['params'])) {

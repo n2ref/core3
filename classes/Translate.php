@@ -10,7 +10,7 @@ use Laminas\I18n\Translator\Translator;
 class Translate {
 
     /**
-     * @var \Zend_Translate
+     * @var Translator
      */
     private $translate;
     private $locale;

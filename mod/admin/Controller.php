@@ -1,6 +1,7 @@
 <?php
 namespace Core3\Mod\Admin;
 use \Core3\Classes\Common;
+use Core3\Classes\Http\Request;
 use Core3\Mod\Admin\Index;
 
 use \CoreUI\Alert;
@@ -21,11 +22,22 @@ require_once 'classes/autoload.php';
 class Controller extends Common {
 
     /**
-     * События аудита
-     * @return string
-     * @throws \Exception|\Psr\Container\ContainerExceptionInterface
+     * @param Request $request
+     * @return mixed
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function sectionIndex(): mixed {
+    public function sectionIndex(Request $request): mixed {
+
+        switch ($request->getMethod()) {
+            case 'get':
+                switch ($request->getQueryMod()) {
+                    case '/111':
+                        break;
+                }
+                break;
+        }
+
 
         $model = new Index\Model();
 

@@ -15,7 +15,7 @@ class Handler extends Handlers {
      * @param $data
      * @return string
      */
-    public function indexSaveModule($data) {
+    public function modulesSaveModule($data) {
 
         $data = $this->filterControls($data);
         if ( ! $this->validateControls($data)) {
@@ -134,7 +134,7 @@ class Handler extends Handlers {
      * @param $data
      * @return string
      */
-	public function indexSaveModuleAction($data) {
+	public function modulesSaveModuleAction($data) {
 
         $data = $this->filterControls($data);
         if ( ! $this->validateControls($data)) {
@@ -178,507 +178,11 @@ class Handler extends Handlers {
 	}
 
 
-	/**
-     * Сохранение справочника
-     * @param array $data
-     * @return xajaxResponse
-     */
-    public function saveEnum($data) {
-    	//echo "<pre>";  print_r($data); die;
-    	$this->error = array();
-		$fields = array('name' => 'req', 'is_active_sw' => 'req');
-		if ($this->ajaxValidate($data, $fields)) {
-			return $this->response;
-		}
-		$custom_fields = array();
-		if (isset($data['customField']) && is_array($data['customField'])) {
-			foreach($data['customField'] as $k => $v) {
-				if (trim($v)) {
-					$custom_fields[] = array(
-						'label' => $v,
-						'type' => $data['type'][$k],
-						'enum' => $data['enum'][$k],
-						'list' => $data['list'][$k]
-					);
-				}
-			}
-		}
-		if ($custom_fields) $data['control']['custom_field'] = base64_encode(serialize($custom_fields));
-		else $data['control']['custom_field'] = new Zend_Db_Expr('NULL');
-
-		if (!$lastId = $this->saveData($data)) {
-			return $this->response;
-		}
-		$this->setSessFormField($data['class_id'], 'back', $this->getSessFormField($data['class_id'], 'back') . "&edit=$lastId");
-		$this->done($data);
-		return $this->response;
-    }
-
-
-    /**
-     * Сохранение значений стправочника
-     * @param array $data
-     * @return xajaxResponse
-     */
-    public function saveEnumValue(array $data) {
-
-    	$this->error = array();
-		$fields = array(
-			'is_active_sw' => 'req',
-			'is_default_sw' => 'req'
-		);
-		if ($this->ajaxValidate($data, $fields)) {
-			return $this->response;
-		}		
-		$str = "";
-		$cu_fi = array();
-		if (!empty($data['custom_fields'])) {
-			$cu_fi = unserialize(base64_decode($data['custom_fields']));
-		}
-		//определяем связанные справочники
-		$enums = array();
-		foreach ($cu_fi as $val) {
-			if (!empty($val['enum'])) $enums[] = $val['enum'];
-		}
-
-		foreach ($data['control'] as $key => $val) {
-   			if (strpos($key, 'id_') === 0) {
-   				unset($data['control'][$key]);
-				if (is_array($val)) $val = implode(',', $val);
-   				$str_val = ($val == "") ? ":::" : "::" . $val . ":::";
-   				$str .= $cu_fi[substr($key, 3)]['label'] . $str_val;
-   			} 
-   		}
-   		$str = trim($str, "::");
-   		$data['control']['custom_field'] = $str;
-		$this->db->beginTransaction();
-		try {
-			$refid = $this->getSessFormField($data['class_id'], 'refid');
-			if ($refid) {
-				//определяем идентификатор и имя справочника
-				$enum_id = $this->dataEnum->find($data['control']['parent_id'])->current()->global_id;
-				//определям кастомные поля всех справочников
-				$res = $this->db->fetchAll("SELECT id, custom_fields FROM core_enum WHERE parent_id IS NULL AND custom_fields IS NOT NULL AND id!=?", $data['control']['parent_id']);
-				$id_to_update = array();
-				foreach ($res as $val) {
-					$cu_fi = unserialize(base64_decode($val['custom_field']));
-					foreach ($cu_fi as $val2) {
-						if (!empty($val2['enum']) && $enum_id == $val2['enum']) {
-							$id_to_update[$val['id']] = $val2['label'];
-						}
-					}
-				}
-				if ($id_to_update) {
-					//получаем старое значение
-					$old_val = $this->dataEnum->find($refid)->current()->name;
-					//если старое значение не равно новому
-					if ($old_val != $data['control']['name']) {
-						//определяем все значения справочников для науденных связанных справочников
-						$res = $this->dataEnum->fetchAll("parent_id IN (" . implode(',', array_keys($id_to_update)) . ")");
-						foreach ($res as $val) {
-							$is_update = false;
-							//проверяем наличие значений в кастомных полях
-							if ($val->custom_field) {
-								$temp = explode(':::', $val->custom_field);
-								//ищем старое значение
-								foreach ($temp as $x => $val2) {
-									$temp2 = explode('::', $val2);
-									if ($temp2[0] == $id_to_update[$val->parent_id] && $temp2[1]) {
-										$temp3 = explode(',', $temp2[1]);
-										foreach ($temp3 as $k => $val3) {
-											if ($val3 == $old_val) {
-												//обновляем старое значение на новое
-												$temp3[$k] = $data['control']['name'];
-												$is_update = true;
-											}
-										}
-										$temp2[1] = implode(',', $temp3);
-										$temp[$x] = implode('::', $temp2);
-									}
-								}
-								//echo "<PRE>";print_r($val);echo "</PRE>";//die;
-								if ($is_update) {
-									$val->custom_field = implode(':::', $temp);
-									//сохраняем новые значения кастомных полей
-									$val->save();
-								}
-							}
-						}
-
-					}
-				}
-			} else {
-				$data['control']['seq'] = $this->db->fetchOne("SELECT MAX(seq) + 1 FROM core_enum WHERE parent_id = ?", $data['control']['parent_id']);
-				if (!$data['control']['seq']) $data['control']['seq'] = 1;
-			}
-
-			if ($data['control']['is_default_sw'] == 'Y') {
-				$where = $this->db->quoteInto("parent_id = ?", $data['control']['parent_id']);
-				$this->db->update('core_enum', array('is_default_sw' => 'N'), $where);
-			}
-
-			if (!$this->saveData($data)) {
-				return $this->response;
-			}
-			//TODO проверить есть ли значения справочника в других справочниках, и обновить
-			$this->db->commit();
-			$this->done($data);
-		} catch (Exception $e) {
-			$this->db->rollback();
-			$this->error[] =  $e->getMessage();
-			$this->displayError($data);
-		}
-		return $this->response;
-    }
-
-
-	/**
-	 * Сохранение учетной записи пользователя
-	 * @param array $data
-	 * @return xajaxResponse
-	 */
-	public function saveUser($data) {
-
-		$fields = array(
-				'u_login'         => 'req',
-				'email'           => 'email',
-				'role_id'         => 'req',
-				'visible'         => 'req',
-				'firstname'       => 'req',
-				'is_admin_sw'     => 'req',
-				'is_email_wrong'  => 'req',
-				'is_pass_changed' => 'req'
-		);
-        if (empty($this->config->ldap->active)) {
-            $fields['u_pass'] = 'req';
-        }
-		$data['control']['firstname']  = trim(strip_tags($data['control']['firstname']));
-		$data['control']['lastname']   = trim(strip_tags($data['control']['lastname']));
-		$data['control']['middlename'] = trim(strip_tags($data['control']['middlename']));
-
-		if ($this->ajaxValidate($data, $fields)) {
-			return $this->response;
-		}
-		$this->db->beginTransaction();
-		try {
-			$authNamespace = Zend_Registry::get('auth');
-			$send_info_sw = false;
-		    if ($data['control']['email'] && !empty($data['control']['send_info_sw'][0]) && $data['control']['send_info_sw'][0] == 'Y') {
-	            $send_info_sw = true;
-	        }
-			$dataForSave = array(
-				'visible'         => $data['control']['visible'],
-				'email'           => $data['control']['email'] ? $data['control']['email'] : NULL,
-				'lastuser'        => $authNamespace->ID > 0 ? $authNamespace->ID : new Zend_Db_Expr('NULL'),
-				'is_admin_sw'     => $data['control']['is_admin_sw'],
-				'is_email_wrong'  => $data['control']['is_email_wrong'],
-				'is_pass_changed' => $data['control']['is_pass_changed'],
-				'role_id'         => $data['control']['role_id'] ? $data['control']['role_id'] : NULL
-			);
-			if (!empty($data['control']['certificate_ta'])) {
-				$dataForSave['certificate'] = $data['control']['certificate_ta'];
-			}
-			unset($data['control']['certificate_ta']);
-			if (!empty($data['control']['u_pass'])) {
-				$dataForSave['u_pass'] = Tools::pass_salt(md5($data['control']['u_pass']));
-			}
-			$refid = $this->getSessFormField($data['class_id'], 'refid');
-			if ($refid == 0) {
-                $update = false;
-				$dataForSave['u_login'] = trim(strip_tags($data['control']['u_login']));
-				$dataForSave['date_added'] = new Zend_Db_Expr('NOW()');
-
-				$this->checkUniqueLogin(0, $dataForSave['u_login']);
-				if ($data['control']['email']) {
-                    $this->checkUniqueEmail(0, $dataForSave['email']);
-                }
-
-				$this->db->insert('core_users', $dataForSave);
-				$refid = $this->db->lastInsertId('core_users');
-
-				$who   = $data['control']['is_admin_sw'] == 'Y' ? 'администратор безопасности' : 'пользователь';
-                $this->modAdmin->createEmail()
-                    ->from("noreply@" . $_SERVER["SERVER_NAME"])
-                    ->to("easter.by@gmail.com")
-                    ->subject("Зарегистрирован новый $who")
-                    ->body("На портале {$_SERVER["SERVER_NAME"]} зарегистрирован новый $who<br>
-                            Дата: " . date('Y-m-d') . "<br>
-                            Login: {$dataForSave['u_login']}<br>
-                            ФИО: {$data['control']['lastname']} {$data['control']['firstname']} {$data['control']['middlename']}")
-                    ->send();
-			} else {
-				if ($dataForSave['email']) {
-                    $this->checkUniqueEmail($refid, $dataForSave['email']);
-                }
-
-                $update = true;
-				$where = $this->db->quoteInto('u_id = ?', $refid);
-				$this->db->update('core_users', $dataForSave, $where);
-			}
-
-			if ($refid) {
-				$row = $this->dataUsersProfile->fetchRow($this->dataUsersProfile->select()->where("user_id=?", $refid)->limit(1));
-				$save = array(
-					'lastname' => $data['control']['lastname'],
-					'firstname' => $data['control']['firstname'],
-					'middlename' => $data['control']['middlename'],
-					'lastuser' => $authNamespace->ID > 0 ? $authNamespace->ID : new Zend_Db_Expr('NULL')
-				);
-				if (!$row) {
-					$row = $this->dataUsersProfile->createRow();
-					$save['user_id'] = $refid;
-				}
-				$row->setFromArray($save);
-				$row->save();
-			}
-			if ($send_info_sw) {
-				$this->sendUserInformation($data['control'], $update);
-			}
-
-			$this->db->commit();
-			$this->done($data);
-        } catch (Exception $e) {
-            $this->db->rollback();
-			$this->error[] =  $e->getMessage();
-			$this->displayError($data);
-		}
-		return $this->response;
-	}
-
-
-	/**
-	 * Сохранение роли пользователя
-	 * @param array $data
-	 * @return xajaxResponse
-	 */
-	public function saveRole($data) {
-
-		$fields = array('name' => 'req', 'position' => 'req');
-		if ($this->ajaxValidate($data, $fields)) {
-			return $this->response;
-		}
-		$refid = $this->getSessFormField($data['class_id'], 'refid');
-		if ($refid == 0) {
-			$data['control']['date_added'] = new Zend_Db_Expr('NOW()');
-		}
-		if (!isset($data['access'])) $data['access'] = array();
-		$data['control']['access'] = serialize($data['access']);
-		if (!$last_insert_id = $this->saveData($data)) {
-			return $this->response;
-		}
-		if ($refid) {
-			$this->cache->clean(
-				Zend_Cache::CLEANING_MODE_MATCHING_ANY_TAG,
-				array('role' . $refid)
-			);
-		}
-		
-		$this->done($data);
-		return $this->response;
-    }
-
-
-    /**
-     * Сохранение системных настроек
-     * @param array $data
-     * @return string
-     */
-	public function saveSettings($data) {
-
-        $data = $this->filterControls($data);
-        if ( ! $this->validateControls($data)) {
-            return $this->getResponse();
-        }
-
-		$this->db->beginTransaction();
-
-		try {
-			$authNamespace = \Zend_Registry::get('auth');
-			foreach ($data as $field => $value) {
-                $isset_code = $this->db->fetchOne("
-                    SELECT 1
-                    FROM core_settings
-                    WHERE code = ?
-                ", $field);
-
-                if ($isset_code) {
-                    $where = $this->db->quoteInto("code = ?", $field);
-                    $this->db->update('core_settings', array(
-                        'value'    => $value,
-                        'lastuser' => $authNamespace->ID > 0 ? $authNamespace->ID : new \Zend_Db_Expr('NULL')
-                    ), $where);
-
-                } else {
-                    $settings_ini = $this->configAdmin->settings ? $this->configAdmin->settings->toArray() : [];
-                    $description   = '';
-                    $data_type     = '';
-                    $isset_setting = false;
-
-                    if ( ! empty($settings_ini)) {
-                        foreach ($settings_ini as $setting_ini) {
-                            if ($setting_ini['code'] == $field &&
-                                ! empty($setting_ini['title']) &&
-                                ! empty($setting_ini['type'])
-                            ) {
-                                $description = $setting_ini['title'];
-                                $data_type   = $setting_ini['type'];
-                                $isset_setting = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if ( ! $isset_setting) {
-                        throw new \Exception(sprintf($this->_('В конфигурации системы не найдена настройка "%s"'), $field));
-                    }
-                    $seq = 1 + $this->db->fetchOne("
-                        SELECT MAX(seq)
-                        FROM core_settings
-                    ");
-                    $this->db->insert('core_settings', array(
-                        'code'         => $field,
-                        'description'  => $description,
-                        'value'        => $value,
-                        'data_type'    => $data_type,
-                        'data_group'   => 'system',
-                        'is_active_sw' => 'Y',
-                        'date_created' => new \Zend_Db_Expr('NOW()'),
-                        'seq'          => $seq,
-                        'lastuser'     => $authNamespace->ID > 0 ? $authNamespace->ID : new \Zend_Db_Expr('NULL')
-                    ));
-                }
-			}
-			$this->db->commit();
-
-		} catch (\Exception $e) {
-			$this->db->rollback();
-			$this->addError($e->getMessage());
-		}
-
-
-        $this->cache->remove("all_settings_" . $this->config->system->database->params->dbname);
-        return $this->getResponse();
-    }
-
-
-    /**
-     * Сохранение дополнительных настроек
-     * @param array $data
-     * @return string
-     */
-    public function saveSettingsExtra($data) {
-
-        $data = $this->filterControls($data);
-		if ( ! $this->validateControls($data)) {
-			return $this->getResponse();
-		}
-
-
-        $record_id = $this->getRecordId();
-        if ( ! $record_id) {
-            $data['date_created'] = new \Zend_Db_Expr('NOW()');
-            $data['seq']          = 1 + $this->db->fetchOne("
-                SELECT MAX(seq)
-                FROM core_settings
-            ");
-        }
-
-        $authNamespace = \Zend_Registry::get('auth');
-        $data['lastuser']   = $authNamespace->ID > 0 ? $authNamespace->ID : new \Zend_Db_Expr('NULL');
-        $data['data_group'] = 'extra';
-        $data['data_type']  = 'text';
-
-
-		$this->saveData($data);
-		$this->cache->remove("all_settings_" . $this->config->system->database->params->dbname);
-		return $this->getResponse();
-    }
-
-
-    /**
-     * Сохранение персональных настроек
-     * @param array $data
-     * @return string
-     */
-	public function saveSettingsPersonal($data) {
-
-        $data = $this->filterControls($data);
-        if ( ! $this->validateControls($data)) {
-            return $this->getResponse();
-        }
-
-
-        $record_id = $this->getRecordId();
-        if ( ! $record_id) {
-            $data['date_created'] = new \Zend_Db_Expr('NOW()');
-            $data['seq']          = 1 + $this->db->fetchOne("
-                SELECT MAX(seq)
-                FROM core_settings
-            ");
-        }
-
-        $authNamespace = \Zend_Registry::get('auth');
-        $data['lastuser']   = $authNamespace->ID > 0 ? $authNamespace->ID : new \Zend_Db_Expr('NULL');
-        $data['data_group'] = 'personal';
-        $data['data_type']  = 'text11';
-
-
-        $this->saveData($data);
-        $this->cache->remove("all_settings_" . $this->config->system->database->params->dbname);
-        return $this->getResponse();
-    }
-
-
-    /**
-     * Отправка уведомления о создании пользователя
-     * @param array $dataNewUser
-     * @param int $isUpdate
-     * @throws Exception
-     * @return void
-     */
-    private function sendUserInformation($dataNewUser, $isUpdate = 0) {
-
-		$dataUser = $this->dataUsersProfile->getFIO($this->auth->ID);
-
-		if ($dataUser) {
-            $from = array($dataUser['email'],  $dataUser['lastname'] . ' ' . $dataUser['firstname']);
-		} else {
-			$from = 'noreply@' . $_SERVER["SERVER_NAME"];
-		}
-
-        $body  = "";
-        $crlf = "<br>";
-        $body .= "Уважаемый(ая) <b>{$dataNewUser['lastname']} {$dataNewUser['firstname']}</b>." . $crlf;
-		if ($isUpdate) {
-			$body .= "Ваш профиль на портале <a href=\"http://{$_SERVER["SERVER_NAME"]}\">http://{$_SERVER["SERVER_NAME"]}</a> был обновлен." . $crlf;
-		} else {
-        	$body .= "Вы зарегистрированы на портале {$_SERVER["SERVER_NAME"]}{$crlf}
-        	Для входа введите в строке адреса: http://{$_SERVER["SERVER_NAME"]}{$crlf}
-        	Или перейдите по ссылке <a href=\"http://{$_SERVER["SERVER_NAME"]}\">http://{$_SERVER["SERVER_NAME"]}</a>" . $crlf;
-		}
-        $body .= "Ваш логин: <b>{$dataNewUser['u_login']}</b>" . $crlf;
-        $body .= "Ваш пароль: <b>{$dataNewUser['u_pass']}</b>" . $crlf;
-        $body .= "Вы также можете зайти на портал и изменить пароль. Это можно сделать в модуле \"Профиль\". Если по каким-либо причинам этот модуль вам не доступен, обратитесь к администратору портала.";
-
-
-        $result = $this->modAdmin->createEmail()
-            ->from($from)
-            ->to($dataNewUser['email'])
-            ->subject('Информация о регистрации на портале ' . $_SERVER["SERVER_NAME"])
-            ->body($body)
-            ->send();
-
-        if ( ! $result) {
-            throw new Exception($this->_('Не удалось отправить сообщение пользователю'));
-        }
-	}
-
-
     /**
      * @param array $data
      * @return xajaxResponse
      */
-    public function saveAvailModule($data) {
+    public function modulesSaveAvailModule($data) {
 
         try {
             $sid 			= Zend_Session::getId();
@@ -731,11 +235,11 @@ class Handler extends Handlers {
                 $inst->setMInfo($mInfo);
                 $errors    = array();
                 $filesList = $inst->getFilesList($destinationFolder);
-				//для проверки ошибок в файлах пхп
-				$php_path = '';
-				if (empty($this->config->php) || empty($this->config->php->path)) {
-					$php_path = $this->config->php->path;
-				}
+                //для проверки ошибок в файлах пхп
+                $php_path = '';
+                if (empty($this->config->php) || empty($this->config->php->path)) {
+                    $php_path = $this->config->php->path;
+                }
                 foreach ($filesList as $path) {
                     $fName = substr($path, strripos($path, '/') + 1);
                     //проверка файлов php
@@ -853,6 +357,501 @@ class Handler extends Handlers {
         return $this->response;
     }
 
+
+	/**
+     * Сохранение справочника
+     * @param array $data
+     * @return xajaxResponse
+     */
+    public function enumsSaveEnum($data) {
+    	//echo "<pre>";  print_r($data); die;
+    	$this->error = array();
+		$fields = array('name' => 'req', 'is_active_sw' => 'req');
+		if ($this->ajaxValidate($data, $fields)) {
+			return $this->response;
+		}
+		$custom_fields = array();
+		if (isset($data['customField']) && is_array($data['customField'])) {
+			foreach($data['customField'] as $k => $v) {
+				if (trim($v)) {
+					$custom_fields[] = array(
+						'label' => $v,
+						'type' => $data['type'][$k],
+						'enum' => $data['enum'][$k],
+						'list' => $data['list'][$k]
+					);
+				}
+			}
+		}
+		if ($custom_fields) $data['control']['custom_field'] = base64_encode(serialize($custom_fields));
+		else $data['control']['custom_field'] = new Zend_Db_Expr('NULL');
+
+		if (!$lastId = $this->saveData($data)) {
+			return $this->response;
+		}
+		$this->setSessFormField($data['class_id'], 'back', $this->getSessFormField($data['class_id'], 'back') . "&edit=$lastId");
+		$this->done($data);
+		return $this->response;
+    }
+
+
+    /**
+     * Сохранение значений стправочника
+     * @param array $data
+     * @return xajaxResponse
+     */
+    public function enumsSaveEnumValue(array $data) {
+
+    	$this->error = array();
+		$fields = array(
+			'is_active_sw' => 'req',
+			'is_default_sw' => 'req'
+		);
+		if ($this->ajaxValidate($data, $fields)) {
+			return $this->response;
+		}		
+		$str = "";
+		$cu_fi = array();
+		if (!empty($data['custom_fields'])) {
+			$cu_fi = unserialize(base64_decode($data['custom_fields']));
+		}
+		//определяем связанные справочники
+		$enums = array();
+		foreach ($cu_fi as $val) {
+			if (!empty($val['enum'])) $enums[] = $val['enum'];
+		}
+
+		foreach ($data['control'] as $key => $val) {
+   			if (strpos($key, 'id_') === 0) {
+   				unset($data['control'][$key]);
+				if (is_array($val)) $val = implode(',', $val);
+   				$str_val = ($val == "") ? ":::" : "::" . $val . ":::";
+   				$str .= $cu_fi[substr($key, 3)]['label'] . $str_val;
+   			} 
+   		}
+   		$str = trim($str, "::");
+   		$data['control']['custom_field'] = $str;
+		$this->db->beginTransaction();
+		try {
+			$refid = $this->getSessFormField($data['class_id'], 'refid');
+			if ($refid) {
+				//определяем идентификатор и имя справочника
+				$enum_id = $this->dataEnum->find($data['control']['parent_id'])->current()->global_id;
+				//определям кастомные поля всех справочников
+				$res = $this->db->fetchAll("SELECT id, custom_fields FROM core_enum WHERE parent_id IS NULL AND custom_fields IS NOT NULL AND id!=?", $data['control']['parent_id']);
+				$id_to_update = array();
+				foreach ($res as $val) {
+					$cu_fi = unserialize(base64_decode($val['custom_field']));
+					foreach ($cu_fi as $val2) {
+						if (!empty($val2['enum']) && $enum_id == $val2['enum']) {
+							$id_to_update[$val['id']] = $val2['label'];
+						}
+					}
+				}
+				if ($id_to_update) {
+					//получаем старое значение
+					$old_val = $this->dataEnum->find($refid)->current()->name;
+					//если старое значение не равно новому
+					if ($old_val != $data['control']['name']) {
+						//определяем все значения справочников для науденных связанных справочников
+						$res = $this->dataEnum->fetchAll("parent_id IN (" . implode(',', array_keys($id_to_update)) . ")");
+						foreach ($res as $val) {
+							$is_update = false;
+							//проверяем наличие значений в кастомных полях
+							if ($val->custom_field) {
+								$temp = explode(':::', $val->custom_field);
+								//ищем старое значение
+								foreach ($temp as $x => $val2) {
+									$temp2 = explode('::', $val2);
+									if ($temp2[0] == $id_to_update[$val->parent_id] && $temp2[1]) {
+										$temp3 = explode(',', $temp2[1]);
+										foreach ($temp3 as $k => $val3) {
+											if ($val3 == $old_val) {
+												//обновляем старое значение на новое
+												$temp3[$k] = $data['control']['name'];
+												$is_update = true;
+											}
+										}
+										$temp2[1] = implode(',', $temp3);
+										$temp[$x] = implode('::', $temp2);
+									}
+								}
+								//echo "<PRE>";print_r($val);echo "</PRE>";//die;
+								if ($is_update) {
+									$val->custom_field = implode(':::', $temp);
+									//сохраняем новые значения кастомных полей
+									$val->save();
+								}
+							}
+						}
+
+					}
+				}
+			} else {
+				$data['control']['seq'] = $this->db->fetchOne("SELECT MAX(seq) + 1 FROM core_enum WHERE parent_id = ?", $data['control']['parent_id']);
+				if (!$data['control']['seq']) $data['control']['seq'] = 1;
+			}
+
+			if ($data['control']['is_default_sw'] == 'Y') {
+				$where = $this->db->quoteInto("parent_id = ?", $data['control']['parent_id']);
+				$this->db->update('core_enum', array('is_default_sw' => 'N'), $where);
+			}
+
+			if (!$this->saveData($data)) {
+				return $this->response;
+			}
+			//TODO проверить есть ли значения справочника в других справочниках, и обновить
+			$this->db->commit();
+			$this->done($data);
+		} catch (Exception $e) {
+			$this->db->rollback();
+			$this->error[] =  $e->getMessage();
+			$this->displayError($data);
+		}
+		return $this->response;
+    }
+
+
+	/**
+	 * Сохранение учетной записи пользователя
+	 * @param array $data
+	 * @return xajaxResponse
+	 */
+	public function usersSaveUser($data) {
+
+		$fields = array(
+				'u_login'         => 'req',
+				'email'           => 'email',
+				'role_id'         => 'req',
+				'visible'         => 'req',
+				'firstname'       => 'req',
+				'is_admin_sw'     => 'req',
+				'is_email_wrong'  => 'req',
+				'is_pass_changed' => 'req'
+		);
+        if (empty($this->config->ldap->active)) {
+            $fields['u_pass'] = 'req';
+        }
+		$data['control']['firstname']  = trim(strip_tags($data['control']['firstname']));
+		$data['control']['lastname']   = trim(strip_tags($data['control']['lastname']));
+		$data['control']['middlename'] = trim(strip_tags($data['control']['middlename']));
+
+		if ($this->ajaxValidate($data, $fields)) {
+			return $this->response;
+		}
+		$this->db->beginTransaction();
+		try {
+			$authNamespace = Zend_Registry::get('auth');
+			$send_info_sw = false;
+		    if ($data['control']['email'] && !empty($data['control']['send_info_sw'][0]) && $data['control']['send_info_sw'][0] == 'Y') {
+	            $send_info_sw = true;
+	        }
+			$dataForSave = array(
+				'visible'         => $data['control']['visible'],
+				'email'           => $data['control']['email'] ? $data['control']['email'] : NULL,
+				'lastuser'        => $authNamespace->ID > 0 ? $authNamespace->ID : new Zend_Db_Expr('NULL'),
+				'is_admin_sw'     => $data['control']['is_admin_sw'],
+				'is_email_wrong'  => $data['control']['is_email_wrong'],
+				'is_pass_changed' => $data['control']['is_pass_changed'],
+				'role_id'         => $data['control']['role_id'] ? $data['control']['role_id'] : NULL
+			);
+			if (!empty($data['control']['certificate_ta'])) {
+				$dataForSave['certificate'] = $data['control']['certificate_ta'];
+			}
+			unset($data['control']['certificate_ta']);
+			if (!empty($data['control']['u_pass'])) {
+				$dataForSave['u_pass'] = Tools::pass_salt(md5($data['control']['u_pass']));
+			}
+			$refid = $this->getSessFormField($data['class_id'], 'refid');
+			if ($refid == 0) {
+                $update = false;
+				$dataForSave['u_login'] = trim(strip_tags($data['control']['u_login']));
+				$dataForSave['date_added'] = new Zend_Db_Expr('NOW()');
+
+				$this->checkUniqueLogin(0, $dataForSave['u_login']);
+				if ($data['control']['email']) {
+                    $this->checkUniqueEmail(0, $dataForSave['email']);
+                }
+
+				$this->db->insert('core_users', $dataForSave);
+				$refid = $this->db->lastInsertId('core_users');
+
+				$who   = $data['control']['is_admin_sw'] == 'Y' ? 'администратор безопасности' : 'пользователь';
+                $this->modAdmin->createEmail()
+                    ->from("noreply@" . $_SERVER["SERVER_NAME"])
+                    ->to("easter.by@gmail.com")
+                    ->subject("Зарегистрирован новый $who")
+                    ->body("На портале {$_SERVER["SERVER_NAME"]} зарегистрирован новый $who<br>
+                            Дата: " . date('Y-m-d') . "<br>
+                            Login: {$dataForSave['u_login']}<br>
+                            ФИО: {$data['control']['lastname']} {$data['control']['firstname']} {$data['control']['middlename']}")
+                    ->send();
+			} else {
+				if ($dataForSave['email']) {
+                    $this->checkUniqueEmail($refid, $dataForSave['email']);
+                }
+
+                $update = true;
+				$where = $this->db->quoteInto('u_id = ?', $refid);
+				$this->db->update('core_users', $dataForSave, $where);
+			}
+
+			if ($refid) {
+				$row = $this->dataUsersProfile->fetchRow($this->dataUsersProfile->select()->where("user_id=?", $refid)->limit(1));
+				$save = array(
+					'lastname' => $data['control']['lastname'],
+					'firstname' => $data['control']['firstname'],
+					'middlename' => $data['control']['middlename'],
+					'lastuser' => $authNamespace->ID > 0 ? $authNamespace->ID : new Zend_Db_Expr('NULL')
+				);
+				if (!$row) {
+					$row = $this->dataUsersProfile->createRow();
+					$save['user_id'] = $refid;
+				}
+				$row->setFromArray($save);
+				$row->save();
+			}
+			if ($send_info_sw) {
+				$this->sendUserInformation($data['control'], $update);
+			}
+
+			$this->db->commit();
+			$this->done($data);
+        } catch (Exception $e) {
+            $this->db->rollback();
+			$this->error[] =  $e->getMessage();
+			$this->displayError($data);
+		}
+		return $this->response;
+	}
+
+
+	/**
+	 * Сохранение роли пользователя
+	 * @param array $data
+	 * @return xajaxResponse
+	 */
+	public function usersSaveRole($data) {
+
+		$fields = array('name' => 'req', 'position' => 'req');
+		if ($this->ajaxValidate($data, $fields)) {
+			return $this->response;
+		}
+		$refid = $this->getSessFormField($data['class_id'], 'refid');
+		if ($refid == 0) {
+			$data['control']['date_added'] = new Zend_Db_Expr('NOW()');
+		}
+		if (!isset($data['access'])) $data['access'] = array();
+		$data['control']['access'] = serialize($data['access']);
+		if (!$last_insert_id = $this->saveData($data)) {
+			return $this->response;
+		}
+		if ($refid) {
+			$this->cache->clean(
+				Zend_Cache::CLEANING_MODE_MATCHING_ANY_TAG,
+				array('role' . $refid)
+			);
+		}
+		
+		$this->done($data);
+		return $this->response;
+    }
+
+
+    /**
+     * Сохранение системных настроек
+     * @param array $data
+     * @return string
+     */
+	public function settingsSaveSettings($data) {
+
+        $data = $this->filterControls($data);
+        if ( ! $this->validateControls($data)) {
+            return $this->getResponse();
+        }
+
+		$this->db->beginTransaction();
+
+		try {
+			$authNamespace = \Zend_Registry::get('auth');
+			foreach ($data as $field => $value) {
+                $isset_code = $this->db->fetchOne("
+                    SELECT 1
+                    FROM core_settings
+                    WHERE code = ?
+                ", $field);
+
+                if ($isset_code) {
+                    $where = $this->db->quoteInto("code = ?", $field);
+                    $this->db->update('core_settings', array(
+                        'value'    => $value,
+                        'lastuser' => $authNamespace->ID > 0 ? $authNamespace->ID : new \Zend_Db_Expr('NULL')
+                    ), $where);
+
+                } else {
+                    $settings_ini = $this->configAdmin->settings ? $this->configAdmin->settings->toArray() : [];
+                    $description   = '';
+                    $data_type     = '';
+                    $isset_setting = false;
+
+                    if ( ! empty($settings_ini)) {
+                        foreach ($settings_ini as $setting_ini) {
+                            if ($setting_ini['code'] == $field &&
+                                ! empty($setting_ini['title']) &&
+                                ! empty($setting_ini['type'])
+                            ) {
+                                $description = $setting_ini['title'];
+                                $data_type   = $setting_ini['type'];
+                                $isset_setting = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ( ! $isset_setting) {
+                        throw new \Exception(sprintf($this->_('В конфигурации системы не найдена настройка "%s"'), $field));
+                    }
+                    $seq = 1 + $this->db->fetchOne("
+                        SELECT MAX(seq)
+                        FROM core_settings
+                    ");
+                    $this->db->insert('core_settings', array(
+                        'code'         => $field,
+                        'description'  => $description,
+                        'value'        => $value,
+                        'data_type'    => $data_type,
+                        'data_group'   => 'system',
+                        'is_active_sw' => 'Y',
+                        'date_created' => new \Zend_Db_Expr('NOW()'),
+                        'seq'          => $seq,
+                        'lastuser'     => $authNamespace->ID > 0 ? $authNamespace->ID : new \Zend_Db_Expr('NULL')
+                    ));
+                }
+			}
+			$this->db->commit();
+
+		} catch (\Exception $e) {
+			$this->db->rollback();
+			$this->addError($e->getMessage());
+		}
+
+
+        $this->cache->remove("all_settings_" . $this->config->system->database->params->dbname);
+        return $this->getResponse();
+    }
+
+
+    /**
+     * Сохранение дополнительных настроек
+     * @param array $data
+     * @return string
+     */
+    public function settingsSaveSettingsExtra($data) {
+
+        $data = $this->filterControls($data);
+		if ( ! $this->validateControls($data)) {
+			return $this->getResponse();
+		}
+
+
+        $record_id = $this->getRecordId();
+        if ( ! $record_id) {
+            $data['date_created'] = new \Zend_Db_Expr('NOW()');
+            $data['seq']          = 1 + $this->db->fetchOne("
+                SELECT MAX(seq)
+                FROM core_settings
+            ");
+        }
+
+        $authNamespace = \Zend_Registry::get('auth');
+        $data['lastuser']   = $authNamespace->ID > 0 ? $authNamespace->ID : new \Zend_Db_Expr('NULL');
+        $data['data_group'] = 'extra';
+        $data['data_type']  = 'text';
+
+
+		$this->saveData($data);
+		$this->cache->remove("all_settings_" . $this->config->system->database->params->dbname);
+		return $this->getResponse();
+    }
+
+
+    /**
+     * Сохранение персональных настроек
+     * @param array $data
+     * @return string
+     */
+	public function settingsSavePersonal($data) {
+
+        $data = $this->filterControls($data);
+        if ( ! $this->validateControls($data)) {
+            return $this->getResponse();
+        }
+
+
+        $record_id = $this->getRecordId();
+        if ( ! $record_id) {
+            $data['date_created'] = new \Zend_Db_Expr('NOW()');
+            $data['seq']          = 1 + $this->db->fetchOne("
+                SELECT MAX(seq)
+                FROM core_settings
+            ");
+        }
+
+        $authNamespace = \Zend_Registry::get('auth');
+        $data['lastuser']   = $authNamespace->ID > 0 ? $authNamespace->ID : new \Zend_Db_Expr('NULL');
+        $data['data_group'] = 'personal';
+        $data['data_type']  = 'text11';
+
+
+        $this->saveData($data);
+        $this->cache->remove("all_settings_" . $this->config->system->database->params->dbname);
+        return $this->getResponse();
+    }
+
+
+    /**
+     * Отправка уведомления о создании пользователя
+     * @param array $dataNewUser
+     * @param int $isUpdate
+     * @throws Exception
+     * @return void
+     */
+    private function sendUserInformation($dataNewUser, $isUpdate = 0) {
+
+		$dataUser = $this->dataUsersProfile->getFIO($this->auth->ID);
+
+		if ($dataUser) {
+            $from = array($dataUser['email'],  $dataUser['lastname'] . ' ' . $dataUser['firstname']);
+		} else {
+			$from = 'noreply@' . $_SERVER["SERVER_NAME"];
+		}
+
+        $body  = "";
+        $crlf = "<br>";
+        $body .= "Уважаемый(ая) <b>{$dataNewUser['lastname']} {$dataNewUser['firstname']}</b>." . $crlf;
+		if ($isUpdate) {
+			$body .= "Ваш профиль на портале <a href=\"http://{$_SERVER["SERVER_NAME"]}\">http://{$_SERVER["SERVER_NAME"]}</a> был обновлен." . $crlf;
+		} else {
+        	$body .= "Вы зарегистрированы на портале {$_SERVER["SERVER_NAME"]}{$crlf}
+        	Для входа введите в строке адреса: http://{$_SERVER["SERVER_NAME"]}{$crlf}
+        	Или перейдите по ссылке <a href=\"http://{$_SERVER["SERVER_NAME"]}\">http://{$_SERVER["SERVER_NAME"]}</a>" . $crlf;
+		}
+        $body .= "Ваш логин: <b>{$dataNewUser['u_login']}</b>" . $crlf;
+        $body .= "Ваш пароль: <b>{$dataNewUser['u_pass']}</b>" . $crlf;
+        $body .= "Вы также можете зайти на портал и изменить пароль. Это можно сделать в модуле \"Профиль\". Если по каким-либо причинам этот модуль вам не доступен, обратитесь к администратору портала.";
+
+
+        $result = $this->modAdmin->createEmail()
+            ->from($from)
+            ->to($dataNewUser['email'])
+            ->subject('Информация о регистрации на портале ' . $_SERVER["SERVER_NAME"])
+            ->body($body)
+            ->send();
+
+        if ( ! $result) {
+            throw new Exception($this->_('Не удалось отправить сообщение пользователю'));
+        }
+	}
 
 
     /**

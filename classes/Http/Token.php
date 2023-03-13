@@ -1,7 +1,8 @@
 <?php
-namespace Core3\Classes\Rest;
+namespace Core3\Classes\Http;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+
 
 /**
  *

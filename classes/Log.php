@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SlackWebhookHandler;
@@ -24,7 +25,7 @@ class Log {
      * @param string $name
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
-     * @throws \Exception
+     * @throws Exception
      */
     public function __construct(string $name = 'core3') {
 
@@ -88,7 +89,6 @@ class Log {
      * Дополнительный лог в заданный файл
      * @param string $filename
      * @return $this
-     * @throws \Exception
      */
     public function file(string $filename): self {
 
@@ -102,7 +102,7 @@ class Log {
      * Информационная запись в лог
      * @param string $message
      * @param array  $context
-     * @throws \Exception
+     * @throws Exception
      */
     public function info(string $message, array $context = []): void {
 
@@ -120,7 +120,7 @@ class Log {
      * Предупреждение в лог
      * @param string $message
      * @param array  $context
-     * @throws \Exception
+     * @throws Exception
      */
     public function warning(string $message, array $context = []): void {
 
@@ -138,7 +138,7 @@ class Log {
      * Предупреждение в лог
      * @param string $message
      * @param array  $context
-     * @throws \Exception
+     * @throws Exception
      */
     public function error(string $message, array $context = []): void {
 
@@ -156,7 +156,7 @@ class Log {
      * Отладочная информация в лог
      * @param string $message
      * @param array  $context
-     * @throws \Exception
+     * @throws Exception
      */
     public function debug(string $message, array $context = []): void {
 
@@ -172,7 +172,7 @@ class Log {
 
     /**
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     private function setWriter(): void {
 

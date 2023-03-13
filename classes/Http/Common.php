@@ -1,9 +1,13 @@
 <?php
-namespace Core3\Classes\Rest;
+namespace Core3\Classes\Http;
 use Core3\Classes;
 use Core3\Exceptions\HttpException;
 
-class Common extends Classes\Common {
+
+/**
+ *
+ */
+abstract class Common extends Classes\Common {
 
     /**
      * @param string $user_login

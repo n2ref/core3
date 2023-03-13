@@ -4,6 +4,7 @@ namespace Core3\Classes;
 
 /**
  * @property \Core3\Mod\Admin\Model\Users  $dataUsers
+ * @deprecated
  */
 class Login extends Db {
 

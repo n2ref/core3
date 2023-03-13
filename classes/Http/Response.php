@@ -1,11 +1,11 @@
 <?php
-namespace Core3\Classes;
+namespace Core3\Classes\Http;
 
 
 /**
  *
  */
-class HttpResponse {
+class Response {
 
 
     /**

@@ -220,15 +220,6 @@ class Cli extends Db {
 
 
     /**
-     * @return string
-     */
-    public function getGenerateOpenapi(): string {
-
-        return '';
-    }
-
-
-    /**
      * Module run method
      * @param string $module
      * @param string $method

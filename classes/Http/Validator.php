@@ -1,11 +1,12 @@
 <?php
-namespace Core3\Classes;
+namespace Core3\Classes\Http;
 use Core3\Exceptions\HttpException;
+use function Core3\Classes\mb_strlen;
 
 /**
  *
  */
-class HttpValidator {
+class Validator {
 
 
     /**
