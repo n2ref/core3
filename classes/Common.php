@@ -19,6 +19,8 @@ abstract class Common extends Acl {
 
 	private static array $params = [];
 
+    private $js        = [];
+    private $css       = [];
 
     /**
      * @throws \Psr\Container\ContainerExceptionInterface
@@ -98,6 +100,34 @@ abstract class Common extends Acl {
         self::$params[$param_name] = $param_value;
 		return $this;
 	}
+
+
+
+
+    /**
+     * @param string $src
+     * @return void
+     */
+    public function addJs(string $src): void {
+
+        $src = trim($src);
+        $src = Tools::addSrcHash($src);
+
+        $this->js[] = $src;
+    }
+
+
+    /**
+     * @param string $src
+     * @return void
+     */
+    public function addCss(string $src): void {
+
+        $src = trim($src);
+        $src = Tools::addSrcHash($src);
+
+        $this->css[] = $src;
+    }
 
 
     /**

@@ -2,6 +2,8 @@
 namespace Core3\Mod\Admin;
 use \Core3\Classes\Common;
 use Core3\Classes\Http\Request;
+use Core3\Classes\Http\Response;
+use Core3\Classes\Http\Router;
 use Core3\Mod\Admin\Index;
 
 use \CoreUI\Alert;
@@ -29,19 +31,26 @@ class Controller extends Common {
      */
     public function sectionIndex(Request $request): mixed {
 
-        switch ($request->getMethod()) {
-            case 'get':
-                switch ($request->getQueryMod()) {
-                    case '/111':
-                        break;
-                }
-                break;
+        $router = new Router();
+        $router->addPath('/cache')->delete('cacheClean');
+
+        $route = $router->getRoute($request->getMethod(), $request->getPathParam('mod_query'));
+
+
+        if ($route) {
+            switch ($route['action']) {
+                case 'cacheClean':
+                    break;
+            }
         }
 
 
-        $model = new Index\Model();
+        $response = new Response();
+        $response->getHeaders();
 
+        $model = new Index\Model();
         return $model->getServerInfo();
+
 
         $panel = new Panel('admin');
         $panel->setTitle($this->_("События аудита"));

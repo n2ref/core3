@@ -17,3 +17,9 @@ test_php_8.0:
   stage: test
   image: php:8.0
   extends: .php_scripts
+
+
+test_php_8.1:
+  stage: test
+  image: php:8.1
+  extends: .php_scripts

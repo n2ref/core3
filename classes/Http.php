@@ -1,5 +1,8 @@
 <?php
 namespace Core3\Classes;
+use Core3\Classes\Http\Request;
+use Core3\Classes\Http\Response;
+use Core3\Classes\Http\Router;
 use Core3\Exceptions\HttpException;
 use Laminas\Db\Sql\Expression;
 
@@ -7,7 +10,7 @@ use Laminas\Db\Sql\Expression;
 /**
  *
  */
-class Rest extends Common {
+class Http extends Common {
 
 
     /**
@@ -16,66 +19,37 @@ class Rest extends Common {
      */
     public function dispatch(): mixed {
 
-        $router = [
-            '~^/core/auth/login$~' => [
-                'POST' => ['action' => 'login', 'params' => ['$php://input/json']],
-            ],
-            '~^/core/auth/logout$~' => [
-                'PUT' => ['action' => 'logout', 'params' => []],
-            ],
-            '~^/core/auth/refresh$~' => [
-                'POST' => ['action' => 'refreshToken', 'params' => ['$php://input/json']],
-            ],
+        $router = new Router();
+        $router->addPath('/core/auth/login')->post('login');
+        $router->addPath('/core/auth/logout')->put('logout');
+        $router->addPath('/core/auth/refresh')->post('refreshToken');
+        $router->addPath('/core/registration/email')->post('registrationEmail');
+        $router->addPath('/core/registration/email/check')->post('registrationEmailCheck');
+        $router->addPath('/core/restore')->post('restorePass');
+        $router->addPath('/core/restore/check')->post('restorePassCheck');
+        $router->addPath('/core/conf')->get('getConf');
+        $router->addPath('/core/home')->get('getHome');
+        $router->addPath('/core/cabinet')->get('getCabinet');
+        $router->addPath('/core/mod/{module}/{section}/handler/{handler}', ['[a-z0-9_]+', '[a-z0-9_]+', '[a-z0-9_/]+'])->any('getModHandler');
+        $router->addPath('/core/mod/{module}/{section}{mod_query}', ['[a-z0-9_]+', '[a-z0-9_]+', '(?:/[a-z0-9_/]+|)'])->any('getModSection');
 
-            '~^/core/registration/email$~'        => [
-                'POST' => ['action' => 'registrationEmail', 'params' => ['$php://input/json']],
-            ],
-            '~^/core/registration/email/check$~' => [
-                'POST' => ['action' => 'registrationEmailCheck', 'params' => ['$php://input/json']],
-            ],
+        // TODO добавить возможность работы в папке
+        $route = $router->getRoute($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
 
-            '~^/core/restore$~' => [
-                'POST' => ['action' => 'restorePass', 'params' => ['$php://input/json']],
-            ],
-            '~^/core/restore/check$~' => [
-                'POST' => ['action' => 'restorePassCheck', 'params' => ['$php://input/json']],
-            ],
-
-            '~^/core/theme~' => [
-                'GET' => ['action' => 'getTheme', 'params' => []],
-            ],
-
-            '~^/core/cabinet$~' => [
-                'GET' => ['action' => 'getCabinet', 'params' => []],
-            ],
-
-            '~^/core/home$~' => [
-                'GET' => ['action' => 'getHome', 'params' => []],
-            ],
-
-            '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)(?:(/[a-z0-9_\/]+)|)~' => [
-                '*'  => ['action' => 'getModSection', 'params' => [1, 2, 3]],
-            ],
-
-            '~^/core/mod/([a-z0-9_]+)/([a-z0-9_]+)/handler/([a-z0-9_\/]+)~' => [
-                '*' => ['action' => 'getModHandler', 'params' => [1, 2, 3]],
-            ],
-        ];
-
-
-        $rout = $this->getRout($router, $_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
-
-        if (empty($rout)) {
+        if (empty($route)) {
             throw new HttpException('404 Not found', 'not_found', 404);
         }
 
         $actions = new Http\Actions();
 
-        if ( ! is_callable([$actions, $rout['action']]) && ! method_exists($rout['action'], '__call')) {
+        if ( ! is_callable([$actions, $route['action']]) && ! method_exists($route['action'], '__call')) {
             throw new HttpException("Incorrect action", 'incorrect_action', 500);
         }
 
-        return call_user_func_array([$actions, $rout['action']], $rout['params']);
+        return call_user_func_array(
+            [$actions, $route['action']],
+            [ new Request($route['params']) ]
+        );
     }
 
 

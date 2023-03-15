@@ -523,6 +523,28 @@ class Tools {
 
 
     /**
+     * Добавляет hash в адрес к скриптам или стилям
+     * @param string $src
+     * @return string
+     */
+    public static function addSrcHash(string $src): string {
+
+        if (strpos($src, '?')) {
+            $explode_src = explode('?', $src, 2);
+            $src .= file_exists(DOC_ROOT . $explode_src[0])
+                ? '&_=' . crc32(md5_file(DOC_ROOT . $explode_src[0]))
+                : '';
+        } else {
+            $src .= file_exists(DOC_ROOT . $src)
+                ? '?_=' . crc32(md5_file(DOC_ROOT . $src))
+                : '';
+        }
+
+        return $src;
+    }
+
+
+    /**
      * Склоняем словоформу
      * @ author runcore
      */

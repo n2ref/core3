@@ -19,19 +19,30 @@ class Request {
     private string $query = '';
 
     /**
-     * @var array|null
+     * @var array
      */
-    private ?array $props = [];
+    private array $path_params = [];
+
+    /**
+     * @var array
+     */
+    private array $props = [];
+
+
+    const FORMAT_TEXT = 'text';
+    const FORMAT_JSON = 'json';
 
 
     /**
-     * @param array|null $props
+     * @param array|null $path_params
      */
-    public function __construct(array $props = null) {
+    public function __construct(array $path_params = null) {
 
-        $this->query           = $_SERVER['QUERY_STRING'];
-        $this->method          = strtolower($_SERVER['REQUEST_METHOD']);
-        $this->props           = $props ?? [];
+        $this->setPathParams($path_params);
+
+        $this->query  = $_SERVER['QUERY_STRING'];
+        $this->method = strtolower($_SERVER['REQUEST_METHOD']);
+
         $this->props['GET']    = $_GET;
         $this->props['POST']   = $_POST;
         $this->props['FILES']  = $_FILES;
@@ -77,20 +88,30 @@ class Request {
 
 
     /**
-     * @return string
+     * @param string $name
+     * @return string|null
      */
-    public function getQuery(): string {
+    public function getPathParam(string $name):? string {
 
-        return $this->query;
+        return $this->path_params[$name] ?? null;
+    }
+
+
+    /**
+     * @return array
+     */
+    public function getPathParams(): array {
+
+        return $this->path_params;
     }
 
 
     /**
      * @return string
      */
-    public function getQueryMod(): string {
+    public function getQuery(): string {
 
-        return $this->props['mod_query'] ?? '';
+        return $this->query;
     }
 
 
@@ -132,25 +153,40 @@ class Request {
 
     /**
      * @param string|null $format
-     * @return string
+     * @return string|array
      * @throws RuntimeException
      */
-    public function getBody(string $format = null): string {
+    public function getBody(string $format = null): string|array {
 
         $request_raw = file_get_contents('php://input', 'r');
 
         switch ($format) {
-            case 'text':
+            case self::FORMAT_TEXT:
             default:
                 return $request_raw;
 
-            case 'json':
+            case self::FORMAT_JSON:
                 $request = @json_decode($request_raw, true);
 
                 if (json_last_error() !== JSON_ERROR_NONE) {
                     throw new RuntimeException('Incorrect json data');
                 }
                 return $request;
+        }
+    }
+
+
+    /**
+     * @param array $query_params
+     * @return void
+     */
+    private function setPathParams(array $query_params): void {
+
+        foreach ($query_params as $name => $value) {
+            if (is_scalar($value)) {
+                $name                     = trim($name);
+                $this->path_params[$name] = $value;
+            }
         }
     }
 }

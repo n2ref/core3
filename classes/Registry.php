@@ -14,26 +14,26 @@ class Registry {
 
 
     /**
-     * @param $index
+     * @param string $name
      * @return bool
      */
-    public static function has($index): bool {
+    public static function has(string $name): bool {
 
         if (self::$_service === null) {
             return false;
         }
 
-        return self::$_service->has($index);
+        return self::$_service->has($name);
     }
 
 
     /**
-     * @param $name
-     * @return array|mixed|object
+     * @param string $name
+     * @return mixed
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public static function get($name) {
+    public static function get(string $name): mixed {
 
         $instance = self::getRealInstance();
         return $instance->get($name);
@@ -41,11 +41,11 @@ class Registry {
 
 
     /**
-     * @param $name
-     * @param $service
+     * @param string $name
+     * @param mixed  $service
      * @return void
      */
-    public static function set($name, $service): void {
+    public static function set(string $name, mixed $service): void {
 
         $instance = self::getRealInstance();
         $instance->setService($name, $service);

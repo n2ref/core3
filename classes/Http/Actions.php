@@ -18,12 +18,16 @@ class Actions extends Common {
 
     /**
      * Авторизация по логину или email
-     * @param array $params
+     * @param Request $request
      * @return array
-     * @throws \Exception
-     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws ContainerExceptionInterface
+     * @throws HttpException
+     * @throws NotFoundExceptionInterface
+     * @throws RuntimeException
      */
-    public function login(array $params): array {
+    public function login(Request $request): array {
+
+        $params = $request->getBody('json');
 
         Validator::testParameters([
             'login'    => 'req,string',
@@ -92,12 +96,16 @@ class Actions extends Common {
 
     /**
      * Обновление токенов
-     * @param array $params
+     * @param Request $request
      * @return array
-     * @throws \Exception
-     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws ContainerExceptionInterface
+     * @throws HttpException
+     * @throws NotFoundExceptionInterface
+     * @throws RuntimeException
      */
-    public function refreshToken(array $params): array {
+    public function refreshToken(Request $request): array {
+
+        $params = $request->getBody('json');
 
         Validator::testParameters([
             'refresh_token' => 'req,string',
@@ -183,8 +191,9 @@ class Actions extends Common {
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function registrationEmail(array $params) : array {
+    public function registrationEmail(Request $request) : array {
 
+        $params = $request->getBody('json');
         // TODO Доделать
         Validator::testParameters([
             'email'    => 'req,string(1-255),email',
@@ -258,10 +267,13 @@ class Actions extends Common {
 
     /**
      * Отправка проверочного кода на email
-     * @param array $params
+     * @param Request $request
      * @return array
+     * @throws RuntimeException
      */
-    public function registrationEmailCheck(array $params): array {
+    public function registrationEmailCheck(Request $request): array {
+
+        $params = $request->getBody('json');
 
         // TODO Доделать
         return [];
@@ -270,11 +282,13 @@ class Actions extends Common {
 
     /**
      * Восстановление пароля при помощи email
-     * @param array $params
+     * @param Request $request
      * @return array
+     * @throws RuntimeException
      */
-    public function restorePass(array $params): array {
+    public function restorePass(Request $request): array {
 
+        $params = $request->getBody('json');
         // TODO Доделать
         return [];
     }
@@ -282,10 +296,13 @@ class Actions extends Common {
 
     /**
      * Отправка проверочного кода на email для восстановления пароля
-     * @param array $params
+     * @param Request $request
      * @return array
+     * @throws RuntimeException
      */
-    public function restorePassCheck(array $params): array {
+    public function restorePassCheck(Request $request): array {
+
+        $params = $request->getBody('json');
 
         // TODO Доделать
         return [];
@@ -341,16 +358,14 @@ class Actions extends Common {
 
 
     /**
-     * Отправка настроек темы
+     * Отправка настроек
      * @return array
      */
-    public function getTheme(): array {
+    public function getConf(): array {
 
-        // TODO Доделать
         return [
-            'logo' => $this->config?->system?->logo,
-            'auth' => $this->config?->system?->auth,
-            'menu' => $this->config?->system?->menu
+            'logo'  => $this->config?->system?->logo,
+            'theme' => $this->config?->system?->theme?->toArray(),
         ];
     }
 
@@ -402,16 +417,17 @@ class Actions extends Common {
 
     /**
      * Данные о разделе модуля
-     * @param string      $module_name
-     * @param string      $section_name
-     * @param string|null $query
+     * @param Request $request
      * @return mixed
+     * @throws ContainerExceptionInterface
+     * @throws ExceptionInterface
      * @throws HttpException
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
-    public function getModSection(string $module_name, string $section_name, string $query = null): mixed {
+    public function getModSection(Request $request): mixed {
+
+        $module_name  = $request->getPathParam('module');
+        $section_name = $request->getPathParam('section');
 
         if (empty($this->auth)) {
             throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
@@ -432,10 +448,6 @@ class Actions extends Common {
         if ( ! is_callable([$controller, "section{$section_name}"])) {
             throw new HttpException($this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]), 'broken_section', 500);
         }
-
-        $request = new Request([
-            'mod_query' => $query
-        ]);
 
         // Обнуление
         $_GET     = [];
@@ -461,7 +473,11 @@ class Actions extends Common {
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    public function getModHandler(string $module_name, string $section_name, string $method_name): array {
+    public function getModHandler(Request $request): array {
+
+        $module_name  = $request->getPathParam('module');
+        $section_name = $request->getPathParam('section');
+        $handler_name = $request->getPathParam('handler');
 
         if (empty($this->auth)) {
             throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
@@ -476,16 +492,14 @@ class Actions extends Common {
         }
 
         $handler        = $this->getModuleHandler($module_name);
-        $handler_method = $section_name . ucfirst($method_name);
+        $handler_method = $section_name . ucfirst($handler_name);
 
 
         if ( ! is_callable([$handler, $handler_method]) ||
-             ! in_array($method_name, get_class_methods($handler_method))
+             ! in_array($handler_name, get_class_methods($handler_method))
         ) {
-            throw new HttpException($this->_("Ошибка. Не найден метод обработчика %s!", [$method_name]), 'incorrect_handler_method', 403);
+            throw new HttpException($this->_("Ошибка. Не найден метод обработчика %s!", [$handler_name]), 'incorrect_handler_method', 403);
         }
-
-        $request = new Request();
 
         // Обнуление
         $_GET     = [];

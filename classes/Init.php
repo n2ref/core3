@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes;
+use Core3\Classes\Http\Request;
 use Core3\Classes\Http\Response;
 use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin;
@@ -67,23 +68,44 @@ class Init extends Db {
                 ];
 
             } else {
-                $result = (new Rest())->dispatch();
+                ob_start();
+                $result = (new Http())->dispatch();
+                $buffer = ob_get_clean();
             }
 
-            $output = Response::dataJson($result);
+            if (is_array($result)) {
+                $response = new Response();
+                $response->setContentTypeJson();
+                $response->setContent(json_encode($result, JSON_UNESCAPED_UNICODE));
 
+            } elseif (is_scalar($result)) {
+                $response = new Response();
+                $response->setContentTypeHtml();
+                $response->setContent($result);
+
+            } elseif ($result instanceof Response) {
+                $response = $result;
+
+            } else {
+                $response = new Response();
+                $response->setHeader('Content-Type', 'text/plain');
+            }
+
+            if ( ! empty($buffer)) {
+                $response->setContent($buffer . $response->getContent());
+            }
 
         } catch (HttpException $e) {
-            $output = Response::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
+            $response = Response::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
 
         } catch (\Exception $e) {
-            $output = Response::errorJson($e->getMessage(), $e->getCode(), 500);
+            $response = Response::errorJson($e->getMessage(), $e->getCode(), 500);
         }
 
+        $this->logResponse($response);
 
-        $this->logOutput($output);
-
-        return $output;
+        $response->printHeaders();
+        return $response->getContent();
     }
 
 
@@ -100,7 +122,7 @@ class Init extends Db {
             return false;
         }
 
-        $this->auth = (new Rest())->getAuth();
+        $this->auth = (new Http())->getAuth();
 
         if ($this->auth) {
             Registry::set('auth', $this->auth);
@@ -233,16 +255,18 @@ class Init extends Db {
 
 
     /**
-     * @param string $output
+     * @param Response $response
      * @return void
      * @throws \Exception
      */
-    private function logOutput(string $output): void {
+    private function logResponse(Response $response): void {
 
         if ($this->config?->system?->log?->on &&
             $this->config?->system?->log?->output_file
         ) {
-            $this->log->file($this->config?->system?->log?->output_file)->info($output);
+            $this->log
+                ->file($this->config?->system?->log?->output_file)
+                ->info($response->getContent());
         }
     }
 }

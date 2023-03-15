@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes\Http;
+use Core3\Exceptions\RuntimeException;
 
 
 /**
@@ -7,51 +8,160 @@ namespace Core3\Classes\Http;
  */
 class Response {
 
+    private $http_code = 200;
+    private $headers   = [];
+    private $content;
+
 
     /**
-     * @param string $error_message
-     * @param string $error_code
-     * @param int    $http_core
-     * @param array  $headers
-     * @return string
+     * @param int $http_code
+     * @return void
      */
-    public static function errorJson(string $error_message, string $error_code, int $http_core = 200, array $headers = []): string {
+    public function setHttpCode(int $http_code): void {
 
-        http_response_code($http_core);
-        header('Content-Type: application/json');
-
-        if ( ! empty($headers)) {
-            foreach ($headers as $header) {
-                header($header);
-            }
-        }
-
-        $body = [
-            'error_code'    => $error_code,
-            'error_message' => $error_message,
-        ];
-
-        return json_encode($body, JSON_UNESCAPED_UNICODE);
+        $this->http_code = $http_code;
     }
 
 
     /**
-     * @param mixed          $data
-     * @param int            $http_core
-     * @param array|string[] $headers
-     * @return string
+     * @return int
      */
-    public static function dataJson(mixed $data, int $http_core = 200, array $headers = []): string {
+    public function getHttpCode(): int {
 
-        http_response_code($http_core);
-        header('Content-Type: application/json');
+        return $this->http_code;
+    }
 
-        if ( ! empty($headers)) {
-            foreach ($headers as $header) {
-                header($header);
+
+    /**
+     * @return void
+     */
+    public function setContentTypeJson(): void {
+
+        $this->setHeader('Content-Type', 'application/json');
+    }
+
+
+    /**
+     * @return void
+     */
+    public function setContentTypeHtml(): void {
+
+        $this->setHeader('Content-Type', 'text/html');
+    }
+
+
+    /**
+     * @return string|null
+     */
+    public function getContentType():? string {
+
+        return $this->getHeader('Content-Type');
+    }
+
+
+    /**
+     * @param array $headers
+     * @return void
+     */
+    public function setHeaders(array $headers): void {
+
+        foreach ($headers as $name => $value) {
+            if (is_scalar($value)) {
+                $this->setHeader($name, $value);
             }
         }
+    }
 
-        return (string)json_encode($data);
+
+    /**
+     * @param string $name
+     * @param string $value
+     * @return void
+     */
+    public function setHeader(string $name, string $value): void {
+
+        $name = trim($name);
+        $name = ucwords(strtolower($name));
+
+        $this->headers[$name] = trim($value);
+    }
+
+
+    /**
+     * @param string $name
+     * @return string|null
+     */
+    public function getHeader(string $name):? string {
+
+        return $this->headers[$name] ?? null;
+    }
+
+
+    /**
+     * @return array
+     */
+    public function getHeaders(): array {
+
+        return $this->headers;
+    }
+
+
+    /**
+     * @param mixed $content
+     * @return void
+     * @throws RuntimeException
+     */
+    public function setContent(mixed $content): void {
+
+        if ( ! is_scalar($content)) {
+            throw new RuntimeException('Incorrect content type');
+        }
+
+        $this->content = $content;
+    }
+
+
+    /**
+     * @return mixed
+     */
+    public function getContent(): mixed {
+
+        return $this->content;
+    }
+
+
+    /**
+     * @return void
+     */
+    public function printHeaders(): void {
+
+        $headers = $this->getHeaders();
+
+        http_response_code($this->http_code);
+
+        foreach ($headers as $name => $value) {
+            header("{$name}: {$value}");
+        }
+    }
+
+
+    /**
+     * @param string $error_message
+     * @param string $error_code
+     * @param int    $http_code
+     * @return Response
+     * @throws RuntimeException
+     */
+    public static function errorJson(string $error_message, string $error_code, int $http_code = 200): Response {
+
+        $response = new Response();
+        $response->setHttpCode($http_code);
+        $response->setContentTypeJson();
+        $response->setContent(json_encode([
+            'error_code'    => $error_code,
+            'error_message' => $error_message,
+        ], JSON_UNESCAPED_UNICODE));
+
+        return $response;
     }
 }
