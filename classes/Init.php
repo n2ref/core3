@@ -50,62 +50,7 @@ class Init extends Db {
             return $this->dispatchCli();
         }
 
-
-        try {
-            if ($this->auth) {
-                $this->logRequest();
-
-                (new Acl())->setupAcl();
-            }
-
-
-            // Disable
-            if ($this->config?->system?->disable?->on && ! $this->auth?->isAdmin()) {
-                $result = [
-                    'core_type'   => 'disable_page',
-                    'title'       => $this->config?->system?->disable?->title ?? $this->_('Система на профилактике'),
-                    'description' => $this->config?->system?->disable?->description ?? '',
-                ];
-
-            } else {
-                ob_start();
-                $result = (new Http())->dispatch();
-                $buffer = ob_get_clean();
-            }
-
-            if (is_array($result)) {
-                $response = new Response();
-                $response->setContentTypeJson();
-                $response->setContent(json_encode($result, JSON_UNESCAPED_UNICODE));
-
-            } elseif (is_scalar($result)) {
-                $response = new Response();
-                $response->setContentTypeHtml();
-                $response->setContent($result);
-
-            } elseif ($result instanceof Response) {
-                $response = $result;
-
-            } else {
-                $response = new Response();
-                $response->setHeader('Content-Type', 'text/plain');
-            }
-
-            if ( ! empty($buffer)) {
-                $response->setContent($buffer . $response->getContent());
-            }
-
-        } catch (HttpException $e) {
-            $response = Response::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
-
-        } catch (\Exception $e) {
-            $response = Response::errorJson($e->getMessage(), $e->getCode(), 500);
-        }
-
-        $this->logResponse($response);
-
-        $response->printHeaders();
-        return $response->getContent();
+        return $this->dispatchHttp();
     }
 
 
@@ -229,6 +174,74 @@ class Init extends Db {
         }
 
         return $result . PHP_EOL;
+    }
+
+
+    /**
+     * @return string
+     * @throws \Core3\Exceptions\RuntimeException
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws \Exception
+     */
+    private function dispatchHttp(): string {
+
+        try {
+            if ($this->auth) {
+                $this->logRequest();
+
+                (new Acl())->setupAcl();
+            }
+
+
+            // Disable
+            if ($this->config?->system?->disable?->on && ! $this->auth?->isAdmin()) {
+                $result = [
+                    'core_type'   => 'disable_page',
+                    'title'       => $this->config?->system?->disable?->title ?? $this->_('Система на профилактике'),
+                    'description' => $this->config?->system?->disable?->description ?? '',
+                ];
+
+            } else {
+                ob_start();
+                $result = (new Http())->dispatch();
+                $buffer = ob_get_clean();
+            }
+
+            if (is_array($result)) {
+                $response = new Response();
+                $response->setContentTypeJson();
+                $response->setContent(json_encode($result, JSON_UNESCAPED_UNICODE));
+
+            } elseif (is_scalar($result)) {
+                $response = new Response();
+                $response->setContentTypeHtml();
+                $response->setContent($result);
+
+            } elseif ($result instanceof Response) {
+                $response = $result;
+
+            } else {
+                $response = new Response();
+                $response->setHeader('Content-Type', 'text/plain');
+            }
+
+            if ( ! empty($buffer)) {
+                $response->setContent($buffer . $response->getContent());
+            }
+
+        } catch (HttpException $e) {
+            $response = Response::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
+
+        } catch (\Exception $e) {
+            $response = Response::errorJson($e->getMessage(), $e->getCode(), 500);
+        }
+
+        $this->logResponse($response);
+
+        $response->printHeaders();
+        return $response->getContent();
     }
 
 

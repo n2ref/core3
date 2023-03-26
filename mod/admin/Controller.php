@@ -49,7 +49,7 @@ class Controller extends Common {
         $response->getHeaders();
 
         $model = new Index\Model();
-        return $model->getServerInfo();
+        return json_encode($model->getServerInfo());
 
 
         $panel = new Panel('admin');
