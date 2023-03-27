@@ -19,9 +19,6 @@ abstract class Common extends Acl {
 
 	private static array $params = [];
 
-    private $js        = [];
-    private $css       = [];
-
     /**
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
@@ -102,31 +99,93 @@ abstract class Common extends Acl {
 	}
 
 
-
-
     /**
      * @param string $src
      * @return void
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     public function addJs(string $src): void {
 
         $src = trim($src);
         $src = Tools::addSrcHash($src);
 
-        $this->js[] = $src;
+        if (Registry::has('js')) {
+            $js = Registry::get('js');
+
+            if (is_array($js)) {
+                $js[] = $src;
+
+                Registry::set('js', $js);
+
+            } else {
+                Registry::set('js', [ $src ]);
+            }
+
+        } else {
+            Registry::set('js', [ $src ]);
+        }
+    }
+
+
+    /**
+     * @param string $module
+     * @param string $src
+     * @return void
+     * @throws ContainerExceptionInterface
+     * @throws DbException
+     * @throws ExceptionInterface
+     */
+    public function addModuleJs(string $module, string $src): void {
+
+        $module_folder = $this->getModuleFolder($module);
+
+        $this->addCss("{$module_folder}/{$src}");
     }
 
 
     /**
      * @param string $src
      * @return void
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     public function addCss(string $src): void {
 
         $src = trim($src);
         $src = Tools::addSrcHash($src);
 
-        $this->css[] = $src;
+        if (Registry::has('css')) {
+            $css = Registry::get('css');
+
+            if (is_array($css)) {
+                $css[] = $src;
+
+                Registry::set('css', $css);
+
+            } else {
+                Registry::set('css', [ $src ]);
+            }
+
+        } else {
+            Registry::set('css', [ $src ]);
+        }
+    }
+
+
+    /**
+     * @param string $module
+     * @param string $src
+     * @return void
+     * @throws ContainerExceptionInterface
+     * @throws DbException
+     * @throws ExceptionInterface
+     */
+    public function addModuleCss(string $module, string $src): void {
+
+        $module_folder = $this->getModuleFolder($module);
+
+        $this->addCss("{$module_folder}/{$src}");
     }
 
 

@@ -122,6 +122,36 @@ class Response {
 
 
     /**
+     * @param mixed $content
+     * @return void
+     * @throws RuntimeException
+     */
+    public function appendContent(mixed $content): void {
+
+        if ( ! is_scalar($content)) {
+            throw new RuntimeException('Incorrect content type');
+        }
+
+        $this->content = $content . $this->content;
+    }
+
+
+    /**
+     * @param mixed $content
+     * @return void
+     * @throws RuntimeException
+     */
+    public function prependContent(mixed $content): void {
+
+        if ( ! is_scalar($content)) {
+            throw new RuntimeException('Incorrect content type');
+        }
+
+        $this->content .= $content;
+    }
+
+
+    /**
      * @return mixed
      */
     public function getContent(): mixed {

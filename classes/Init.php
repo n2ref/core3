@@ -227,9 +227,22 @@ class Init extends Db {
                 $response->setHeader('Content-Type', 'text/plain');
             }
 
-            if ( ! empty($buffer)) {
-                $response->setContent($buffer . $response->getContent());
+            if (Registry::has('js')) {
+                foreach (Registry::get('js') as $src) {
+                    $response->appendContent("<script type=\"text/javascript\" src=\"{$src}\"></script>'");
+                }
             }
+
+            if (Registry::has('css')) {
+                foreach (Registry::get('css') as $src) {
+                    $response->appendContent("<link href=\"{$src}\" type=\"text/css\" rel=\"stylesheet\" />");
+                }
+            }
+
+            if ( ! empty($buffer)) {
+                $response->appendContent($buffer);
+            }
+
 
         } catch (HttpException $e) {
             $response = Response::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
