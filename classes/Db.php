@@ -122,16 +122,18 @@ abstract class Db extends System {
             $key  = "core2_mod_is_active{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $module = $this->db->fetchRow("
+                $is_active_sw = $this->db->fetchOne("
                     SELECT is_active_sw 
                     FROM core_modules 
                     WHERE name = ? 
-                      AND is_active_sw = 'Y'
                 ", $module_name);
 
-                $is_active = (bool)$module?->is_active_sw;
+                if ( ! empty($is_active_sw)) {
+                    $this->cache->save($key, $is_active_sw == 'Y', ['core3_mod']);
+                }
 
-                $this->cache->save($key, $is_active, ['core3_mod']);
+                $is_active = $is_active_sw == 'Y';
+
             } else {
                 $is_active = (bool)$this->cache->load($key);
             }
@@ -157,15 +159,15 @@ abstract class Db extends System {
             $key         = "core3_mod_installed_{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $module = $this->db->fetchRow("
-                    SELECT 1 AS is_install
+                $is_install = (bool)$this->db->fetchOne("
+                    SELECT 1
                     FROM core_modules 
                     WHERE name = ?
                 ", $module_name);
 
-                $is_install = (bool)$module?->is_install;
-
-                $this->cache->save($key, $is_install, ['core3_mod']);
+                if ($is_install) {
+                    $this->cache->save($key, $is_install, ['core3_mod']);
+                }
 
             } else {
                 $is_install = (bool)$this->cache->load($key);
@@ -222,9 +224,9 @@ abstract class Db extends System {
                 ", $module_name);
 
                 if ($module) {
-                    $folder = $module->is_system_sw == "Y"
-                        ? "core3/mod/{$module_name}/v{$module->version}"
-                        : "mod/{$module_name}/v{$module->version}";
+                    $folder = $module['is_system_sw'] == "Y"
+                        ? "core3/mod/{$module_name}/v{$module['version']}"
+                        : "mod/{$module_name}/v{$module['version']}";
                 } else {
                     throw new DbException($this->_("Модуль %s не существует", [$module_name]), 404);
                 }
@@ -260,7 +262,11 @@ abstract class Db extends System {
                 WHERE name = ?
             ", $module_name);
 
-            $this->cache->save($key, $module?->version, ['core3_mod']);
+            if ( ! empty($module['version'])) {
+                $this->cache->save($key, $module['version'], ['core3_mod']);
+            }
+
+            $version = $module['version'] ?? '';
 
         } else {
             $version = $this->cache->load($key);
