@@ -2,6 +2,7 @@
 namespace Core3\Mod\Admin\Tables;
 use Core3\Classes\Db\Table;
 use Laminas\Db\RowGateway\AbstractRowGateway;
+use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Select;
 
 /**
@@ -11,6 +12,25 @@ class Users extends Table {
 
 
 	protected $table = "core_users";
+
+
+    /**
+     * Количество пользователей
+     * @return int
+     */
+	public function getCount(): int {
+
+        $results = $this->select(function (Select $select) {
+            $select
+                ->columns([
+                    'id'    => 'id',
+                    'count' => new Expression('COUNT(1)')
+                ])
+                ->limit(1);
+        });
+
+        return (int)$results->current()->count;
+	}
 
 
     /**

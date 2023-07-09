@@ -17,12 +17,29 @@ class Modules extends Table {
     /**
      * @return ResultSetInterface
      */
-    public function getRowsByActiveVisible(): ResultSetInterface {
+    public function getRowsByActive(): ResultSetInterface {
 
         $result = $this->fetchAll(function (Select $select) {
             $select
                 ->where([
                     'is_active_sw' => 'Y',
+                ])
+                ->order('seq');
+        });
+
+        return $result;
+    }
+
+
+    /**
+     * @return ResultSetInterface
+     */
+    public function getRowsByActiveVisible(): ResultSetInterface {
+
+        $result = $this->fetchAll(function (Select $select) {
+            $select
+                ->where([
+                    'is_active_sw'  => 'Y',
                     'is_visible_sw' => 'Y',
                 ])
                 ->order('seq');

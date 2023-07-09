@@ -129,22 +129,6 @@ abstract class Common extends Acl {
 
 
     /**
-     * @param string $module
-     * @param string $src
-     * @return void
-     * @throws ContainerExceptionInterface
-     * @throws DbException
-     * @throws ExceptionInterface
-     */
-    public function addModuleJs(string $module, string $src): void {
-
-        $module_folder = $this->getModuleFolder($module);
-
-        $this->addCss("{$module_folder}/{$src}");
-    }
-
-
-    /**
      * @param string $src
      * @return void
      * @throws ContainerExceptionInterface
@@ -181,11 +165,65 @@ abstract class Common extends Acl {
      * @throws DbException
      * @throws ExceptionInterface
      */
-    public function addModuleCss(string $module, string $src): void {
+    public function addCssModule(string $module, string $src): void {
 
         $module_folder = $this->getModuleFolder($module);
 
         $this->addCss("{$module_folder}/{$src}");
+    }
+
+
+    /**
+     * @param string $module
+     * @param string $src
+     * @return void
+     * @throws ContainerExceptionInterface
+     * @throws DbException
+     * @throws ExceptionInterface
+     */
+    public function addJsModule(string $module, string $src): void {
+
+        $module_folder = $this->getModuleFolder($module);
+
+        $this->addCss("{$module_folder}/{$src}");
+    }
+
+
+    /**
+     * @param string $module
+     * @param string $src
+     * @return string
+     * @throws ContainerExceptionInterface
+     * @throws DbException
+     * @throws ExceptionInterface
+     */
+    public function getJsModule(string $module, string $src): string {
+
+        $module_folder = $this->getModuleFolder($module);
+
+        $src = trim("{$module_folder}/{$src}");
+        $src = Tools::addSrcHash($src);
+
+        return "<script type=\"text/javascript\" src=\"{$src}\"></script>";
+    }
+
+
+    /**
+     * @param string $module
+     * @param string $src
+     * @return string
+     * @throws ContainerExceptionInterface
+     * @throws DbException
+     * @throws ExceptionInterface
+     */
+    public function getCssModule(string $module, string $src): string {
+
+        $module_folder = $this->getModuleFolder($module);
+
+        $src = trim("{$module_folder}/{$src}");
+        $src = Tools::addSrcHash($src);
+
+        return "<link href=\"{$src}\" type=\"text/css\" rel=\"stylesheet\"/>";
     }
 
 

@@ -46,6 +46,7 @@ class Database extends Db {
 				$sql = "SELECT VERSION FROM PRODUCT_COMPONENT_VERSION";
 				break;
 
+			case 'Pdo_Mysql':
 			case 'mysql':
 			case 'pgsql':
 			default:
@@ -72,28 +73,32 @@ class Database extends Db {
 	/**
 	 * Copy of phpBB's get_database_size()
 	 * @link https://github.com/phpbb/phpbb/blob/release-3.1.6/phpBB/includes/functions_admin.php#L2908-L3043
-	 *
+	 * @return float|null
 	 * @copyright (c) phpBB Limited <https://www.phpbb.com>
 	 * @license GNU General Public License, version 2 (GPL-2.0)
 	 */
-	protected function databaseSize(): string {
+	protected function databaseSize():? float {
 
 		$database_size = false;
 
 		// This code is heavily influenced by a similar routine in phpMyAdmin 2.2.0
 		switch ($this->getType()) {
 			case 'mysql':
+			case 'Pdo_Mysql':
                 $mysqlEngine = ['MyISAM', 'InnoDB', 'Aria'];
                 $db_name     = $this->config->system->database->params->database;
 
 				$result        = $this->db->query("SHOW TABLE STATUS FROM `{$db_name}`")->execute();
 				$database_size = 0;
 
+
                 foreach ($result as $row) {
                     if (isset($row['Engine']) && in_array($row['Engine'], $mysqlEngine)) {
-                        $database_size += $row['Data_length'] + $row['Index_length'];
+                        $database_size += ($row['Data_length'] + $row['Index_length']) / 8;
                     }
                 }
+
+                $database_size = $database_size * 1024 * 1024;
 				break;
 
 			case 'sqlite':
@@ -147,8 +152,8 @@ class Database extends Db {
 		}
 
 		return ($database_size !== false)
-            ? (string) $database_size
-            : 'N/A';
+            ? (float)$database_size
+            : null;
 	}
 
 

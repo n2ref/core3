@@ -63,22 +63,6 @@ class Cache {
 
 
     /**
-     * @param array $tags
-     * @return void
-     */
-    public function clearByTags(array $tags): void {
-
-        if (method_exists($this->adapter, 'clearByTags')) {
-            $this->adapter->clearByTags($tags);
-
-        } else {
-            //TODO сделать очистку по тэгам
-            $this->adapter->clearByNamespace($this->namespace);
-        }
-    }
-
-
-    /**
      * @param string $key
      * @return mixed
      * @throws \Laminas\Cache\Exception\ExceptionInterface
@@ -108,20 +92,31 @@ class Cache {
 
     /**
      * @param string $key
-     * @param array  $tags
      * @return void
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
-    public function clean(string $key = '', array $tags = []): void {
+    public function clear(string $key = ''): void {
 
-        if ($tags) {
-            $this->clearByTags($tags);
+        if ($key) {
+            $this->adapter->removeItem($key);
         } else {
-            if ($key) {
-                $this->adapter->removeItem($key);
-            } else {
-                $this->adapter->clearByNamespace($this->namespace);
-            }
+            $this->adapter->clearByNamespace($this->namespace);
+        }
+    }
+
+
+    /**
+     * @param array $tags
+     * @return void
+     */
+    public function clearByTags(array $tags): void {
+
+        if (method_exists($this->adapter, 'clearByTags')) {
+            $this->adapter->clearByTags($tags);
+
+        } else {
+            //TODO сделать очистку по тэгам
+            $this->adapter->clearByNamespace($this->namespace);
         }
     }
 

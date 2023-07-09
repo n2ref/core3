@@ -4,11 +4,9 @@ use \Core3\Classes\Common;
 use Core3\Classes\Http\Request;
 use Core3\Classes\Http\Response;
 use Core3\Classes\Http\Router;
+use Core3\Classes\Tools;
 use Core3\Mod\Admin\Index;
 
-use \CoreUI\Alert;
-use \CoreUI\Panel;
-use CoreUI\Tabs;
 
 require_once 'classes/autoload.php';
 
@@ -25,31 +23,129 @@ class Controller extends Common {
 
     /**
      * @param Request $request
-     * @return mixed
+     * @return array|string|string[]
+     * @throws \Core3\Exceptions\DbException
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
      * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws \Exception
      */
-    public function sectionIndex(Request $request): mixed {
+    public function sectionIndex(Request $request) {
 
         $router = new Router();
-        $router->addPath('/cache')->delete('cacheClean');
+        $router->addPath('/cache')->delete('cache_clean');
+        $router->addPath('/php_info')->get('get_php_info');
 
         $route = $router->getRoute($request->getMethod(), $request->getPathParam('mod_query'));
 
 
         if ($route) {
             switch ($route['action']) {
-                case 'cacheClean':
+                case 'cache_clean':
+                    $this->cache->clear();
+
+                    return [
+                        'status' => 'success'
+                    ];
+                    break;
+
+                case 'get_php_info':
+                    return (new Index\SysInfo\PhpInfo())->getPhpinfo();
                     break;
             }
         }
 
+        $service_info = (new Index\Model())->getServerInfo();
+        $view         = new Index\View();
 
-        $response = new Response();
-        $response->getHeaders();
 
-        $model = new Index\Model();
-        return json_encode($model->getServerInfo());
+
+        $content = [
+            $this->getCssModule('admin', 'assets/index/css/admin.css'),
+            $this->getJsModule('admin', 'assets/index/js/admin.index.js'),
+        ];
+
+        $panel_admin = new \CoreUI\Panel();
+        $panel_admin->setTitle('Общие сведения');
+        $panel_admin->setControls('<button class="btn btn-outline-secondary" onclick="coreMenu.reload()"><i class="bi bi-arrow-clockwise"></i></button>');
+        $panel_admin->setContent($view->getTableCommon($service_info));
+        $content[] = $panel_admin->toArray();
+
+
+
+
+        $layout = new \CoreUI\Layout();
+        $layout->justify($layout::JUSTIFY_AROUND);
+        $layout->direction($layout::DIRECTION_ROW);
+        $layout->addItems()->width(200)->content($view->getChartCpu($service_info));
+        $layout->addItems()->width(200)->content($view->getChartMem($service_info));
+        $layout->addItems()->width(200)->content($view->getChartSwap($service_info));
+        $layout->addItems()->width(200)->content($view->getChartDisks($service_info));
+
+        $panel_system = new \CoreUI\Panel();
+        $panel_system->setTitle('Системная информация');
+        $panel_system->setContent([
+            $layout->toArray(),
+            '<br><br>',
+            $view->getTableSystem($service_info)
+        ]);
+        $content[] = $panel_system->toArray();
+
+
+
+
+
+
+        $panel_php = new \CoreUI\Panel();
+        $panel_php->setTitle('Php');
+        $panel_php->setControls('<button class="btn btn-outline-secondary" onclick="adminIndex.showPhpInfo()"><i class="bi bi-info"></i></button>');
+        $panel_php->setContent($view->getPhp());
+
+
+        $panel_db = new \CoreUI\Panel();
+        $panel_db->setTitle('База данных');
+        $panel_db->setContent($view->getDbInfo($service_info));
+
+
+
+        $layout = new \CoreUI\Layout();
+        $item = $layout->addItems();
+        $item->widthColumn(12);
+        $item->addSize('lg')->widthColumn(6);
+
+        $item->content($panel_php->toArray());
+
+        $item = $layout->addItems();
+        $item->widthColumn(12);
+        $item->addSize('lg')->widthColumn(6);
+        $item->content($panel_db->toArray());
+
+        $content[] = $layout->toArray();
+
+
+
+
+        $panel_disks = new \CoreUI\Panel();
+        $panel_disks->setTitle('Использование дисков');
+        $panel_disks->setContent($view->getTableDisks($service_info));
+        $content[] = $panel_disks->toArray();
+
+
+        $panel_network = new \CoreUI\Panel();
+        $panel_network->setTitle('Сеть');
+        $panel_network->setContent($view->getTableNetworks($service_info));
+        $content[] = $panel_network->toArray();
+
+
+        $layout = new \CoreUI\Layout();
+        $layout->addSize('sm')->justify($layout::JUSTIFY_START);
+        $layout->addSize('md')->justify($layout::JUSTIFY_CENTER);
+        $layout->addItems()
+            ->width(1024)
+            ->maxWidth('100%')
+            ->minWidth(400)
+            ->content($content);
+
+        return $layout->toArray();
     }
 
 

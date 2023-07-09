@@ -41,6 +41,11 @@ class Linux implements OperatingSystem {
 			}
 		}
 
+        $data['mem_used']     = $data['mem_total'] - $data['mem_available'];
+        $data['mem_percent']  = $data['mem_available'] / $data['mem_total'] * 100;
+        $data['swap_used']    = $data['swap_total'] - $data['swap_free'];
+        $data['swap_percent'] = ($data['swap_total'] - $data['swap_free']) / $data['swap_total'] * 100;
+
 		return $data;
 	}
 
@@ -88,10 +93,22 @@ class Linux implements OperatingSystem {
 
 
     /**
+     * @return float
+     */
+    public function getCpuLoad(): float {
+
+        $exec_loads = sys_getloadavg();
+        $exec_cores = (float)trim(shell_exec("grep -P '^processor' /proc/cpuinfo|wc -l"));
+
+        return round($exec_loads[0] / ($exec_cores + 1) * 100, 2);
+    }
+
+
+    /**
      * @return string
      */
 	public function getTime(): string {
-		return (string)shell_exec('date');
+		return trim(shell_exec('date'));
 	}
 
 
@@ -120,8 +137,8 @@ class Linux implements OperatingSystem {
 
         $result             = [];
         $result['hostname'] = \gethostname();
-        $result['dns']      = shell_exec('cat /etc/resolv.conf |grep -i \'^nameserver\'|head -n1|cut -d \' \' -f2');
-        $result['gateway']  = shell_exec('ip route | awk \'/default/ { print $3 }\'');;
+        $result['dns']      = trim(shell_exec('cat /etc/resolv.conf |grep -i \'^nameserver\'|head -n1|cut -d \' \' -f2'));
+        $result['gateway']  = trim(shell_exec('ip route | awk \'/default/ { print $3 }\''));
         return $result;
 	}
 
@@ -137,12 +154,12 @@ class Linux implements OperatingSystem {
         foreach ($interfaces as $interface) {
             $iface              = [];
             $iface['interface'] = basename($interface);
-            $iface['mac']       = shell_exec('ip addr show dev ' . $iface['interface'] . ' | grep "link/ether " | cut -d \' \' -f 6  | cut -f 1 -d \'/\'');
-            $iface['ipv4']      = shell_exec('ip addr show dev ' . $iface['interface'] . ' | grep "inet " | cut -d \' \' -f 6  | cut -f 1 -d \'/\'');
-            $iface['ipv6']      = shell_exec('ip -o -6 addr show ' . $iface['interface'] . ' | sed -e \'s/^.*inet6 \([^ ]\+\).*/\1/\'');
+            $iface['mac']       = trim(shell_exec('ip addr show dev ' . $iface['interface'] . ' | grep "link/ether " | cut -d \' \' -f 6  | cut -f 1 -d \'/\''));
+            $iface['ipv4']      = trim(shell_exec('ip addr show dev ' . $iface['interface'] . ' | grep "inet " | cut -d \' \' -f 6  | cut -f 1 -d \'/\''));
+            $iface['ipv6']      = trim(shell_exec('ip -o -6 addr show ' . $iface['interface'] . ' | sed -e \'s/^.*inet6 \([^ ]\+\).*/\1/\''));
 
             if ($iface['interface'] !== 'lo') {
-                $iface['status'] = shell_exec('cat /sys/class/net/' . $iface['interface'] . '/operstate');
+                $iface['status'] = trim(shell_exec('cat /sys/class/net/' . $iface['interface'] . '/operstate'));
                 $iface['speed']  = (int)shell_exec('cat /sys/class/net/' . $iface['interface'] . '/speed');
                 if (isset($iface['speed']) && $iface['speed'] > 0) {
                     if ($iface['speed'] >= 1000) {
@@ -154,7 +171,7 @@ class Linux implements OperatingSystem {
                     $iface['speed'] = 'unknown';
                 }
 
-                $duplex = shell_exec('cat /sys/class/net/' . $iface['interface'] . '/duplex');
+                $duplex = trim(shell_exec('cat /sys/class/net/' . $iface['interface'] . '/duplex'));
 
                 if (isset($duplex) && $duplex !== '') {
                     $iface['duplex'] = 'Duplex: ' . $duplex;
@@ -188,7 +205,7 @@ class Linux implements OperatingSystem {
 		}
 
         $matches = [];
-        $pattern = '/^(?<Filesystem>[\S]+)\s*(?<Type>[\S]+)\s*(?<Blocks>\d+)\s*(?<Used>\d+)\s*(?<Available>\d+)\s*(?<Capacity>\d+%)\s*(?<Mounted>[\w\/-]+)$/m';
+        $pattern = '/^(?<Filesystem>[\S]+)\s*(?<Type>[\S]+)\s*(?<Blocks>\d+)\s*(?<Used>\d+)\s*(?<Available>\d+)\s*(?<Capacity>\d+)%\s*(?<Mounted>[\w\/-]+)$/m';
         $result  = preg_match_all($pattern, $disks, $matches);
 
 		if ($result === 0 || $result === false) {
@@ -207,7 +224,8 @@ class Linux implements OperatingSystem {
                 'fs'        => $matches['Type'][$i],
                 'used'      => (int)((int)$matches['Used'][$i] / 1024),
                 'available' => (int)((int)$matches['Available'][$i] / 1024),
-                'percent'   => $matches['Capacity'][$i],
+                'total'     => (int)((int)$matches['Used'][$i] / 1024) + (int)((int)$matches['Available'][$i] / 1024),
+                'percent'   => (float)$matches['Capacity'][$i],
                 'mount'     => $matches['Mounted'][$i],
             ];
         }

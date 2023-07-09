@@ -227,15 +227,17 @@ class Init extends Db {
                 $response->setHeader('Content-Type', 'text/plain');
             }
 
-            if (Registry::has('js')) {
-                foreach (Registry::get('js') as $src) {
-                    $response->appendContent("<script type=\"text/javascript\" src=\"{$src}\"></script>'");
+            if ( ! is_array($result)) {
+                if (Registry::has('js')) {
+                    foreach (Registry::get('js') as $src) {
+                        $response->appendContent("<script type=\"text/javascript\" src=\"{$src}\"></script>'");
+                    }
                 }
-            }
 
-            if (Registry::has('css')) {
-                foreach (Registry::get('css') as $src) {
-                    $response->appendContent("<link href=\"{$src}\" type=\"text/css\" rel=\"stylesheet\" />");
+                if (Registry::has('css')) {
+                    foreach (Registry::get('css') as $src) {
+                        $response->appendContent("<link href=\"{$src}\" type=\"text/css\" rel=\"stylesheet\"/>");
+                    }
                 }
             }
 

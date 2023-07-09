@@ -42,8 +42,13 @@ class FreeBSD implements OperatingSystem {
 			$data['mem_total']     = (int)($lines[0] / 1024 / 1024);
             $data['mem_available'] = (int)(($lines[1] * ($lines[2] + $lines[3] + $lines[4])) / 1024 / 1024);
 		}
-
 		unset($lines);
+
+
+        $data['mem_used']     = $data['mem_total'] - $data['mem_available'];
+        $data['mem_percent']  = $data['mem_available'] / $data['mem_total'] * 100;
+        $data['swap_percent'] = ($data['swap_total'] - $data['swap_free']) / $data['swap_total'] * 100;
+        $data['swap_used']    = $data['swap_total'] - $data['swap_free'];
 
 		return $data;
 	}
@@ -73,12 +78,21 @@ class FreeBSD implements OperatingSystem {
 
 
     /**
+     * @return float
+     */
+    public function getCpuLoad(): float {
+
+        return 0;
+    }
+
+
+    /**
      * @return string
      */
 	public function getTime(): string {
 
 		try {
-			return $this->executeCommand('date');
+			return trim($this->executeCommand('date'));
 		} catch (\RuntimeException $e) {
 			return '';
 		}
@@ -227,7 +241,7 @@ class FreeBSD implements OperatingSystem {
 		}
 
 		$matches = [];
-		$pattern = '/^(?<Filesystem>[\S]+)\s*(?<Type>[\S]+)\s*(?<Blocks>\d+)\s*(?<Used>\d+)\s*(?<Available>\d+)\s*(?<Capacity>\d+%)\s*(?<Mounted>[\w\/-]+)$/m';
+		$pattern = '/^(?<Filesystem>[\S]+)\s*(?<Type>[\S]+)\s*(?<Blocks>\d+)\s*(?<Used>\d+)\s*(?<Available>\d+)\s*(?<Capacity>\d+)%\s*(?<Mounted>[\w\/-]+)$/m';
 
 		$result = preg_match_all($pattern, $disks, $matches);
 		if ($result === 0 || $result === false) {
@@ -245,7 +259,8 @@ class FreeBSD implements OperatingSystem {
                 'fs'        => $matches['Type'][$i],
                 'used'      => (int)((int)$matches['Used'][$i] / 1024),
                 'available' => (int)((int)$matches['Available'][$i] / 1024),
-                'percent'   => $matches['Capacity'][$i],
+                'total'     => (int)((int)$matches['Used'][$i] / 1024) + (int)((int)$matches['Available'][$i] / 1024),
+                'percent'   => (float)$matches['Capacity'][$i],
                 'mount'     => $matches['Mounted'][$i],
             ];
 		}

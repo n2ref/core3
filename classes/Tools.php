@@ -302,21 +302,24 @@ class Tools {
 
     /**
      * Сортировка массивов по элементу
-     *
      * @param array  $array Массив
-     * @param string $on Ключ элемента
+     * @param string $field Ключ элемента
      * @param int    $order Тип сортировки
-     *
      * @return array
      */
-    public static function arrayMultisort($array, $on, $order = SORT_ASC) {
+    public static function arrayMultisort(array $array, $field, int $order = SORT_ASC): array {
 
         switch ($order) {
             case SORT_ASC:
-                usort($array, create_function('$a, $b', "return strnatcasecmp(\$a['$on'], \$b['$on']);"));
+                usort($array, function($a, $b) use ($field) {
+                    return strnatcasecmp((string)$a[$field], (string)$b[$field]);
+                });
                 break;
+
             case SORT_DESC:
-                usort($array, create_function('$a, $b', "return strnatcasecmp(\$b['$on'], \$a['$on']);"));
+                usort($array, function($a, $b) use ($field) {
+                    return strnatcasecmp((string)$b[$field], (string)$a[$field]);
+                });
                 break;
         }
 
@@ -339,43 +342,44 @@ class Tools {
 
     /**
      * Возвращает сумму прописью
-     * @param  float  $num
+     * @param float $num
      * @return string
      */
-    public static function num2str($num) {
-        $nul = 'ноль';
-        $ten = array(
-            array('','один','два','три','четыре','пять','шесть','семь', 'восемь','девять'),
-            array('','одна','две','три','четыре','пять','шесть','семь', 'восемь','девять'),
-        );
-        $a20     = array('десять','одиннадцать','двенадцать','тринадцать','четырнадцать' ,'пятнадцать','шестнадцать','семнадцать','восемнадцать','девятнадцать');
-        $tens    = array(2 => 'двадцать','тридцать','сорок','пятьдесят','шестьдесят','семьдесят' ,'восемьдесят','девяносто');
-        $hundred = array('','сто','двести','триста','четыреста','пятьсот','шестьсот', 'семьсот','восемьсот','девятьсот');
-        $unit    = array( // Units
-             array('копейка' ,'копейки' ,'копеек',	 1),
-             array('рубль'   ,'рубля'   ,'рублей'    ,0),
-             array('тысяча'  ,'тысячи'  ,'тысяч'     ,1),
-             array('миллион' ,'миллиона','миллионов' ,0),
-             array('миллиард','милиарда','миллиардов',0),
-        );
-        //
-        list($rub, $kop) = explode('.', sprintf("%015.2f", floatval($num)));
-        $out = array();
+    public static function num2str(float $num): string {
+
+        $nul     = 'ноль';
+        $ten     = [
+            ['', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'],
+            ['', 'одна', 'две', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'],
+        ];
+        $a20     = ['десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать', 'шестнадцать', 'семнадцать', 'восемнадцать', 'девятнадцать'];
+        $tens    = [2 => 'двадцать', 'тридцать', 'сорок', 'пятьдесят', 'шестьдесят', 'семьдесят', 'восемьдесят', 'девяносто'];
+        $hundred = ['', 'сто', 'двести', 'триста', 'четыреста', 'пятьсот', 'шестьсот', 'семьсот', 'восемьсот', 'девятьсот'];
+        $unit    = [
+            ['копейка', 'копейки', 'копеек', 1],
+            ['рубль', 'рубля', 'рублей', 0],
+            ['тысяча', 'тысячи', 'тысяч', 1],
+            ['миллион', 'миллиона', 'миллионов', 0],
+            ['миллиард', 'милиарда', 'миллиардов', 0],
+        ];
+
+        [$rub, $kop] = explode('.', sprintf("%015.2f", $num));
+
+        $out = [];
         if (intval($rub) > 0) {
             foreach (str_split($rub, 3) as $uk => $v) { // by 3 symbols
                 if ( ! intval($v)) continue;
-                $uk = sizeof($unit) - $uk - 1; // unit key
+                $uk     = sizeof($unit) - $uk - 1; // unit key
                 $gender = $unit[$uk][3];
-                list($i1, $i2, $i3) = array_map('intval', str_split($v, 1));
+                [$i1, $i2, $i3] = array_map('intval', str_split($v, 1));
                 // mega-logic
-                $out[] = $hundred[$i1]; # 1xx-9xx
-                if ($i2 > 1) $out[]= $tens[$i2] . ' ' . $ten[$gender][$i3]; # 20-99
+                $out[] = $hundred[$i1];            # 1xx-9xx
+                if ($i2 > 1) $out[] = $tens[$i2] . ' ' . $ten[$gender][$i3]; # 20-99
                 else $out[] = $i2 > 0 ? $a20[$i3] : $ten[$gender][$i3]; # 10-19 | 1-9
                 // units without rub & kop
-                if ($uk > 1) $out[]= self::morph($v, $unit[$uk][0], $unit[$uk][1], $unit[$uk][2]);
+                if ($uk > 1) $out[] = self::morph($v, $unit[$uk][0], $unit[$uk][1], $unit[$uk][2]);
             }
-        }
-        else $out[] = $nul;
+        } else $out[] = $nul;
         // $out[] = self::morph(intval($rub), $unit[1][0], $unit[1][1], $unit[1][2]); // rub
         // $out[] = $kop . ' ' . self::morph($kop, $unit[0][0], $unit[0][1], $unit[0][2]); // kop
         return trim(preg_replace('/ {2,}/', ' ', join(' ', $out)));
@@ -387,14 +391,14 @@ class Tools {
      * @param  int    $bytes
      * @return string
      */
-    public static function formatSizeHuman($bytes) {
+    public static function formatSizeHuman($bytes): string {
 
         if ($bytes >= 1073741824) {
-            $bytes = number_format($bytes / 1073741824, 2) . ' GB';
+            $bytes = number_format($bytes / 1073741824, 2) . ' Gb';
         } elseif ($bytes >= 1048576) {
-            $bytes = number_format($bytes / 1048576, 2) . ' MB';
+            $bytes = number_format($bytes / 1048576, 2) . ' Mb';
         } elseif ($bytes >= 1024) {
-            $bytes = number_format($bytes / 1024, 2) . ' KB';
+            $bytes = number_format($bytes / 1024, 2) . ' Kb';
         } elseif ($bytes > 1) {
             $bytes = $bytes . ' bytes';
         } elseif ($bytes == 1) {
@@ -440,10 +444,10 @@ class Tools {
         $result = 0;
 
         switch ($unit) {
-            case 'k':  $result = round($bytes / 1024, 2); break;
-            case 'm':  $result = round($bytes / 1024 / 1024, 2); break;
-            case 'gb': $result = round($bytes / 1024 / 1024 / 1024, 2); break;
-            case 'tb': $result = round($bytes / 1024 / 1024 / 1024 / 1024, 2); break;
+            case 'Kb':  $result = round($bytes / 1024, 2); break;
+            case 'Mb':  $result = round($bytes / 1024 / 1024, 2); break;
+            case 'Gb': $result = round($bytes / 1024 / 1024 / 1024, 2); break;
+            case 'Tb': $result = round($bytes / 1024 / 1024 / 1024 / 1024, 2); break;
         }
 
         return $result;

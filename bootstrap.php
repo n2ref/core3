@@ -53,10 +53,10 @@ require_once 'autoload.php';
 
 
 
-$core_conf_file = __DIR__ . "/../conf.ini";
+$core_conf_file = __DIR__ . "/conf.ini";
 
 $config = new Classes\Config();
-$config->addFileIni($core_conf_file, $_SERVER['SERVER_NAME'] ?? 'production');
+$config->addFileIni($core_conf_file, 'production');
 $config->addFileIni($conf_file,      $_SERVER['SERVER_NAME'] ?? 'production');
 $config->setReadOnly();
 

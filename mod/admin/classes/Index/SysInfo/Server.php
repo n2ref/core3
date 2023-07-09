@@ -55,6 +55,14 @@ class Server {
 
 
     /**
+     * @return string
+     */
+    public function getCpuLoad(): string {
+        return $this->os->getCpuLoad();
+    }
+
+
+    /**
      * @return array|false
      */
     public function getLoadAvg(): bool|array {
