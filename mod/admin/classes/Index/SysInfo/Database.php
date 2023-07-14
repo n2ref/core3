@@ -94,11 +94,11 @@ class Database extends Db {
 
                 foreach ($result as $row) {
                     if (isset($row['Engine']) && in_array($row['Engine'], $mysqlEngine)) {
-                        $database_size += ($row['Data_length'] + $row['Index_length']) / 8;
+                        $database_size += $row['Data_length'] + $row['Index_length'];
                     }
                 }
 
-                $database_size = $database_size * 1024 * 1024;
+                $database_size = $database_size;
 				break;
 
 			case 'sqlite':

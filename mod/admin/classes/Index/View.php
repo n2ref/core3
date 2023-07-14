@@ -242,7 +242,7 @@ class View extends Common {
                 [
                     'type' => "radialBar",
                     'name' => "CPU",
-                    'data' => [ sprintf("%0.2f", $service_info['cpu_load']) ]
+                    'data' => [ sprintf("%0.1f", $service_info['cpu_load']) ]
                 ]
             ],
             'options'  => [
@@ -265,7 +265,7 @@ class View extends Common {
                     'total'      => [
                         'label'     => 'Cpu',
                         'labelSize' => '14px',
-                        'valueSize' => '18px',
+                        'valueSize' => '16px',
                         'color'     => '#333',
                     ]
                 ]
@@ -289,7 +289,7 @@ class View extends Common {
                 [
                     'type' => "radialBar",
                     'name' => "Mem",
-                    'data' => [ sprintf("%0.2f", $service_info['memory']['mem_percent']) ]
+                    'data' => [ sprintf("%0.1f", $service_info['memory']['mem_percent']) ]
                 ]
             ],
             'options'  => [
@@ -309,11 +309,10 @@ class View extends Common {
                     'endAngle'       => 120,          // -360 - 360
                     'size'           => 50,           // 0 - 100
                     'fill'           => 90,           // 0 - 100
-                    'gradientColors' => ['#f44336'],  // new
                     'total'          => [
                         'label'     => 'Mem',
-                        'labelSize' => '14px', // new
-                        'valueSize' => '18px', // new
+                        'labelSize' => '14px',
+                        'valueSize' => '16px',
                         'color'     => '#333',
                     ]
                 ]
@@ -337,7 +336,7 @@ class View extends Common {
                 [
                     'type' => "radialBar",
                     'name' => "Swap",
-                    'data' => [ sprintf("%0.2f", $service_info['memory']['swap_percent']) ]
+                    'data' => [ sprintf("%0.1f", $service_info['memory']['swap_percent']) ]
                 ]
             ],
             'options'  => [
@@ -353,11 +352,12 @@ class View extends Common {
                 'style' => [
                     'startAngle' => -120,   // -360 - 360
                     'endAngle'   => 120,    // -360 - 360
+                    'size'       => 50,     // 0 - 100
                     'fill'       => 90,     // 0 - 100
                     'total'      => [
                         'label'     => 'Swap',
                         'labelSize' => '14px',
-                        'valueSize' => '18px',
+                        'valueSize' => '16px',
                         'color'     => '#333',
                     ]
                 ]
@@ -379,7 +379,7 @@ class View extends Common {
 
         foreach ($service_info['disk_info'] as $disk) {
             $labels[] = "Disk {$disk['mount']}";
-            $disks[]  = $disk['percent'];
+            $disks[]  = round($disk['percent'], 1);
         }
 
         $chart_swap = [
@@ -401,6 +401,11 @@ class View extends Common {
                     'legend' => false
                 ],
 
+                'theme' => [
+                    'colorScheme' => 'monochrome',
+                    'monochromeColor' => '#7eb26d'
+                ],
+
                 'style' => [
                     'labels'     => true,
                     'labelColor' => '#ffffff',
@@ -411,7 +416,7 @@ class View extends Common {
                     'total'      => [
                         'label'     => 'Disks',
                         'labelSize' => '14px',
-                        'valueSize' => '18px',
+                        'valueSize' => '16px',
                         'color'     => '#333',
                     ]
                 ]
@@ -458,7 +463,7 @@ class View extends Common {
         $tpl = file_get_contents(__DIR__ . '/../../assets/index/html/db_list.html');
         $tpl = str_replace('[TYPE]',    $service_info['database']['type'], $tpl);
         $tpl = str_replace('[VERSION]', $service_info['database']['version'], $tpl);
-        $tpl = str_replace('[SIZE]',    Tools::convertBytes($service_info['database']['size'], 'Gb'), $tpl);
+        $tpl = str_replace('[SIZE]',    Tools::convertBytes($service_info['database']['size'], 'Mb'), $tpl);
 
         return $tpl;
     }
