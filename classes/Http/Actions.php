@@ -347,12 +347,13 @@ class Actions extends Common {
                 'id'     => $this->auth->getUserId(),
                 'name'   => $this->auth->getUserName(),
                 'login'  => $this->auth->getUserLogin(),
-                'avatar' => 'https://www.gravatar.com/avatar/9dd10adaa1333208b4cf36935c73bbd7',
+                'avatar' => 'https://www.gravatar.com/avatar/' . md5($this->auth->getUserEmail()) . '?&s=32&d=mm',
             ],
             'system'  => [
-                'name' => $this->config?->system?->name ?: ''
+                'name' => $this->config?->system?->name ?: '',
+                'conf' => $this->getConf(),
             ],
-            'modules' => $modules,
+            'modules' => $modules
         ];
     }
 
