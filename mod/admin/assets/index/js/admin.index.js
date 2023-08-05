@@ -7,8 +7,11 @@ var adminIndex = {
      */
     clearCache: function() {
 
-        CoreUI.confirm.warning("Очистить кэш системы", '', {
-            onAccept: function () {
+        CoreUI.alert.warning("Очистить кэш системы?", '', {
+            btnRejectText: "Отмена",
+            btnAcceptText: "Да",
+            btnAcceptColor: "#F57C00",
+            btnAcceptEvent: function () {
                 coreMenu.preloader.show();
 
                 $.ajax({
