@@ -154,12 +154,12 @@ class Linux implements OperatingSystem {
         foreach ($interfaces as $interface) {
             $iface              = [];
             $iface['interface'] = basename($interface);
-            $iface['mac']       = trim(shell_exec('ip addr show dev ' . $iface['interface'] . ' | grep "link/ether " | cut -d \' \' -f 6  | cut -f 1 -d \'/\''));
-            $iface['ipv4']      = trim(shell_exec('ip addr show dev ' . $iface['interface'] . ' | grep "inet " | cut -d \' \' -f 6  | cut -f 1 -d \'/\''));
-            $iface['ipv6']      = trim(shell_exec('ip -o -6 addr show ' . $iface['interface'] . ' | sed -e \'s/^.*inet6 \([^ ]\+\).*/\1/\''));
+            $iface['mac']       = trim((string)shell_exec('ip addr show dev ' . $iface['interface'] . ' | grep "link/ether " | cut -d \' \' -f 6  | cut -f 1 -d \'/\''));
+            $iface['ipv4']      = trim((string)shell_exec('ip addr show dev ' . $iface['interface'] . ' | grep "inet " | cut -d \' \' -f 6  | cut -f 1 -d \'/\''));
+            $iface['ipv6']      = trim((string)shell_exec('ip -o -6 addr show ' . $iface['interface'] . ' | sed -e \'s/^.*inet6 \([^ ]\+\).*/\1/\''));
 
             if ($iface['interface'] !== 'lo') {
-                $iface['status'] = trim(shell_exec('cat /sys/class/net/' . $iface['interface'] . '/operstate'));
+                $iface['status'] = trim((string)shell_exec('cat /sys/class/net/' . $iface['interface'] . '/operstate'));
                 $iface['speed']  = (int)shell_exec('cat /sys/class/net/' . $iface['interface'] . '/speed');
                 if (isset($iface['speed']) && $iface['speed'] > 0) {
                     if ($iface['speed'] >= 1000) {
@@ -171,7 +171,7 @@ class Linux implements OperatingSystem {
                     $iface['speed'] = 'unknown';
                 }
 
-                $duplex = trim(shell_exec('cat /sys/class/net/' . $iface['interface'] . '/duplex'));
+                $duplex = trim((string)shell_exec('cat /sys/class/net/' . $iface['interface'] . '/duplex'));
 
                 if (isset($duplex) && $duplex !== '') {
                     $iface['duplex'] = 'Duplex: ' . $duplex;
