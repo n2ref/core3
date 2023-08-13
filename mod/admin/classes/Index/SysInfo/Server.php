@@ -142,4 +142,45 @@ class Server {
 
         return $this->os->getThermalZones();
     }
+
+
+    /**
+     * Список процессов
+     * @return array
+     */
+    public function getProcessList(): array {
+
+        $output = [];
+        $cmd    = sprintf("ps -o pid,ruser,rgroup,lstart,pcpu,pmem,size,command");
+        exec($cmd, $output);
+
+        $result = [];
+
+        if (count($output) > 1) {
+            $first = true;
+            foreach ($output as $output_line) {
+                if ($first) {
+                    $first = false;
+                    continue;
+                }
+
+                $regex = implode('', [
+                    "~(?P<pid>[0-9]+)\s+",
+                    "(?P<user>[0-9a-z_\-]+)\s+",
+                    "(?P<group>[0-9a-z_\-]+)\s+",
+                    "(?P<start>.{24})\s+",
+                    "(?P<cpu>[0-9\.]+)\s+",
+                    "(?P<mem>[0-9\.]+)\s+",
+                    "(?P<size>[0-9]+)\s+",
+                    "(?P<command>.+)$~"
+                ]);
+
+                if (preg_match($regex, $output_line, $matches)) {
+                    $result[] = $matches;
+                }
+            }
+        }
+
+        return $result;
+    }
 }

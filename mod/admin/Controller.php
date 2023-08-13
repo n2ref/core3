@@ -34,6 +34,8 @@ class Controller extends Common {
         $router = new Router();
         $router->addPath('/cache')->delete('cache_clean');
         $router->addPath('/php_info')->get('get_php_info');
+        $router->addPath('/db_connections')->get('get_db_connections');
+        $router->addPath('/system_process_list')->get('get_system_process_list');
 
         $route = $router->getRoute($request->getMethod(), $request->getPathParam('mod_query'));
 
@@ -50,6 +52,14 @@ class Controller extends Common {
 
                 case 'get_php_info':
                     return (new Index\SysInfo\PhpInfo())->getPhpinfo();
+                    break;
+
+                case 'get_db_connections':
+                    return (new Index\View())->getTableDbConnections();
+                    break;
+
+                case 'get_system_process_list':
+                    return (new Index\View())->getTableProcessList();
                     break;
             }
         }
@@ -83,6 +93,7 @@ class Controller extends Common {
 
         $panel_system = new \CoreUI\Panel();
         $panel_system->setTitle('Системная информация');
+        $panel_system->setControls('<button class="btn btn-outline-secondary" onclick="adminIndex.showSystemProcessList()"><i class="bi bi-list-ul"></i></button>');
         $panel_system->setContent([
             $layout->toArray(),
             '<br><br>',
@@ -103,6 +114,7 @@ class Controller extends Common {
 
         $panel_db = new \CoreUI\Panel();
         $panel_db->setTitle('База данных');
+        $panel_db->setControls('<button class="btn btn-outline-secondary" onclick="adminIndex.showDbProcessList()"><i class="bi bi-list-ul"></i></button>');
         $panel_db->setContent($view->getDbInfo($service_info));
 
 

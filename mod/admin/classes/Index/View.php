@@ -46,7 +46,7 @@ class View extends Common {
                 ],
                 [
                     'title'   => 'Версия web theme',
-                    'value'   => 'Material 1.0.0',
+                    'value'   => 'Bootstrap 1.0.0',
                     'actions' =>
                         '<small class="text-success fw-bold">Доступна версия 1.1.0</small> ' .
                         '<button class="btn btn-xs btn-success ms-1 btn-install-theme"><i class="bi bi-cloud-arrow-down"></i> обновить</button><br>' .
@@ -179,6 +179,59 @@ class View extends Common {
                 [ 'field' => 'available', 'label' => 'Свободно',     'width' => 120, 'type' => 'html' ],
             ],
             'records' => $records
+        ];
+
+        return $table_system;
+    }
+
+
+    /**
+     * @return array
+     */
+    public function getTableDbConnections(): array {
+
+        $connections = (new SysInfo\Database())->getConnections();
+
+        $table_system = [
+            'component' => 'coreui.table',
+            'columns' => [
+                [ 'field' => 'Id',    'label' => 'Id' ],
+                [ 'field' => 'User',  'label' => 'User' ],
+                [ 'field' => 'Host',  'label' => 'Host' ],
+                [ 'field' => 'db',    'label' => 'db' ],
+                [ 'field' => 'Time',  'label' => 'Time' ],
+                [ 'field' => 'State', 'label' => 'State' ],
+                [ 'field' => 'Info',  'label' => 'Info' ],
+            ],
+            'records' => $connections
+        ];
+
+        return $table_system;
+    }
+
+
+    /**
+     * @return array
+     */
+    public function getTableProcessList(): array {
+
+        $connections = (new SysInfo\Server())->getProcessList();
+
+        $connections = Tools::arrayMultisort($connections, 'cpu', SORT_DESC);
+
+        $table_system = [
+            'component' => 'coreui.table',
+            'columns' => [
+                [ 'field' => 'pid',     'label' => 'Pid' ],
+                [ 'field' => 'user',    'label' => 'User' ],
+                [ 'field' => 'group',   'label' => 'Group' ],
+                [ 'field' => 'start',   'label' => 'Start' ],
+                [ 'field' => 'cpu',     'label' => 'Cpu' ],
+                [ 'field' => 'mem',     'label' => 'Mem' ],
+                [ 'field' => 'size',    'label' => 'Size' ],
+                [ 'field' => 'command', 'label' => 'Command' ],
+            ],
+            'records' => $connections
         ];
 
         return $table_system;

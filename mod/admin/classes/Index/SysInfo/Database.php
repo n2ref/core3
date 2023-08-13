@@ -23,6 +23,25 @@ class Database extends Db {
 
 
     /**
+     * @return array
+     */
+    public function getConnections(): array {
+
+        $connections = [];
+
+        switch ($this->getType()) {
+            case 'Pdo_Mysql':
+            case 'mysql':
+            case 'pgsql':
+                $connections = $this->db->fetchAll('SHOW FULL PROCESSLIST');
+                break;
+        }
+
+        return $connections;
+    }
+
+
+    /**
      * @return mixed
      */
     protected function getType(): string {
@@ -97,8 +116,6 @@ class Database extends Db {
                         $database_size += $row['Data_length'] + $row['Index_length'];
                     }
                 }
-
-                $database_size = $database_size;
 				break;
 
 			case 'sqlite':
@@ -130,7 +147,7 @@ class Database extends Db {
                     $db_name = $this->config->system->database->params->database;
 
 					if (strpos($db_name, '.') !== false) {
-						list($db_name, ) = explode('.', $db_name);
+						[$db_name, ] = explode('.', $db_name);
 					}
 
                     $oid = $this->db->fetchOne("

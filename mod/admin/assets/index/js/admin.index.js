@@ -44,5 +44,27 @@ var adminIndex = {
     showPhpInfo: function () {
 
         CoreUI.modal.showLoad("Php Info", adminIndex._baseUrl + '/php_info');
+    },
+
+
+    /**
+     * Показ списка текущих подключений
+     */
+    showDbProcessList: function () {
+
+        CoreUI.modal.showLoad("Database connections", adminIndex._baseUrl + '/db_connections', {
+            size: "xl"
+        });
+    },
+
+
+    /**
+     * Показ списка процессов системы
+     */
+    showSystemProcessList: function () {
+
+        CoreUI.modal.showLoad("System process list", adminIndex._baseUrl + '/system_process_list', {
+            size: "xl"
+        });
     }
 };
