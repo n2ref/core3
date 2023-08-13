@@ -1,6 +1,7 @@
 <?php
 namespace Core3\Classes\Db;
 
+use Laminas\Db\Adapter\Driver\Pdo\Result;
 use Laminas\Db\Adapter\Driver\StatementInterface;
 
 /**
@@ -31,7 +32,14 @@ class Adapter extends \Laminas\Db\Adapter\Adapter {
             ? $query_result->execute()
             : $query_result;
 
-        return $result_set->toArray();
+        if ($result_set instanceof Result) {
+            $result = iterator_to_array($result_set);
+
+        } else {
+            $result = $result_set->toArray();
+        }
+
+        return $result;
     }
 
 
