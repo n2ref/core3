@@ -13,6 +13,7 @@ class Token {
     private string    $token     = '';
     private string    $sign      = '';
     private string    $algorithm = 'HS256';
+    private string    $iss       = '';
 
 
     /**
