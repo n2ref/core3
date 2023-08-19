@@ -288,6 +288,14 @@ class View extends Common {
      */
     public function getChartCpu(array $service_info): array {
 
+        $percent = $service_info['cpu_load'];
+
+        $color = match (true) {
+            $percent < 40 => '#7EB26D',
+            $percent >= 40 && $percent < 80 => '#ffcc80',
+            $percent >= 80 => '#ef9a9a',
+        };
+
         $chart_cpu = [
             'component' => 'coreui.chart',
             'labels'    => [ 'CPU' ],
@@ -295,7 +303,7 @@ class View extends Common {
                 [
                     'type' => "radialBar",
                     'name' => "CPU",
-                    'data' => [ sprintf("%0.1f", $service_info['cpu_load']) ]
+                    'data' => [ sprintf("%0.1f", $percent) ]
                 ]
             ],
             'options'  => [
@@ -306,6 +314,11 @@ class View extends Common {
                 'enabled' => [
                     'legend'  => false,
                     'tooltip' => false,
+                ],
+
+                'theme' => [
+                    'colorScheme'  => 'custom',
+                    'customColors' => [ $color ]
                 ],
 
                 'style' => [
@@ -335,6 +348,14 @@ class View extends Common {
      */
     public function getChartMem(array $service_info): array {
 
+        $percent = $service_info['memory']['mem_percent'];
+
+        $color = match (true) {
+            $percent < 40 => '#7EB26D',
+            $percent >= 40 && $percent < 80 => '#ffcc80',
+            $percent >= 80 => '#ef9a9a',
+        };
+
         $chart_mem = [
             'component' => 'coreui.chart',
             'labels'    => [ 'Mem' ],
@@ -342,7 +363,7 @@ class View extends Common {
                 [
                     'type' => "radialBar",
                     'name' => "Mem",
-                    'data' => [ sprintf("%0.1f", $service_info['memory']['mem_percent']) ]
+                    'data' => [ sprintf("%0.1f", $percent) ]
                 ]
             ],
             'options'  => [
@@ -353,6 +374,11 @@ class View extends Common {
                 'enabled' => [
                     'legend'  => false,
                     'tooltip' => false,
+                ],
+
+                'theme' => [
+                    'colorScheme'  => 'custom',
+                    'customColors' => [ $color ]
                 ],
 
                 'style' => [
@@ -382,6 +408,14 @@ class View extends Common {
      */
     public function getChartSwap(array $service_info): array {
 
+        $percent = $service_info['memory']['swap_percent'];
+
+        $color = match (true) {
+            $percent < 40 => '#7EB26D',
+            $percent >= 40 && $percent < 80 => '#ffcc80',
+            $percent >= 80 => '#ef9a9a',
+        };
+
         $chart_swap = [
             'component' => 'coreui.chart',
             'labels'    => [ 'Swap' ],
@@ -389,7 +423,7 @@ class View extends Common {
                 [
                     'type' => "radialBar",
                     'name' => "Swap",
-                    'data' => [ sprintf("%0.1f", $service_info['memory']['swap_percent']) ]
+                    'data' => [ sprintf("%0.1f", $percent) ]
                 ]
             ],
             'options'  => [
@@ -400,6 +434,11 @@ class View extends Common {
                 'enabled' => [
                     'legend'  => false,
                     'tooltip' => false,
+                ],
+
+                'theme' => [
+                    'colorScheme'  => 'custom',
+                    'customColors' => [ $color ]
                 ],
 
                 'style' => [
@@ -427,12 +466,20 @@ class View extends Common {
      */
     public function getChartDisks(array $service_info): array {
 
-        $disks  = [];
-        $labels = [];
+        $disks   = [];
+        $labels  = [];
+        $colors  = [];
 
         foreach ($service_info['disk_info'] as $disk) {
+            $percent = round($disk['percent'], 1);
+
             $labels[] = "Disk {$disk['mount']}";
-            $disks[]  = round($disk['percent'], 1);
+            $disks[]  = $percent;
+            $colors[] = match (true) {
+                $percent < 40 => '#7EB26D',
+                $percent >= 40 && $percent < 80 => '#ffcc80',
+                $percent >= 80 => '#ef9a9a',
+            };
         }
 
         $chart_swap = [
@@ -455,8 +502,8 @@ class View extends Common {
                 ],
 
                 'theme' => [
-                    'colorScheme' => 'monochrome',
-                    'monochromeColor' => '#7eb26d'
+                    'colorScheme'  => 'custom',
+                    'customColors' => $colors
                 ],
 
                 'style' => [
