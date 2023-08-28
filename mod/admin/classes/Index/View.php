@@ -96,10 +96,28 @@ class View extends Common {
         $hours = floor(($service_info['uptime'] - ($days * 24 * 60 * 60)) / 60 / 60);
         $mins  = floor(($service_info['uptime'] - ($days * 24 * 60 * 60) - ($hours * 60 * 60)) / 60);
 
+        $avg1_style = match (true) {
+            $service_info['loadavg'][0] >= 2 => 'text-danger',
+            $service_info['loadavg'][0] >= 1 => 'text-warning-emphasis',
+            default => '',
+        };
+
+        $avg5_style = match (true) {
+            $service_info['loadavg'][1] >= 2 => 'text-danger',
+            $service_info['loadavg'][1] >= 1 => 'text-warning-emphasis',
+            default => '',
+        };
+
+        $avg15_style = match (true) {
+            $service_info['loadavg'][2] >= 2 => 'text-danger',
+            $service_info['loadavg'][2] >= 1 => 'text-warning-emphasis',
+            default => '',
+        };
+
         $load_avg = [
-            sprintf("%0.2f <small class=\"text-muted\">(1 min)</small>", $service_info['loadavg'][0]),
-            sprintf("%0.2f <small class=\"text-muted\">(5 min)</small>", $service_info['loadavg'][1]),
-            sprintf("%0.2f <small class=\"text-muted\">(15 min)</small>", $service_info['loadavg'][2]),
+            sprintf("<span class=\"{$avg1_style}\">%0.2f</span> <small class=\"text-muted\">(1 min)</small>", $service_info['loadavg'][0]),
+            sprintf("<span class=\"{$avg5_style}\">%0.2f</span> <small class=\"text-muted\">(5 min)</small>", $service_info['loadavg'][1]),
+            sprintf("<span class=\"{$avg15_style}\">%0.2f</span> <small class=\"text-muted\">(15 min)</small>", $service_info['loadavg'][2]),
         ];
 
 
@@ -107,6 +125,19 @@ class View extends Common {
         $mem_used   = Tools::numberFormat($service_info['memory']['mem_used'],   ' ');
         $swap_total = Tools::numberFormat($service_info['memory']['swap_total'], ' ');
         $swap_used  = Tools::numberFormat($service_info['memory']['swap_used'],  ' ');
+
+
+        $mem_style = match (true) {
+            $service_info['memory']['mem_percent'] >= 80 => 'text-danger',
+            $service_info['memory']['mem_percent'] >= 40 => 'text-warning-emphasis',
+            default => '',
+        };
+
+        $swap_style = match (true) {
+            $service_info['memory']['swap_percent'] >= 80 => 'text-danger',
+            $service_info['memory']['swap_percent'] >= 40 => 'text-warning-emphasis',
+            default => '',
+        };
 
         $table_system = [
             'component' => 'coreui.table',
@@ -126,8 +157,8 @@ class View extends Common {
                 [ 'title' => 'System uptime', 'value' => "{$days} дней {$hours} часов {$mins} минут", ],
                 [ 'title' => 'Cpu name',      'value' => $service_info['cpu_name'], ],
                 [ 'title' => 'Load avg',      'value' => implode(' / ', $load_avg) ],
-                [ 'title' => 'Memory',        'value' => "Всего {$mem_total} Mb / используется {$mem_used} Mb" ],
-                [ 'title' => 'Swap',          'value' => "Всего {$swap_total} Mb / используется {$swap_used} Mb" ],
+                [ 'title' => 'Memory',        'value' => "Всего {$mem_total} Mb / используется <span class=\"{$mem_style}\">{$mem_used}</span> Mb" ],
+                [ 'title' => 'Swap',          'value' => "Всего {$swap_total} Mb / используется <span class=\"{$swap_style}\">{$swap_used}</span> Mb" ],
                 [ 'title' => 'DNS',           'value' => $service_info['network_info']['dns'] ],
                 [ 'title' => 'Gateway',       'value' => $service_info['network_info']['gateway'] ],
             ]
@@ -149,6 +180,7 @@ class View extends Common {
 
             $available         = Tools::convertBytes($disk['available'] * 1024 * 1024, 'Gb');
             $available_percent = round(($disk['total'] - $disk['used']) / $disk['total'] * 100, 1);
+            $used_percent      = round($disk['percent'], 1);
 
             if ($available <= 5) {
                 $available = "<b class=\"text-danger\">{$available}Gb <small>{$available_percent}%</small></b>";
@@ -163,7 +195,7 @@ class View extends Common {
                 'device'    => $disk['device'],
                 'fs'        => $disk['fs'],
                 'total'     => Tools::convertBytes($disk['total'] * 1024 * 1024, 'Gb')  . 'Gb',
-                'used'      => Tools::convertBytes($disk['used'] * 1024 * 1024, 'Gb')  . 'Gb',
+                'used'      => Tools::convertBytes($disk['used'] * 1024 * 1024, 'Gb')  . "Gb <small>{$used_percent}%</small>",
                 'available' => $available,
             ];
         }
@@ -175,7 +207,7 @@ class View extends Common {
                 [ 'field' => 'device',    'label' => 'Устройство', 'width' => 200 ],
                 [ 'field' => 'fs',        'label' => 'Файловая система' ],
                 [ 'field' => 'total',     'label' => 'Всего',        'width' => 120 ],
-                [ 'field' => 'used',      'label' => 'Использовано', 'width' => 120 ],
+                [ 'field' => 'used',      'label' => 'Использовано', 'width' => 120, 'type' => 'html' ],
                 [ 'field' => 'available', 'label' => 'Свободно',     'width' => 120, 'type' => 'html' ],
             ],
             'records' => $records
@@ -288,7 +320,9 @@ class View extends Common {
      */
     public function getChartCpu(array $service_info): array {
 
-        $percent = $service_info['cpu_load'];
+        $percent = $service_info['cpu_load'] <= 100
+            ? $service_info['cpu_load']
+            : 100;
 
         $color = match (true) {
             $percent < 40 => '#7EB26D',

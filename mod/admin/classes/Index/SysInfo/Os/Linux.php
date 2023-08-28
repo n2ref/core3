@@ -30,7 +30,9 @@ class Linux implements OperatingSystem {
 
 		foreach ($matches['Key'] as $i => $key) {
 			// Value is always in KB: https://github.com/torvalds/linux/blob/c70672d8d316ebd46ea447effadfe57ab7a30a50/fs/proc/meminfo.c#L58-L60
-			$value = (int)((int)$matches['Value'][$i] / 1024);
+			$value = $matches['Value'][$i] > 0
+                ? round((int)$matches['Value'][$i] / 1024, 2)
+                : 0;
 
 			switch ($key) {
 				case 'MemTotal':     $data['mem_total']     = $value; break;
@@ -42,7 +44,7 @@ class Linux implements OperatingSystem {
 		}
 
         $data['mem_used']     = $data['mem_total'] - $data['mem_available'];
-        $data['mem_percent']  = $data['mem_available'] / $data['mem_total'] * 100;
+        $data['mem_percent']  = ($data['mem_total'] - $data['mem_available']) / $data['mem_total'] * 100;
         $data['swap_used']    = $data['swap_total'] - $data['swap_free'];
         $data['swap_percent'] = ($data['swap_total'] - $data['swap_free']) / $data['swap_total'] * 100;
 
@@ -213,10 +215,10 @@ class Linux implements OperatingSystem {
 		}
 
 		foreach ($matches['Filesystem'] as $i => $filesystem) {
-			if (in_array($matches['Type'][$i], ['tmpfs', 'devtmpfs', 'squashfs', 'overlay'], false)) {
+			if (in_array($matches['Type'][$i], ['tmpfs', 'devtmpfs', 'squashfs', 'overlay'], false) ||
+                in_array($matches['Mounted'][$i], ['/etc/hostname', '/etc/hosts'], false)
+            ) {
 				continue;
-            } elseif (in_array($matches['Mounted'][$i], ['/etc/hostname', '/etc/hosts'], false)) {
-                continue;
             }
 
             $data[] = [
