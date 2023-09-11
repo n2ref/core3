@@ -59,6 +59,16 @@ var adminIndex = {
 
 
     /**
+     * Показ списка с информацией о базе данных
+     */
+    showDbVariablesList: function () {
+        CoreUI.modal.showLoad("Database variables", adminIndex._baseUrl + '/db_variables', {
+            size: "xl"
+        });
+    },
+
+
+    /**
      * Показ списка процессов системы
      */
     showSystemProcessList: function () {

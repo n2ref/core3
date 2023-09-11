@@ -35,6 +35,7 @@ class Controller extends Common {
         $router->addPath('/cache')->delete('cache_clean');
         $router->addPath('/php_info')->get('get_php_info');
         $router->addPath('/db_connections')->get('get_db_connections');
+        $router->addPath('/db_variables')->get('get_db_variables');
         $router->addPath('/system_process_list')->get('get_system_process_list');
 
         $route = $router->getRoute($request->getMethod(), $request->getPathParam('mod_query'));
@@ -56,6 +57,10 @@ class Controller extends Common {
 
                 case 'get_db_connections':
                     return (new Index\View())->getTableDbConnections();
+                    break;
+
+                case 'get_db_variables':
+                    return (new Index\View())->getTableDbVariables();
                     break;
 
                 case 'get_system_process_list':
@@ -114,7 +119,10 @@ class Controller extends Common {
 
         $panel_db = new \CoreUI\Panel();
         $panel_db->setTitle('База данных');
-        $panel_db->setControls('<button class="btn btn-outline-secondary" onclick="adminIndex.showDbProcessList()"><i class="bi bi-list-ul"></i></button>');
+        $panel_db->setControls('
+            <button class="btn btn-outline-secondary" onclick="adminIndex.showDbVariablesList()"><i class="bi bi-info"></i></button>
+            <button class="btn btn-outline-secondary" onclick="adminIndex.showDbProcessList()"><i class="bi bi-plugin"></i></button>
+        ');
         $panel_db->setContent($view->getDbInfo($service_info));
 
 

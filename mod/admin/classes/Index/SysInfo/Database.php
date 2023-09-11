@@ -42,6 +42,32 @@ class Database extends Db {
 
 
     /**
+     * @return array
+     */
+    public function getVariables(): array {
+
+        $variables = [];
+
+        switch ($this->getType()) {
+            case 'Pdo_Mysql':
+            case 'mysql':
+            case 'pgsql':
+                $variables_raw = $this->db->fetchAll('SHOW VARIABLES');
+
+                foreach ($variables_raw as $variable) {
+                    $variables[] = [
+                        'name'  => $variable['Variable_name'] ?? null,
+                        'value' => $variable['Value'] ?? null,
+                    ];
+                }
+                break;
+        }
+
+        return $variables;
+    }
+
+
+    /**
      * @return mixed
      */
     protected function getType(): string {

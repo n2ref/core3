@@ -245,6 +245,26 @@ class View extends Common {
     /**
      * @return array
      */
+    public function getTableDbVariables(): array {
+
+        $variables = (new SysInfo\Database())->getVariables();
+
+        $table_system = [
+            'component' => 'coreui.table',
+            'columns' => [
+                [ 'field' => 'name',  'label' => 'Name' ],
+                [ 'field' => 'value', 'label' => 'value' ],
+            ],
+            'records' => $variables
+        ];
+
+        return $table_system;
+    }
+
+
+    /**
+     * @return array
+     */
     public function getTableProcessList(): array {
 
         $connections = (new SysInfo\Server())->getProcessList();
