@@ -365,6 +365,7 @@ class Actions extends Common {
     public function getConf(): array {
 
         return [
+            'name'  => $this->config?->system?->name,
             'logo'  => $this->config?->system?->logo,
             'theme' => $this->config?->system?->theme?->toArray(),
         ];
