@@ -7,7 +7,7 @@ use Core3\Mod\Admin;
 
 
 /**
- * @property Admin\Controller $modAdmin
+ * @property \admin\Controller $modAdmin
  */
 class Init extends Db {
 

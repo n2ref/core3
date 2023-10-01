@@ -108,7 +108,7 @@ class Path {
         $route       = [];
         $preparePath = $this->preparePath();
 
-        if (preg_match("~^{$preparePath}$~u", $query, $matches)) {
+        if (preg_match("~^{$preparePath}~u", $query, $matches)) {
             $method = ! empty($this->methods[$method]) ? $method : '*';
             if ( ! empty($this->methods[$method])) {
                 foreach ($matches as $key => $match) {

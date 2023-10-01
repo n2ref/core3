@@ -42,13 +42,12 @@ class Table extends AbstractTableGateway {
 
     /**
      * @param array|string|\Closure|null $where
-     * @param array                      $options
      * @return ResultSetInterface
      */
-    public function fetchAll(array|string|\Closure $where = null, array $options = []): ResultSetInterface {
+    public function fetchAll(array|string|\Closure $where = null): ResultSetInterface {
 
         if ( ! empty($where) && ! $where instanceof \Closure) {
-            $where = function (Select $select) use ($where, $options) {
+            $where = function (Select $select) use ($where) {
                 $select
                     ->where($where);
             };
@@ -62,15 +61,17 @@ class Table extends AbstractTableGateway {
      * @param array|string|null $where
      * @return AbstractRowGateway|null
      */
-    public function fetchRow(array|string $where = null):? AbstractRowGateway {
+    public function fetchRow(array|string|\Closure $where = null):? AbstractRowGateway {
 
-        $results = $this->select(function (Select $select) use ($where) {
-            $select
-                ->where($where)
-                ->limit(1);
-        });
+        if ( ! empty($where) && ! $where instanceof \Closure) {
+            $where = function (Select $select) use ($where) {
+                $select
+                    ->where($where)
+                    ->limit(1);
+            };
+        }
 
-        return $results->current();
+        return $this->select($where)->current();
     }
 
 
@@ -130,8 +131,6 @@ class Table extends AbstractTableGateway {
      */
     public function find(array|int $id): ResultSetInterface {
 
-        $results = parent::select([$this->primary_key => $id]);
-
-        return $results;
+        return parent::select([$this->primary_key => $id]);
     }
 }

@@ -109,7 +109,7 @@ class Request {
     /**
      * @return string
      */
-    public function getQuery(): string {
+    public function getQueryString(): string {
 
         return $this->query;
     }
@@ -121,6 +121,18 @@ class Request {
     public function getQueryParams(): array {
 
         return $this->props['GET'] ?? [];
+    }
+
+
+    /**
+     * @param string $name
+     * @return mixed
+     */
+    public function getQuery(string $name): mixed {
+
+        $queries = $this->props['GET'];
+
+        return $queries[$name] ?? null;
     }
 
 
