@@ -1,7 +1,10 @@
 <?php
-namespace Core3;
+namespace Core3\Mod\Admin\Classes;
 
 
+/**
+ *
+ */
 spl_autoload_register(function ($class) {
 
     if (strpos($class, __NAMESPACE__) !== 0) {
@@ -9,13 +12,9 @@ spl_autoload_register(function ($class) {
     }
 
     $class_explode   = explode("\\", $class);
+    $class_name      = end($class_explode);
     $class_path      = [];
     $count_namespace = count(explode("\\", __NAMESPACE__));
-
-
-    if (empty($class_explode[1]) || ! in_array($class_explode[1], ['Classes', 'Interfaces', 'Exceptions'])) {
-        return false;
-    }
 
     foreach ($class_explode as $key => $item) {
         if ($key >= $count_namespace && $key < (count($class_explode) - 1)) {
@@ -23,12 +22,8 @@ spl_autoload_register(function ($class) {
         }
     }
 
-    $class_path[0] = lcfirst($class_path[0]);
-
     $class_path_implode = implode('/', $class_path);
     $class_path_implode = $class_path_implode ? "/{$class_path_implode}" : '';
-    $class_name         = end($class_explode);
-
 
     $file_path = __DIR__ . "{$class_path_implode}/{$class_name}.php";
 

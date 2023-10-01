@@ -2,8 +2,6 @@
 namespace Core3\Classes;
 use Core3\Exceptions\DbException;
 use \Laminas\Db\Adapter\Adapter;
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
 use Laminas\Cache\Exception\ExceptionInterface;
 
 
@@ -27,9 +25,7 @@ abstract class Db extends System {
     /**
      * @param string $param_name
      * @return Cache|Log|Adapter|mixed|null
-     * @throws ContainerExceptionInterface
-     * @throws ExceptionInterface
-     * @throws NotFoundExceptionInterface|DbException
+     * @throws DbException
      */
 	public function __get(string $param_name) {
 
@@ -66,7 +62,6 @@ abstract class Db extends System {
 
     /**
      * @return Adapter
-     * @throws ContainerExceptionInterface
      * @throws DbException
      */
     public function initConnection(): Adapter {
@@ -182,9 +177,7 @@ abstract class Db extends System {
      * Возврат абсолютного пути до директории в которой находится модуль
      * @param string $module_name
      * @return string
-     * @throws ContainerExceptionInterface
      * @throws DbException
-     * @throws ExceptionInterface
      */
     final public function getModuleLocation(string $module_name): string {
 
@@ -197,8 +190,6 @@ abstract class Db extends System {
      * @param string $module_name
      * @return string
      * @throws DbException
-     * @throws ContainerExceptionInterface
-     * @throws ExceptionInterface
      */
     final public function getModuleFolder(string $module_name): string {
 
@@ -209,24 +200,21 @@ abstract class Db extends System {
         }
 
         if ($module_name == 'admin') {
-            $folder = "core3/mod/admin";
+            $folder = "core3/admin";
 
         } else {
             $host = $this->config?->system?->database?->params?->database;
             $key  = "core3_mod_folder_{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $module = $this->db->fetchRow("
-                    SELECT is_system_sw, 
-                           version 
+                $module_version = $this->db->fetchOne("
+                    SELECT version 
                     FROM core_modules 
                     WHERE name = ?
                 ", $module_name);
 
-                if ($module) {
-                    $folder = $module['is_system_sw'] == "Y"
-                        ? "core3/mod/{$module_name}/v{$module['version']}"
-                        : "mod/{$module_name}/v{$module['version']}";
+                if ($module_version) {
+                    $folder = "mod/{$module_name}/v{$module_version}";
                 } else {
                     throw new DbException($this->_("Модуль %s не существует", [$module_name]), 404);
                 }
@@ -248,7 +236,6 @@ abstract class Db extends System {
      * Возврат версии модуля
      * @param string $module_name
      * @return string
-     * @throws ExceptionInterface
      */
     final public function getModuleVersion(string $module_name): string {
 
@@ -306,8 +293,6 @@ abstract class Db extends System {
     /**
      * @param array $settings
      * @return Adapter
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      * @throws DbException
      */
     protected function setupConnection(array $settings): Adapter {

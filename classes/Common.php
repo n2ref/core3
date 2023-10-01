@@ -9,7 +9,7 @@ use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 /**
- * @property Mod\Admin\Controller $modAdmin
+ * @property \admin\Controller $modAdmin
  */
 abstract class Common extends Acl {
 
@@ -61,7 +61,7 @@ abstract class Common extends Acl {
         } else {
             if (strpos($param_name, 'table') === 0) {
                 $table_name = substr($param_name, 5);
-                $result     = $this->getTable($this->module, $table_name);
+                $result     = $this->getModuleTable($this->module, $table_name);
 
             } elseif (strpos($param_name, 'mod') === 0) {
                 $module_name = strtolower(substr($param_name, 3));
@@ -74,7 +74,7 @@ abstract class Common extends Acl {
 
             } elseif (strpos($param_name, 'worker') === 0) {
                 $worker_name = substr($param_name, 6);
-                $result      = $this->getTable($this->module, $worker_name);
+                $result      = $this->getModuleTable($this->module, $worker_name);
             }
 
             if ( ! empty($result)) {
@@ -161,7 +161,6 @@ abstract class Common extends Acl {
      * @param string $module
      * @param string $src
      * @return void
-     * @throws ContainerExceptionInterface
      * @throws DbException
      * @throws ExceptionInterface
      */
@@ -177,7 +176,6 @@ abstract class Common extends Acl {
      * @param string $module
      * @param string $src
      * @return void
-     * @throws ContainerExceptionInterface
      * @throws DbException
      * @throws ExceptionInterface
      */
@@ -193,7 +191,6 @@ abstract class Common extends Acl {
      * @param string $module
      * @param string $src
      * @return string
-     * @throws ContainerExceptionInterface
      * @throws DbException
      * @throws ExceptionInterface
      */
@@ -212,9 +209,7 @@ abstract class Common extends Acl {
      * @param string $module
      * @param string $src
      * @return string
-     * @throws ContainerExceptionInterface
      * @throws DbException
-     * @throws ExceptionInterface
      */
     public function getCssModule(string $module, string $src): string {
 
@@ -231,8 +226,6 @@ abstract class Common extends Acl {
      * @param string $module_name
      * @return mixed
      * @throws \Laminas\Cache\Exception\ExceptionInterface
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
     protected function getModuleController(string $module_name): mixed {
@@ -246,7 +239,7 @@ abstract class Common extends Acl {
 
         if ($module_name === 'admin') {
             require_once "{$location}/Controller.php";
-            $result = new Mod\Admin\Controller();
+            $result = new \Core3\Mod\Admin\Controller();
 
         } else {
             if ( ! $this->isModuleActive($module_name)) {
@@ -289,7 +282,7 @@ abstract class Common extends Acl {
      * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
-    protected function getTable(string $module_name, string $model_name): AbstractTableGateway {
+    protected function getModuleTable(string $module_name, string $model_name): AbstractTableGateway {
 
         $module_name = strtolower($module_name);
         $model_name  = ucfirst($model_name);
@@ -352,7 +345,7 @@ abstract class Common extends Acl {
 
         if ($module_name === 'admin') {
             require_once "{$location}/Handler.php";
-            $result = new Mod\Admin\Handler();
+            $result = new \Core3\Mod\Admin\Handler();
 
         } else {
             // Подключение файла с обработчиком

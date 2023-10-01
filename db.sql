@@ -36,7 +36,6 @@ CREATE TABLE `core_modules` (
     `version` varchar(11) NOT NULL DEFAULT '1.0.0',
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
     `is_visible_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
-    `is_system_sw` enum('Y','N') NOT NULL DEFAULT 'N',
     `is_home_page_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
     `seq` int unsigned DEFAULT NULL,
     `last_user_id` int unsigned DEFAULT NULL,
@@ -96,7 +95,7 @@ CREATE TABLE `core_roles` (
 CREATE TABLE `core_settings` (
     `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
     `code` varchar(255) NOT NULL,
-    `description` varchar(255) DEFAULT NULL,
+    `title` varchar(255) DEFAULT NULL,
     `value` text,
     `data_type` varchar(20) NOT NULL DEFAULT 'text',
     `data_group` enum('system','extra','personal') NOT NULL DEFAULT 'extra',

@@ -75,7 +75,6 @@ class Cli extends Db {
                    m.title,
                    m.version,
                    m.is_visible_sw,
-                   m.is_system_sw,
                    m.is_active_sw
             FROM core_modules AS m
             ORDER BY m.seq
