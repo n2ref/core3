@@ -12,7 +12,7 @@ var adminIndex = {
             btnAcceptText: "Да",
             btnAcceptColor: "#F57C00",
             btnAcceptEvent: function () {
-                coreMenu.preloader.show();
+                Core.menu.preloader.show();
 
                 $.ajax({
                     url: adminIndex._baseUrl + '/cache',
@@ -30,7 +30,7 @@ var adminIndex = {
                         CoreUI.notice.danger("Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз.");
                     },
                     complete : function () {
-                        coreMenu.preloader.hide();
+                        Core.menu.preloader.hide();
                     }
                 });
             }
