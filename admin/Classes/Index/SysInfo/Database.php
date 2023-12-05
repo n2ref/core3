@@ -72,7 +72,7 @@ class Database extends Db {
      */
     protected function getType(): string {
 
-        return (string)$this->config?->system?->database?->adapter ?: 'mysql';
+        return (string)$this->config?->system?->db?->base?->adapter ?: 'mysql';
     }
 
 
@@ -131,7 +131,7 @@ class Database extends Db {
 			case 'mysql':
 			case 'Pdo_Mysql':
                 $mysqlEngine = ['MyISAM', 'InnoDB', 'Aria'];
-                $db_name     = $this->config->system->database->params->database;
+                $db_name     = $this->config->system->db?->base->params->database;
 
 				$result        = $this->db->query("SHOW TABLE STATUS FROM `{$db_name}`")->execute();
 				$database_size = 0;
@@ -146,7 +146,7 @@ class Database extends Db {
 
 			case 'sqlite':
 			case 'sqlite3':
-                $host = $this->config->system->database->params->host;
+                $host = $this->config->system->db?->base->params->host;
 
 				if (file_exists($host)) {
 					$database_size = filesize($host);
@@ -170,7 +170,7 @@ class Database extends Db {
                 $proname = $this->db->fetchOne($sql);
 
 				if ($proname === 'pg_database_size') {
-                    $db_name = $this->config->system->database->params->database;
+                    $db_name = $this->config->system->db?->base->params->database;
 
 					if (strpos($db_name, '.') !== false) {
 						[$db_name, ] = explode('.', $db_name);

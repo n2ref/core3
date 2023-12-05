@@ -1,23 +1,22 @@
 <?php
 namespace Core3\Classes;
 use Core3\Exceptions\DbException;
-use Core3\Exceptions\RuntimeException;
-use Core3\Mod;
+use Core3\Exceptions\Exception;
+use Core3\Interfaces\Events;
+use Core3\Mod\Admin;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\TableGateway\AbstractTableGateway;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 /**
- * @property \admin\Controller $modAdmin
+ * @property Admin\Controller $modAdmin
  */
 abstract class Common extends Acl {
 
     protected $module   = '';
     protected $section  = '';
     protected $recource = '';
-
-	private static array $params = [];
 
     /**
      * @throws \Psr\Container\ContainerExceptionInterface
@@ -27,7 +26,7 @@ abstract class Common extends Acl {
 
         parent::__construct();
 
-        $child_class_name = preg_match('~^Core3\\\Mod\\\([A-z0-9\_]+)\\\Controller$~', get_class($this), $match)
+        $child_class_name = preg_match('~^Core3\\\Mod\\\([A-z0-9\_]+)\\\~', get_class($this), $match)
             ? $match[1]
             : '';
 
@@ -38,47 +37,36 @@ abstract class Common extends Acl {
 
 
     /**
-     * @param string $k
-     * @return bool
-     */
-	public function __isset(string $k) {
-		return isset(self::$params[$k]);
-	}
-
-
-    /**
      * @param string $param_name
-     * @return Cache|Log|\Laminas\Db\Adapter\Adapter|AbstractTableGateway|mixed|null
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
+     * @return self|Cache|Log|\Laminas\Db\Adapter\Adapter|AbstractTableGateway|mixed|null
+     * @throws ContainerExceptionInterface
+     * @throws DbException
+     * @throws ExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws Exception
      */
     public function __get(string $param_name) {
 
-        if (array_key_exists($param_name, self::$params)) {
-            $result = self::$params[$param_name];
+        if ($this->hasStaticCache($param_name)) {
+            $result = $this->getStaticCache($param_name);
 
         } else {
             if (strpos($param_name, 'table') === 0) {
                 $table_name = substr($param_name, 5);
                 $result     = $this->getModuleTable($this->module, $table_name);
 
+            } elseif (strpos($param_name, 'model') === 0) {
+                $model_name = strtolower(substr($param_name, 5));
+                $result     = $this->getModuleModel($this->module, $model_name);
+
             } elseif (strpos($param_name, 'mod') === 0) {
                 $module_name = strtolower(substr($param_name, 3));
                 $result      = $this->getModuleController($module_name);
-
-
-            } elseif (strpos($param_name, 'handler') === 0) {
-                $module_name = strtolower(substr($param_name, 3));
-                $result      = $this->getModuleHandler($module_name);
-
-            } elseif (strpos($param_name, 'worker') === 0) {
-                $worker_name = substr($param_name, 6);
-                $result      = $this->getModuleTable($this->module, $worker_name);
             }
 
             if ( ! empty($result)) {
-                self::$params[$param_name] = $result;
+                $this->setStaticCache($param_name, $result);
+
             } else {
                 $result = parent::__get($param_name);
             }
@@ -89,23 +77,12 @@ abstract class Common extends Acl {
 
 
     /**
-     * @param string $param_name
-     * @param mixed  $param_value
-     * @return $this
-     */
-	public function __set(string $param_name, mixed $param_value) {
-        self::$params[$param_name] = $param_value;
-		return $this;
-	}
-
-
-    /**
      * @param string $src
      * @return void
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    public function addJs(string $src): void {
+    protected function addJs(string $src): void {
 
         $src = trim($src);
         $src = Tools::addSrcHash($src);
@@ -134,7 +111,7 @@ abstract class Common extends Acl {
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    public function addCss(string $src): void {
+    protected function addCss(string $src): void {
 
         $src = trim($src);
         $src = Tools::addSrcHash($src);
@@ -164,7 +141,7 @@ abstract class Common extends Acl {
      * @throws DbException
      * @throws ExceptionInterface
      */
-    public function addCssModule(string $module, string $src): void {
+    protected function addCssModule(string $module, string $src): void {
 
         $module_folder = $this->getModuleFolder($module);
 
@@ -179,11 +156,11 @@ abstract class Common extends Acl {
      * @throws DbException
      * @throws ExceptionInterface
      */
-    public function addJsModule(string $module, string $src): void {
+    protected function addJsModule(string $module, string $src): void {
 
         $module_folder = $this->getModuleFolder($module);
 
-        $this->addCss("{$module_folder}/{$src}");
+        $this->addJs("{$module_folder}/{$src}");
     }
 
 
@@ -194,7 +171,7 @@ abstract class Common extends Acl {
      * @throws DbException
      * @throws ExceptionInterface
      */
-    public function getJsModule(string $module, string $src): string {
+    protected function getJsModule(string $module, string $src): string {
 
         $module_folder = $this->getModuleFolder($module);
 
@@ -211,7 +188,7 @@ abstract class Common extends Acl {
      * @return string
      * @throws DbException
      */
-    public function getCssModule(string $module, string $src): string {
+    protected function getCssModule(string $module, string $src): string {
 
         $module_folder = $this->getModuleFolder($module);
 
@@ -223,6 +200,81 @@ abstract class Common extends Acl {
 
 
     /**
+     * Вызов обработки события
+     * @param string $event_name
+     * @param array  $data
+     * @return array
+     * @throws DbException
+     * @throws ExceptionInterface
+     * @throws Exception
+     */
+    protected function event(string $event_name, array $data): array {
+
+        $modules = $this->modAdmin->tableModules->getRowsByActive();
+        $results  = [];
+
+        foreach ($modules as $module) {
+            $module_config = $this->getModuleConfig($module->name);
+
+            $subscribe_events   = $module_config?->mod?->events;
+            $is_subscribe_event = false;
+
+            if ( ! empty($subscribe_events)) {
+                foreach ($subscribe_events as $module_name => $subscribe_event_name) {
+                    if ($module_name == $this->module &&
+                        ($subscribe_event_name == '*' || $subscribe_event_name == $event_name)
+                    ) {
+                        $is_subscribe_event = true;
+                        break;
+                    }
+                }
+            }
+
+            if ($is_subscribe_event) {
+                $event = $this->getModuleEvent($module->name);
+
+                if ( ! $event || ! is_callable([$event, $this->module])) {
+                    continue;
+                }
+
+                $result = $event->{$this->module}($event_name, $data);
+
+                if ( ! is_null($result)) {
+                    $results[] = $result;
+                }
+            }
+        }
+
+        return $results;
+    }
+
+
+    /**
+     * Запуск cli метода
+     * @param string     $module_name
+     * @param string     $method_name
+     * @param string[]   $params
+     * @param array|null $options
+     * @return bool
+     * @throws \Exception
+     */
+    protected function startCli(string $module_name, string $method_name, array $params = [], array $options = null): bool {
+
+        // Заменить на класс cli
+
+        $thread = new Thread($options);
+        $thread->setModule($module_name);
+        $thread->setMethod($method_name);
+
+        if ( ! empty($params)) {
+            $thread->setParams($params);
+        }
+
+        return $thread->start();
+    }
+
+
+    /**
      * @param string $module_name
      * @return mixed
      * @throws \Laminas\Cache\Exception\ExceptionInterface
@@ -230,43 +282,160 @@ abstract class Common extends Acl {
      */
     protected function getModuleController(string $module_name): mixed {
 
-        $location = $this->getModuleLocation($module_name);
+        $key_name = "mod_controller_{$module_name}";
 
-        if ( ! $location) {
-            throw new RuntimeException($this->_("Модуль \"%s\" не найден", [$module_name]));
-        }
-
-
-        if ($module_name === 'admin') {
-            require_once "{$location}/Controller.php";
-            $result = new \Core3\Mod\Admin\Controller();
+        if ($this->hasStaticCache($key_name)) {
+            $result = $this->getStaticCache($key_name);
 
         } else {
+            $location = $this->getModuleLocation($module_name);
+
+            if ( ! $location) {
+                throw new Exception($this->_("Модуль \"%s\" не найден", [$module_name]));
+            }
+
+
+            if ($module_name === 'admin') {
+                require_once "{$location}/Controller.php";
+                $result = new \Core3\Mod\Admin\Controller();
+
+            } else {
+                if ( ! $this->isModuleActive($module_name)) {
+                    throw new Exception($this->_("Модуль \"%s\" не активен", [$module_name]));
+                }
+
+                $controller_file = "{$location}/Controller.php";
+
+                if ( ! file_exists($controller_file)) {
+                    throw new Exception($this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", [$module_name]));
+                }
+
+                $this->loadVendorDir($location);
+
+                require_once $controller_file;
+
+                $module_class_name = "\\Core3\\Mod\\" . ucfirst($module_name) . "\\Controller";
+
+                if ( ! class_exists($module_class_name)) {
+                    throw new Exception($this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", [$module_name]));
+                }
+
+                $result = new $module_class_name();
+            }
+
+            $this->setStaticCache($key_name, $result);
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * @param string $module_name
+     * @return mixed
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws \Exception
+     */
+    private function getModuleEvent(string $module_name): mixed {
+
+        $key_name = "mod_event_{$module_name}";
+
+        if ($this->hasStaticCache($key_name)) {
+            $result = $this->getStaticCache($key_name);
+
+        } else {
+            $location = $this->getModuleLocation($module_name);
+
+            if ( ! $location) {
+                throw new Exception($this->_("Модуль \"%s\" не найден", [$module_name]));
+            }
+
+            $result = null;
+
+            if ($module_name !== 'admin') {
+                if ( ! $this->isModuleActive($module_name)) {
+                    throw new Exception($this->_("Модуль \"%s\" не активен", [$module_name]));
+                }
+
+                $event_file = "{$location}/Event.php";
+
+                if (file_exists($event_file)) {
+                    $this->loadVendorDir($location);
+
+                    require_once $event_file;
+
+                    $module_class_name = "\\Core3\\Mod\\" . ucfirst($module_name) . "\\Event";
+
+                    $result = class_exists($module_class_name)
+                        ? new $module_class_name()
+                        : null;
+                }
+            }
+
+            $this->setStaticCache($key_name, $result);
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * @param string $module_name
+     * @param string $table_name
+     * @return AbstractTableGateway
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws \Exception
+     */
+    private function getModuleTable(string $module_name, string $table_name): AbstractTableGateway {
+
+        $key_name = "mod_table_{$module_name}_{$table_name}";
+
+        if ($this->hasStaticCache($key_name)) {
+            $result = $this->getStaticCache($key_name);
+
+        } else {
+            $module_name = strtolower($module_name);
+            $table_name  = ucfirst($table_name);
+
+            $location = $this->getModuleLocation($module_name);
+
+            if ( ! $location) {
+                throw new Exception($this->_('Модуль "%s" не найден', [$module_name]));
+            }
+
             if ( ! $this->isModuleActive($module_name)) {
-                throw new RuntimeException($this->_("Модуль \"%s\" не активен", [$module_name]));
+                throw new Exception($this->_('Модуль "%s" не активен', [$module_name]));
             }
 
-            $controller_file = "{$location}/Controller.php";
+            $table_class = '\\Core3\\Mod\\' . ucfirst($module_name). '\\Tables\\' . $table_name;
+            $table_file  = "{$location}/Tables/{$table_name}.php";
 
-            if ( ! file_exists($controller_file)) {
-                throw new RuntimeException($this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", [$module_name]));
+            if ( ! file_exists($table_file)) {
+                throw new Exception($this->_('Не найден файл таблицы: %s', [$table_file]));
             }
 
-            $autoload_file = "{$location}/vendor/autoload.php";
+            $this->loadVendorDir($location);
 
-            if (file_exists($autoload_file)) {
-                require_once $autoload_file;
+            require_once $table_file;
+
+            if ( ! class_exists($table_class)) {
+                throw new Exception($this->_('Не найден класс таблицы %s', [$table_class]));
             }
 
-            require_once $controller_file;
 
-            $module_class_name = "\\Core3\\Mod\\" . ucfirst($module_name) . "\\Controller";
-
-            if ( ! class_exists($module_class_name)) {
-                throw new RuntimeException($this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", [$module_name]));
+            if ( ! $this->issetConnection()) {
+                $this->initConnection();
             }
 
-            $result = new $module_class_name();
+            $result = new $table_class();
+
+            if ( ! $result instanceof AbstractTableGateway) {
+                throw new Exception($this->_('Некорректный класс таблицы %s', [$table_class]));
+            }
+
+            $this->setStaticCache($key_name, $result);
         }
 
         return $result;
@@ -276,99 +445,72 @@ abstract class Common extends Acl {
     /**
      * @param string $module_name
      * @param string $model_name
-     * @return AbstractTableGateway
+     * @return mixed
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
-    protected function getModuleTable(string $module_name, string $model_name): AbstractTableGateway {
+    private function getModuleModel(string $module_name, string $model_name): mixed {
 
-        $module_name = strtolower($module_name);
-        $model_name  = ucfirst($model_name);
+        $key_name = "mod_model_{$module_name}_{$model_name}";
 
-        $location = $this->getModuleLocation($module_name);
+        if ($this->hasStaticCache($key_name)) {
+            $result = $this->getStaticCache($key_name);
 
-        if ( ! $location) {
-            throw new RuntimeException($this->_('Модуль "%s" не найден', [$module_name]));
+        } else {
+            $module_name = strtolower($module_name);
+            $model_name  = ucfirst($model_name);
+
+            $location = $this->getModuleLocation($module_name);
+
+            if ( ! $location) {
+                throw new Exception($this->_('Модуль "%s" не найден', [$module_name]));
+            }
+
+            if ( ! $this->isModuleActive($module_name)) {
+                throw new Exception($this->_('Модуль "%s" не активен', [$module_name]));
+            }
+
+            $model_class = '\\Core3\\Mod\\' . ucfirst($module_name). '\\Models\\' . $model_name;
+            $model_file  = "{$location}/Models/{$model_name}.php";
+
+            if ( ! file_exists($model_file)) {
+                throw new Exception($this->_('Не найден файл модели: %s', [$model_file]));
+            }
+
+            $this->loadVendorDir($location);
+
+            require_once $model_file;
+
+            if ( ! class_exists($model_class)) {
+                throw new Exception($this->_('Не найден класс модели %s', [$model_class]));
+            }
+
+
+            if ( ! $this->issetConnection()) {
+                $this->initConnection();
+            }
+
+            $result = new $model_class();
+
+            $this->setStaticCache($key_name, $result);
         }
 
-        if ( ! $this->isModuleActive($module_name)) {
-            throw new RuntimeException($this->_('Модуль "%s" не активен', [$module_name]));
-        }
-
-        $table_class = '\\Core3\\Mod\\' . ucfirst($module_name). '\\Tables\\' . $model_name;
-        $table_file  = "{$location}/tables/{$model_name}.php";
-
-        if ( ! file_exists($table_file)) {
-            throw new RuntimeException($this->_('Не найден файл таблицы: %s', [$table_file]));
-        }
-
-        require_once $table_file;
-
-        if ( ! class_exists($table_class)) {
-            throw new RuntimeException($this->_('Не найден класс таблицы %s', [$table_class]));
-        }
-
-
-        if ( ! $this->issetConnection()) {
-            $this->initConnection();
-        }
-
-        $table_instance = new $table_class();
-
-        if ( ! $table_instance instanceof AbstractTableGateway) {
-            throw new RuntimeException($this->_('Некорректный класс таблицы %s', [$table_class]));
-        }
-
-        return $table_instance;
+        return $result;
     }
 
 
     /**
-     * Обработчик модуля
-     * @param string $module_name
-     * @return mixed
-     * @throws ExceptionInterface
-     * @throws RuntimeException
-     * @throws DbException
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
+     * @param string $location
+     * @return void
      */
-    protected function getModuleHandler(string $module_name): mixed {
+    private function loadVendorDir(string $location): void {
 
-        $location = $this->getModuleLocation($module_name);
+        $autoload_file = "{$location}/vendor/autoload.php";
 
-        if ( ! $location) {
-            throw new RuntimeException($this->_("Модуль \"%s\" не найден", [$module_name]));
+        if (file_exists($autoload_file)) {
+            require_once $autoload_file;
         }
-
-        if ($module_name === 'admin') {
-            require_once "{$location}/Handler.php";
-            $result = new \Core3\Mod\Admin\Handler();
-
-        } else {
-            // Подключение файла с обработчиком
-            $location         = $this->getModuleLocation($module_name);
-            $module_save_path = "{$location}/Handler.php";
-
-            if ( ! file_exists($module_save_path)) {
-                throw new RuntimeException($this->_('Не найден файл "%s" в модуле "%s"', [$module_save_path, $module_name]));
-            }
-            require_once $module_save_path;
-
-
-            // Инициализация обработчика
-            $handler_class_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module_name) . '\\Handler';
-            if ( ! class_exists($handler_class_name)) {
-                throw new RuntimeException($this->_('Не найден класс "%s" в модуле "%s"', [$handler_class_name, $module_name]));
-            }
-
-
-            // Выполнение обработчика
-            $result = new $handler_class_name();
-        }
-
-        return $result;
     }
 }

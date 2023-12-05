@@ -6,17 +6,17 @@ require_once 'RuntimeException.php';
 /**
  *
  */
-class HttpException extends RuntimeException {
+class HttpException extends Exception {
 
     protected string $error_code = '';
 
 
     /**
-     * @param string $message
-     * @param string $error_code
      * @param int    $http_code
+     * @param string $error_code
+     * @param string $message
      */
-    public function __construct(string $message, string $error_code, int $http_code = 200) {
+    public function __construct(int $http_code, string $error_code, string $message) {
 
         parent::__construct($message, $http_code);
         $this->error_code = $error_code;

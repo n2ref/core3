@@ -32,7 +32,7 @@ class Roles extends \Common {
                 $edit = new \editTable('roles');
                 $edit->SQL = $this->db->quoteInto("
                     SELECT id,
-                           name,
+                           title,
                            description,
                            position,
                            privileges
@@ -120,7 +120,7 @@ class Roles extends \Common {
 
             $list->SQL = "
                 SELECT `id`,
-                       `name`,
+                       title,
                        description,
                        position,
                        is_active_sw

@@ -30,8 +30,6 @@ class Registry {
     /**
      * @param string $name
      * @return mixed
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
      */
     public static function get(string $name): mixed {
 

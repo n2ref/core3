@@ -16,7 +16,7 @@ class Tools {
      *
 	 * @return bool|int
 	 */
-	public static function httpAuth($realm, array $users) {
+	public static function httpAuth(string $realm, array $users) {
 		
 		if (isset($_SERVER['PHP_AUTH_DIGEST'])) {
 			$auth_data = $_SERVER['PHP_AUTH_DIGEST'];
@@ -109,53 +109,64 @@ class Tools {
      *
      * @return string
      */
-    public static function date_ru($formatum, $timestamp=0) {
+    public static function dateRu($formatum, $timestamp=0) {
 
-        if (($timestamp <= -1) || !is_numeric($timestamp)) return '';
+        if (($timestamp <= -1) || !is_numeric($timestamp)) {
+            return '';
+        }
+
         mb_internal_encoding("UTF-8");
 
-        $q['д'] = array(-1 => 'w', 'воскресенье','понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота');
-        $q['в'] = array(-1 => 'w', 'воскресенье','понедельник', 'вторник', 'среду', 'четверг', 'пятницу', 'субботу');
-        $q['Д'] = array(-1 => 'w', 'Воскресенье','Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота');
-        $q['В'] = array(-1 => 'w', 'Воскресенье','Понедельник', 'Вторник', 'Среду', 'Четверг', 'Пятницу', 'Субботу');
-        $q['к'] = array(-1 => 'w', 'вс','пн', 'вт', 'ср', 'чт', 'пт', 'сб');
-        $q['К'] = array(-1 => 'w', 'Вс','Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб');
-        $q['м'] = array(-1 => 'n', '', 'января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря');
-        $q['М'] = array(-1 => 'n', '', 'Января', 'Февраля', 'Март', 'Апреля', 'Май', 'Июня', 'Июля', 'Август', 'Сентября', 'Октября', 'Ноября', 'Декабря');
-        $q['И'] = array(-1 => 'n', '', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь');
-        $q['л'] = array(-1 => 'n', '', 'янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек');
-        $q['Л'] = array(-1 => 'n', '',  'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек');
+        $q['д'] = [-1 => 'w', 'воскресенье','понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+        $q['в'] = [-1 => 'w', 'воскресенье','понедельник', 'вторник', 'среду', 'четверг', 'пятницу', 'субботу'];
+        $q['Д'] = [-1 => 'w', 'Воскресенье','Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+        $q['В'] = [-1 => 'w', 'Воскресенье','Понедельник', 'Вторник', 'Среду', 'Четверг', 'Пятницу', 'Субботу'];
+        $q['к'] = [-1 => 'w', 'вс','пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+        $q['К'] = [-1 => 'w', 'Вс','Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        $q['м'] = [-1 => 'n', '', 'января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+        $q['М'] = [-1 => 'n', '', 'Января', 'Февраля', 'Март', 'Апреля', 'Май', 'Июня', 'Июля', 'Август', 'Сентября', 'Октября', 'Ноября', 'Декабря'];
+        $q['И'] = [-1 => 'n', '', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+        $q['л'] = [-1 => 'n', '', 'янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+        $q['Л'] = [-1 => 'n', '',  'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
 
-        if ($timestamp == 0)
-        $timestamp = time();
+        if ($timestamp == 0) {
+            $timestamp = time();
+        }
+
         $temp = '';
         $i = 0;
-        while ( (mb_strpos($formatum, 'д', $i) !== FALSE) || (mb_strpos($formatum, 'Д', $i) !== FALSE) ||
+        while ((mb_strpos($formatum, 'д', $i) !== FALSE) || (mb_strpos($formatum, 'Д', $i) !== FALSE) ||
               (mb_strpos($formatum, 'в', $i) !== FALSE) || (mb_strpos($formatum, 'В', $i) !== FALSE) ||
               (mb_strpos($formatum, 'к', $i) !== FALSE) || (mb_strpos($formatum, 'К', $i) !== FALSE) ||
               (mb_strpos($formatum, 'м', $i) !== FALSE) || (mb_strpos($formatum, 'М', $i) !== FALSE) ||
               (mb_strpos($formatum, 'и', $i) !== FALSE) || (mb_strpos($formatum, 'И', $i) !== FALSE) ||
-              (mb_strpos($formatum, 'л', $i) !== FALSE) || (mb_strpos($formatum, 'Л', $i) !== FALSE)) {
-        $ch['д']=mb_strpos($formatum, 'д', $i);
-        $ch['Д']=mb_strpos($formatum, 'Д', $i);
-        $ch['в']=mb_strpos($formatum, 'в', $i);
-        $ch['В']=mb_strpos($formatum, 'В', $i);
-        $ch['к']=mb_strpos($formatum, 'к', $i);
-        $ch['К']=mb_strpos($formatum, 'К', $i);
-        $ch['м']=mb_strpos($formatum, 'м', $i);
-        $ch['М']=mb_strpos($formatum, 'М', $i);
-        $ch['И']=mb_strpos($formatum, 'И', $i);
-        $ch['л']=mb_strpos($formatum, 'л', $i);
-        $ch['Л']=mb_strpos($formatum, 'Л', $i);
-        foreach ($ch as $k => $v)
-          if ($v === FALSE)
-            unset($ch[$k]);
-        $a = min($ch);
-        $index = mb_substr($formatum, $a, 1);
-        $temp .= date(mb_substr($formatum, $i, $a - $i), $timestamp) . $q[$index][date($q[$index][-1], $timestamp)];
-        $i = $a + 1;
+              (mb_strpos($formatum, 'л', $i) !== FALSE) || (mb_strpos($formatum, 'Л', $i) !== FALSE)
+        ) {
+            $ch['д'] = mb_strpos($formatum, 'д', $i);
+            $ch['Д'] = mb_strpos($formatum, 'Д', $i);
+            $ch['в'] = mb_strpos($formatum, 'в', $i);
+            $ch['В'] = mb_strpos($formatum, 'В', $i);
+            $ch['к'] = mb_strpos($formatum, 'к', $i);
+            $ch['К'] = mb_strpos($formatum, 'К', $i);
+            $ch['м'] = mb_strpos($formatum, 'м', $i);
+            $ch['М'] = mb_strpos($formatum, 'М', $i);
+            $ch['И'] = mb_strpos($formatum, 'И', $i);
+            $ch['л'] = mb_strpos($formatum, 'л', $i);
+            $ch['Л'] = mb_strpos($formatum, 'Л', $i);
+
+            foreach ($ch as $k => $v) {
+                if ($v === false) {
+                    unset($ch[$k]);
+                }
+            }
+            $a = min($ch);
+            $index = mb_substr($formatum, $a, 1);
+            $temp .= date(mb_substr($formatum, $i, $a - $i), $timestamp) . $q[$index][date($q[$index][-1], $timestamp)];
+            $i = $a + 1;
         }
+
         $temp .= date(mb_substr($formatum, $i), $timestamp);
+
         return $temp;
 	}
 
@@ -184,7 +195,7 @@ class Tools {
      *
 	 * @return string
 	 */
-	public static function detect_encoding($string, $pattern_size = 50) {
+	public static function detectEncoding($string, $pattern_size = 50) {
 
 		$list = array('cp1251', 'utf-8', 'ascii', '855', 'KOI8R', 'ISO-IR-111', 'CP866', 'KOI8U');
 		$c = strlen($string);
@@ -229,38 +240,6 @@ class Tools {
 			$headers[$header] = $value;
 		}
 		return $headers;
-	}
-
-
-	/**
-	 * will execute $cmd in the background (no cmd window) without PHP waiting for it to finish, on both Windows and Unix
-	 *
-	 * @param $cmd - command to execute
-	 */
-	public static function execInBackground($cmd) {
-		if (substr(php_uname(), 0, 7) == "Windows") {
-			pclose(popen("start /B " . $cmd, "r"));
-		} else {
-			exec($cmd . " > /dev/null &");
-		}
-	}
-
-
-    /**
-     * @param  string $data
-     * @return string
-     */
-	public static function base64url_encode($data) {
-		return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-	}
-
-
-    /**
-     * @param  string $data
-     * @return string
-     */
-	public static function base64url_decode($data) {
-		return base64_decode(str_pad(strtr($data, '-_', '+/'), strlen($data) % 4, '=', STR_PAD_RIGHT));
 	}
 
 
@@ -379,9 +358,11 @@ class Tools {
                 // units without rub & kop
                 if ($uk > 1) $out[] = self::morph($v, $unit[$uk][0], $unit[$uk][1], $unit[$uk][2]);
             }
-        } else $out[] = $nul;
-        // $out[] = self::morph(intval($rub), $unit[1][0], $unit[1][1], $unit[1][2]); // rub
-        // $out[] = $kop . ' ' . self::morph($kop, $unit[0][0], $unit[0][1], $unit[0][2]); // kop
+
+        } else {
+            $out[] = $nul;
+        }
+
         return trim(preg_replace('/ {2,}/', ' ', join(' ', $out)));
     }
 
@@ -391,7 +372,7 @@ class Tools {
      * @param  int    $bytes
      * @return string
      */
-    public static function formatSizeHuman($bytes): string {
+    public static function formatSizeHuman(int $bytes): string {
 
         if ($bytes >= 1073741824) {
             $bytes = number_format($bytes / 1073741824, 2) . ' Gb';
@@ -550,14 +531,30 @@ class Tools {
 
     /**
      * Склоняем словоформу
-     * @ author runcore
+     * @param float  $number
+     * @param string $str1
+     * @param string $str2
+     * @param string $str3
+     * @return mixed
      */
-    private static function morph($n, $f1, $f2, $f5) {
-        $n = abs(intval($n)) % 100;
-        if ($n > 10 && $n < 20) return $f5;
-        $n = $n % 10;
-        if ($n > 1 && $n < 5) return $f2;
-        if ($n == 1) return $f1;
-        return $f5;
+    private static function morph(float $number, string $str1, string $str2, string $str3): mixed {
+
+        $number = abs(intval($number)) % 100;
+
+        if ($number > 10 && $number < 20) {
+            return $str3;
+        }
+
+        $number = $number % 10;
+
+        if ($number > 1 && $number < 5) {
+            return $str2;
+        }
+
+        if ($number == 1) {
+            return $str1;
+        }
+
+        return $str3;
     }
 }

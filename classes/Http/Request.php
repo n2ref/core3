@@ -1,6 +1,6 @@
 <?php
 namespace Core3\Classes\Http;
-use Core3\Exceptions\RuntimeException;
+use Core3\Exceptions\Exception;
 
 
 /**
@@ -29,8 +29,9 @@ class Request {
     private array $props = [];
 
 
-    const FORMAT_TEXT = 'text';
+    const FORMAT_RAW  = 'raw';
     const FORMAT_JSON = 'json';
+    const FORMAT_FORM = 'form';
 
 
     /**
@@ -166,25 +167,55 @@ class Request {
     /**
      * @param string|null $format
      * @return string|array
-     * @throws RuntimeException
+     * @throws Exception
      */
     public function getBody(string $format = null): string|array {
 
         $request_raw = file_get_contents('php://input', 'r');
 
         switch ($format) {
-            case self::FORMAT_TEXT:
+            case self::FORMAT_RAW:
             default:
-                return $request_raw;
+                $return = &$request_raw;
+                break;
+
+            case self::FORMAT_FORM:
+                $return = $this->getFormData($request_raw)['fields'];
+                break;
 
             case self::FORMAT_JSON:
-                $request = @json_decode($request_raw, true);
+                $json_data = @json_decode($request_raw, true);
 
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    throw new RuntimeException('Incorrect json data');
+                    throw new Exception('Incorrect json data');
                 }
-                return $request;
+                $return = $json_data;
+                break;
         }
+
+        return $return;
+    }
+
+
+    /**
+     * @return array
+     * @throws Exception
+     */
+    public function getFormContent(): array {
+
+        return $_SERVER['REQUEST_METHOD'] == 'POST'
+            ? $this->getPost()
+            : $this->getBody($this::FORMAT_FORM);
+    }
+
+
+    /**
+     * @return array
+     * @throws Exception
+     */
+    public function getJsonContent(): array {
+
+        return $this->getBody($this::FORMAT_JSON);
     }
 
 
@@ -200,5 +231,103 @@ class Request {
                 $this->path_params[$name] = $value;
             }
         }
+    }
+
+
+    /**
+     * @param string $content
+     * @return array
+     */
+    private function getFormData(string $content): array {
+
+        // Fetch content and determine boundary
+        $boundary = substr($content, 0, strpos($content, "\r\n"));
+        $files    = [];
+        $data     = [];
+
+        if (empty($boundary)) {
+            parse_str($content, $data);
+
+        } else {
+            // Fetch each part
+            $parts = array_slice(explode($boundary, $content), 1);
+
+
+            foreach ($parts as $part) {
+                // If this is the last part, break
+                if ($part == "--\r\n") {
+                    break;
+                }
+
+                // Separate content from headers
+                $part = ltrim($part, "\r\n");
+                [$raw_headers, $body] = explode("\r\n\r\n", $part, 2);
+
+                // Parse the headers list
+                $raw_headers = explode("\r\n", $raw_headers);
+                $headers     = [];
+
+                foreach ($raw_headers as $header) {
+                    [$name, $value] = explode(':', $header);
+                    $headers[strtolower($name)] = ltrim($value, ' ');
+                }
+
+                // Parse the Content-Disposition to get the field name, etc.
+                if (isset($headers['content-disposition'])) {
+                    preg_match(
+                        '/^(?<type>.+); *name="(?<name>[^"]*)"(; *filename="(?<filename>[^"]*)")?/',
+                        $headers['content-disposition'],
+                        $matches
+                    );
+
+                    $is_file = isset($matches['filename']);
+
+                    //Parse File
+                    if ($is_file) {
+                        //get tmp name
+                        $filename_parts = pathinfo($matches['filename']);
+                        $tmp_name       = tempnam(ini_get('upload_tmp_dir'), $filename_parts['filename']);
+
+                        $value = [
+                            'error'    => 0,
+                            'name'     => $matches['filename'],
+                            'tmp_name' => $tmp_name,
+                            'size'     => strlen($body),
+                            'type'     => $matches['type'],
+                        ];
+
+                        //place in temporary directory
+                        file_put_contents($tmp_name, $body);
+                    } else {
+                        $value = substr($body, 0, strlen($body) - 2);
+                    }
+
+                    parse_str($matches['name'], $name_structure);
+                    $path      = preg_split('~(\[|\])~', $matches['name']);
+                    $name_part = &$name_structure;
+
+                    foreach ($path as $key) {
+                        if ( ! empty($key)) {
+                            if ( ! is_array($name_part)) {
+                                $name_part = array();
+                            }
+                            $name_part = &$name_part[$key];
+                        }
+                    }
+                    $name_part = $value;
+
+                    if ($is_file) {
+                        $files = array_merge_recursive($files, $name_structure);
+                    } else {
+                        $data = array_merge_recursive($data, $name_structure);
+                    }
+                }
+            }
+        }
+
+        return [
+            'fields' => $data,
+            'files'  => $files ?: null,
+        ];
     }
 }

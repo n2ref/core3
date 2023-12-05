@@ -15,8 +15,8 @@ var adminIndex = {
                 Core.menu.preloader.show();
 
                 $.ajax({
-                    url: adminIndex._baseUrl + '/cache',
-                    method: 'delete',
+                    url: adminIndex._baseUrl + '/handler/clear_cache',
+                    method: 'post',
                     dataType: 'json',
                     success: function (response) {
                         if (response.status !== 'success') {
@@ -43,7 +43,7 @@ var adminIndex = {
      */
     showPhpInfo: function () {
 
-        CoreUI.modal.showLoad("Php Info", adminIndex._baseUrl + '/php_info');
+        CoreUI.modal.showLoad("Php Info", adminIndex._baseUrl + '/handler/get_php_info');
     },
 
 
@@ -52,7 +52,7 @@ var adminIndex = {
      */
     showDbProcessList: function () {
 
-        CoreUI.modal.showLoad("Database connections", adminIndex._baseUrl + '/db_connections', {
+        CoreUI.modal.showLoad("Database connections", adminIndex._baseUrl + '/handler/get_db_connections', {
             size: "xl"
         });
     },
@@ -62,7 +62,7 @@ var adminIndex = {
      * Показ списка с информацией о базе данных
      */
     showDbVariablesList: function () {
-        CoreUI.modal.showLoad("Database variables", adminIndex._baseUrl + '/db_variables', {
+        CoreUI.modal.showLoad("Database variables", adminIndex._baseUrl + '/handler/get_db_variables', {
             size: "xl"
         });
     },
@@ -73,7 +73,7 @@ var adminIndex = {
      */
     showSystemProcessList: function () {
 
-        CoreUI.modal.showLoad("System process list", adminIndex._baseUrl + '/system_process_list', {
+        CoreUI.modal.showLoad("System process list", adminIndex._baseUrl + '/handler/get_system_process_list', {
             size: "xl"
         });
     }

@@ -32,7 +32,7 @@ class View extends Common {
                 'version'       => $module->version,
                 'is_visible_sw' => $module->is_visible_sw == 'Y' ? '<span class="text-success">Да</span>' :  '<span class="text-danger">Нет</span>',
                 'is_active_sw'  => $module->is_active_sw,
-                'actions'       => "<button class=\"btn btn-sm btn-outline-danger\"><i class=\"bi bi-trash3-fill\"></i></button>",
+                'actions'       => "<button class=\"btn btn-xs btn-outline-danger\"><i class=\"bi bi-trash3-fill\"></i></button>",
             ];
         }
 
@@ -48,10 +48,10 @@ class View extends Common {
             'onClickUrl' => "{$base_url}?edit=[id]",
             'columns' => [
                 [ 'type' => 'numbers', 'width' => 25, 'attr' => [ 'class' => "border-end text-end" ] ],
-                [ 'field' => 'title',         'label' => 'Название',      'width' => 200 ],
+                [ 'field' => 'is_active_sw',  'label' => 'Вкл',           'width' => 50,  'type' => 'switch' ],
+                [ 'field' => 'title',         'label' => 'Название',      'width' => 200, 'type' => 'html' ],
                 [ 'field' => 'version',       'label' => 'Версия' ],
                 [ 'field' => 'is_visible_sw', 'label' => 'Отображаемый',  'width' => 140, 'type' => 'html' ],
-                [ 'field' => 'is_active_sw',  'label' => 'Вкл',           'width' => 50,  'type' => 'switch' ],
                 [ 'field' => 'actions',       'label' => '',              'width' => 50,  'type' => 'html' ],
             ],
             'records' => $records

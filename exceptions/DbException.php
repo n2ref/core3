@@ -6,6 +6,6 @@ require_once 'RuntimeException.php';
 /**
  *
  */
-class DbException extends RuntimeException {
+class DbException extends Exception {
 
 }

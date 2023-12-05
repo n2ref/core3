@@ -26,7 +26,7 @@ class Users extends Common {
                    up.firstname,
                    up.lastname,
                    up.middlename,
-                   r.name AS role
+                   r.title AS role
             FROM core_users AS u
                 LEFT JOIN core_users_profile AS up ON u.u_id = up.user_id 
                 LEFT JOIN core_roles AS r ON r.id = u.role_id  

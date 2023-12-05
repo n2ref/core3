@@ -9,12 +9,13 @@ require_once 'Classes/autoload.php';
 
 
 /**
- * @property tables\Modules         $tableModules
- * @property tables\ModulesSections $tableModulesSections
- * @property tables\Roles           $tableRoles
- * @property tables\Users           $tableUsers
- * @property tables\UsersSession    $tableUsersSession
- * @property tables\Enum            $tableEnum
+ * @property Tables\Modules         $tableModules
+ * @property Tables\ModulesSections $tableModulesSections
+ * @property Tables\Roles           $tableRoles
+ * @property Tables\Users           $tableUsers
+ * @property Tables\UsersSession    $tableUsersSession
+ * @property Tables\Controls        $tableControls
+ * @property Model\Users            $modelUsers
  */
 class Controller extends Common {
 
@@ -27,44 +28,8 @@ class Controller extends Common {
      */
     public function sectionIndex(Request $request) {
 
-        $router = new Router();
-        $router->addPath('/cache')->delete('cache_clean');
-        $router->addPath('/php_info')->get('get_php_info');
-        $router->addPath('/db_connections')->get('get_db_connections');
-        $router->addPath('/db_variables')->get('get_db_variables');
-        $router->addPath('/system_process_list')->get('get_system_process_list');
-
-        $route = $router->getRoute($request->getMethod(), $request->getPathParam('mod_query'));
-
-
-        if ($route) {
-            switch ($route['action']) {
-                case 'cache_clean':
-                    $this->cache->clear();
-                    return [ 'status' => 'success' ];
-                    break;
-
-                case 'get_php_info':
-                    return (new Classes\Index\SysInfo\PhpInfo())->getPhpinfo();
-                    break;
-
-                case 'get_db_connections':
-                    return (new Classes\Index\View())->getTableDbConnections();
-                    break;
-
-                case 'get_db_variables':
-                    return (new Classes\Index\View())->getTableDbVariables();
-                    break;
-
-                case 'get_system_process_list':
-                    return (new Classes\Index\View())->getTableProcessList();
-                    break;
-            }
-        }
-
         $service_info = (new Classes\Index\Model())->getServerInfo();
         $view         = new Classes\Index\View();
-
 
 
         $content = [
@@ -74,7 +39,7 @@ class Controller extends Common {
 
         $panel_admin = new \CoreUI\Panel();
         $panel_admin->setTitle('Общие сведения');
-        $panel_admin->setControls('<button class="btn btn-outline-secondary" onclick="coreMenu.reload()"><i class="bi bi-arrow-clockwise"></i></button>');
+        $panel_admin->setControls('<button class="btn btn-outline-secondary" onclick="Core.menu.reload()"><i class="bi bi-arrow-clockwise"></i></button>');
         $panel_admin->setContent($view->getTableCommon($service_info));
         $content[] = $panel_admin->toArray();
 
@@ -102,8 +67,6 @@ class Controller extends Common {
 
 
 
-
-
         $panel_php = new \CoreUI\Panel();
         $panel_php->setTitle('Php');
         $panel_php->setControls('<button class="btn btn-outline-secondary" onclick="adminIndex.showPhpInfo()"><i class="bi bi-info"></i></button>');
@@ -123,13 +86,14 @@ class Controller extends Common {
         $layout = new \CoreUI\Layout();
         $item = $layout->addItems();
         $item->widthColumn(12);
-        $item->addSize('lg')->widthColumn(6);
-
+        $item->addSize('lg');
+        $item->widthColumn(6);
         $item->content($panel_php->toArray());
 
         $item = $layout->addItems();
         $item->widthColumn(12);
-        $item->addSize('lg')->widthColumn(6);
+        $item->addSize('lg');
+        $item->widthColumn(6);
         $item->content($panel_db->toArray());
 
         $content[] = $layout->toArray();
@@ -176,7 +140,7 @@ class Controller extends Common {
         try {
             if ($request->getQuery('edit') !== null) {
                 if ($request->getQuery('edit')) {
-                    $module = $this->modAdmin->tableModules->getRowById($request->getQuery('edit'));
+                    $module = $this->tableModules->getRowById($request->getQuery('edit'));
 
                     if (empty($module)) {
                         throw new AppException($this->_('Указанный модуль не найден'));
@@ -189,7 +153,7 @@ class Controller extends Common {
                 }
 
             } else {
-                $count_modules = $this->modAdmin->tableModules->getCount();
+                $count_modules = $this->tableModules->getCount();
 
                 $panel->addTab($this->_("Установленные (%s)", [ $count_modules ]), 'installed', "{$base_url}?tab=installed");
                 $panel->addTab($this->_("Доступные"),                              'available', "{$base_url}?tab=available");
@@ -219,7 +183,7 @@ class Controller extends Common {
      * Справочник пользователей системы
      * @param Request $request
      * @return array
-     * @throws \Exception
+     * @throws AppException
      */
     public function sectionUsers(Request $request): array {
 
@@ -228,24 +192,31 @@ class Controller extends Common {
         $panel = new \CoreUI\Panel();
         $view  = new Classes\Users\View();
 
+        $content   = [];
+        $content[] = $this->getJsModule('admin', 'assets/users/js/admin.users.js');
+
         try {
             if ($request->getQuery('edit') !== null) {
                 if ($request->getQuery('edit')) {
-                    $user = $this->modAdmin->tableUsers->getRowById($request->getQuery('edit'));
+                    $user = $this->tableUsers->getRowById((int)$request->getQuery('edit'));
 
                     if (empty($user)) {
                         throw new AppException('Указанный пользователь не найден');
                     }
 
                     $panel->setTitle("{$user->lname} {$user->fname} {$user->mname}", $this->_('Редактирование пользователя'), $base_url);
+                    $content[] = $view->getForm($base_url, $user);
 
                 } else {
-                    $panel->setTitle($this->_('Добавление пользователя'));
+                    $panel->setTitle($this->_('Добавление пользователя'), null, $base_url);
+                    $content[] = $view->getFormNew($base_url);
                 }
 
             } else {
-                $panel->setContent($view->getTable($base_url));
+                $content[] = $view->getTable($base_url);
             }
+
+            $panel->setContent($content);
 
         } catch (AppException $e) {
             $panel->setContent(
@@ -317,77 +288,6 @@ class Controller extends Common {
         }
 
         $panel->addContent(ob_get_clean());
-        return $panel->render();
-    }
-
-
-
-    /**
-     * Справочники
-     * @return string
-     */
-    public function sectionEnum() {
-
-        // TODO модифицировать роутер под новую схему с ресурсами /module/section/resource
-        // TODO перенести ресурсы секции справочники в свой новый класс и протестировать их работу
-
-        // TODO переделать формирование панелей на js
-        // TODO переделать формирование алетов на js
-        // TODO переделать формирование таблицы на js
-        // TODO переделать формирование форм на js
-        // TODO переделать формирование табов на js
-        // TODO переделать формирование дерева на js
-        // TODO переделать формирование макета на js
-
-        // TODO сделать Модули
-        // TODO сделать Мониторинг
-        // TODO сделать Справочники
-        // TODO сделать Пользователи
-        // TODO сделать Роли
-
-        // TODO проверка acl должна происходить по GET параметрам module и action
-        // TODO в мобильной верстке при открытии субмодулей они должны налаживаться на модули
-        // TODO возможно формы должны быть материальные
-
-
-        $panel = new Panel('enum');
-
-        // Редактирование справочника
-        if (isset($_GET['edit'])) {
-            $panel->addContent($this->getModuleTable('admin', 'enum')->formEnum());
-
-            if ($_GET['edit']) {
-                $name = $this->db->fetchOne("
-                    SELECT name
-                    FROM core_enum
-                    WHERE id = ?
-                ", $_GET['edit']);
-                $panel->setTitle($this->_("Редактирование справочника"));
-
-                $panel_value = new Panel('enum_value');
-                $panel_value->setTitle(sprintf($this->_("Перечень значений справочника \"%s\""), $name));
-
-                // Редактирование значения
-                if ($_GET['edit_value']) {
-                    $panel_value->addContent($this->getModuleTable('admin', 'enum')->formValue());
-                }
-
-                // Таблица значений
-                $panel_value->addContent($this->getModuleTable('admin', 'enum')->tableValues());
-                $panel->addContent($panel_value->render());
-
-            } else {
-                $panel->setTitle($this->_("Создание нового справочника"));
-            }
-
-
-        // Таблица справочников
-        } else {
-            $panel->setTitle($this->_("Справочники"));
-            $panel->addContent($this->getModuleTable('admin', 'enum')->tableEnums());
-        }
-
-        $this->printJs(DOC_PATH . "core3/mod/admin/enum.js");
         return $panel->render();
     }
 
@@ -538,7 +438,7 @@ class Controller extends Common {
 
                                 //отправка уведомления
                                 if ($admin_email && $server) {
-                                    $is_send = $this->modAdmin->createEmail()
+                                    $is_send = $this->createEmail()
                                         ->to($admin_email)
                                         ->subject(sprintf($this->_("%s: обнаружены изменения в структуре модуля!"), $server))
                                         ->body("<b>{$server}:</b> Обнаружены изменения в структуре модуля {$module['module_id']}. Обнаружено  {$n} несоответствий.")
@@ -563,57 +463,5 @@ class Controller extends Common {
 
         $panel->addContent(ob_get_clean());
         return $panel->render();
-    }
-
-
-    /**
-     * Проверяем файлы модулей на изменения
-     * @return array
-     */
-    private function getModulesChanges() {
-
-        $modules_list = $this->db->fetchAll("
-            SELECT name
-            FROM core_modules 
-            WHERE files_hash IS NOT NULL
-        ");
-
-        $install = new Modules_Install();
-        $modules = [];
-
-        if ( ! empty($modules_list)) {
-            $modules = [
-                'modules' => [],
-                'files'   => [],
-                'count'   => 0,
-            ];
-            foreach ($modules_list as $module) {
-                $dirhash    = $install->extractHashForFiles($this->getModuleLocation($module['name']));
-                $dbhash     = $install->getFilesHashFromDb($module['name']);
-                $compare    = $install->compareFilesHash($dirhash, $dbhash);
-
-                $br = $install->branchesCompareFilesHash($compare);
-                if ( ! empty($br['added'])) {
-                    $modules['count'] += count($br['added']);
-                }
-                if ( ! empty($br['changed'])) {
-                    $modules['count'] += count($br['changed']);
-                }
-                if ( ! empty($br['lost'])) {
-                    $modules['count'] += count($br['lost']);
-                }
-
-                if ( ! empty($compare)) {
-                    $modules['modules'][] = $module['name'];
-
-                    foreach ($compare as $file => $item) {
-                        $modules['files'][] = $file;
-                    }
-                }
-
-            }
-        }
-
-        return $modules;
     }
 }

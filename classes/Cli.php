@@ -2,6 +2,9 @@
 namespace Core3\Classes;
 
 
+use Core3\Exceptions\DbException;
+use Laminas\Cache\Exception\ExceptionInterface;
+
 /**
  *
  */
@@ -80,14 +83,21 @@ class Cli extends Db {
             ORDER BY m.seq
         ");
 
-        $result = "Name | Title | Version | Is visible? | Is system? | Is active?" . PHP_EOL . PHP_EOL;
+        $modules_result = [];
         if ( ! empty($modules)) {
             foreach ($modules as $module) {
-                $result .= implode("\t ",$module) . PHP_EOL;
+                $modules_result[] = [
+                    'Name'       => $module['name'],
+                    'Title'      => $module['title'],
+                    'Version'    => $module['version'],
+                    'Is visible' => $module['is_visible_sw'],
+                    'Is active'  => $module['is_active_sw'],
+                ];
             }
         }
 
-        return $result;
+        $table = new AsciiTable();
+        return $table->makeTable($modules_result);
     }
 
 
@@ -95,7 +105,7 @@ class Cli extends Db {
      * @param array $params
      * @throws \Exception
      */
-    public function cliComposer(array $params) {
+    public function cliComposer(array $params): void {
 
         $temp_dir = sys_get_temp_dir();
         if ( ! is_writable($temp_dir)) {
@@ -222,10 +232,12 @@ class Cli extends Db {
      * Module run method
      * @param string $module
      * @param string $method
+     * @param array  $params
      * @return string
-     * @throws \Exception
+     * @throws DbException
+     * @throws ExceptionInterface
      */
-    public function runCliMethod(string $module, string $method): string {
+    public function runCliMethod(string $module, string $method, array $params): string {
 
         $module = strtolower($module);
         $method = strtolower($method);

@@ -4,7 +4,6 @@ namespace Core3\Classes;
 
 /**
  * @see https://github.com/shabuninil/Micro_Templater
- * @deprecated
  */
 class Mtpl {
 

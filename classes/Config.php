@@ -368,7 +368,7 @@ class Config {
      * @param string $val
      * @return array
      */
-    private function processKey(array $config, string $key, string $val): array {
+    private function processKey(array $config, string $key, string|array $val): array {
 
         $nest_separator = '.';
 

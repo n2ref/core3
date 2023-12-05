@@ -31,7 +31,7 @@ class Translate {
             }
 
             if ($config->translate->adapter == 'gettext') {
-                $content = __DIR__ . "/../translations/{$locale}.mo";
+                $content = __DIR__ . "/../lang/{$locale}.mo";
             } else {
                 throw new \Exception("Адаптер перевода не поддерживается");
             }

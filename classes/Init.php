@@ -2,12 +2,13 @@
 namespace Core3\Classes;
 use Core3\Classes\Http\Request;
 use Core3\Classes\Http\Response;
+use Core3\Exceptions\AppException;
 use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin;
 
 
 /**
- * @property \admin\Controller $modAdmin
+ * @property Admin\Controller $modAdmin
  */
 class Init extends Db {
 
@@ -179,7 +180,7 @@ class Init extends Db {
 
     /**
      * @return string
-     * @throws \Core3\Exceptions\RuntimeException
+     * @throws \Core3\Exceptions\Exception
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
@@ -210,16 +211,28 @@ class Init extends Db {
             }
 
             if (is_array($result)) {
+                if (isset($buffer) && is_string($buffer) && $buffer != '' && ! array_key_exists('_buffer', $result)) {
+                    $result['_buffer'] = $buffer;
+                }
+
                 $response = new Response();
                 $response->setContentTypeJson();
-                $response->setContent(json_encode($result, JSON_UNESCAPED_UNICODE));
+                $response->setContentJson($result);
 
             } elseif (is_scalar($result)) {
+                if (isset($buffer) && is_string($buffer) && $buffer != '') {
+                    $result = $buffer . $result;
+                }
+
                 $response = new Response();
                 $response->setContentTypeHtml();
                 $response->setContent($result);
 
             } elseif ($result instanceof Response) {
+                if (isset($buffer) && is_string($buffer) && $buffer != '') {
+                    $result->appendContent($buffer);
+                }
+
                 $response = $result;
 
             } else {
@@ -241,13 +254,12 @@ class Init extends Db {
                 }
             }
 
-            if ( ! empty($buffer)) {
-                $response->appendContent($buffer);
-            }
-
 
         } catch (HttpException $e) {
             $response = Response::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
+
+        } catch (AppException $e) {
+            $response = Response::errorJson($e->getMessage(), $e->getCode(), 400);
 
         } catch (\Exception $e) {
             $response = Response::errorJson($e->getMessage(), $e->getCode(), 500);

@@ -28,27 +28,37 @@ class Http extends Common {
         $router->addPath('/core/restore')->post('restorePass');
         $router->addPath('/core/restore/check')->post('restorePassCheck');
         $router->addPath('/core/conf')->get('getConf');
-        $router->addPath('/core/home')->get('getHome');
         $router->addPath('/core/cabinet')->get('getCabinet');
-        $router->addPath('/core/mod/{module}/{section}/handler/{handler}', ['[a-z0-9_]+', '[a-z0-9_]+', '[a-z0-9_/]+'])->any('getModHandler');
+        $router->addPath('/core/home')->get('getHome');
+        $router->addPath('/core/mod/{module}/{section}/handler/{method}', ['[a-z0-9_]+', '[a-z0-9_]+', '[a-z0-9_/]+'])->any('getModHandler');
         $router->addPath('/core/mod/{module}/{section}{mod_query}', ['[a-z0-9_]+', '[a-z0-9_]+', '(?:/[a-z0-9_/]+|)'])->any('getModSection');
 
         // TODO добавить возможность работы в папке
         $route = $router->getRoute($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
 
         if (empty($route)) {
-            throw new HttpException('404 Not found', 'not_found', 404);
+            throw new HttpException(404, 'not_found', '404 Not found');
         }
 
         $actions = new Http\Actions();
 
         if ( ! is_callable([$actions, $route['action']]) && ! method_exists($route['action'], '__call')) {
-            throw new HttpException("Incorrect action", 'incorrect_action', 500);
+            throw new HttpException(500, 'incorrect_action', "Incorrect action");
         }
+
+        $request = new Request($route['params']);
+
+        // Обнуление
+        $_GET     = [];
+        $_POST    = [];
+        $_REQUEST = [];
+        $_FILES   = [];
+        $_COOKIE  = [];
+
 
         return call_user_func_array(
             [$actions, $route['action']],
-            [ new Request($route['params']) ]
+            [ $request ]
         );
     }
 
@@ -165,11 +175,11 @@ class Http extends Common {
                     $http_method = ! empty($route[$http_method]) ? $http_method : '*';
 
                     if ( ! isset($route[$http_method])) {
-                        throw new HttpException("Incorrect http method", 'incorrect_http_method', 405);
+                        throw new HttpException(405, 'incorrect_http_method', "Incorrect http method");
                     }
 
                     if (empty($route[$http_method]['action'])) {
-                        throw new HttpException("Incorrect action", 'incorrect_action', 500);
+                        throw new HttpException(500, 'incorrect_action', "Incorrect action");
                     }
 
                     $result['action'] = $route[$http_method]['action'];
@@ -205,7 +215,7 @@ class Http extends Common {
                                         $request     = @json_decode($request_raw, true);
 
                                         if (json_last_error() !== JSON_ERROR_NONE) {
-                                            throw new HttpException('Incorrect json data', 'incorrect_json_data', 400);
+                                            throw new HttpException(400, 'incorrect_json_data', 'Incorrect json data');
                                         }
 
                                         $result['params'][] = $request;

@@ -10,8 +10,8 @@ use Laminas\Cache\Storage;
  */
 abstract class System {
 
-    private string       $version = '3.0.0';
-    private static array $params  = [];
+    private   string       $version      = '3.0.0';
+    protected static array $static_cache = [];
 
 
     /**
@@ -29,10 +29,8 @@ abstract class System {
      * @param array  $params
      * @param string $domain
      * @return string|null
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    public function _(string $text, array $params = [], string $domain = 'core3'): ?string {
+    public static function _(string $text, array $params = [], string $domain = 'core3'): ?string {
 
         $translate      = Registry::has('translate') ? Registry::get('translate') : null;
         $translate_text = $translate?->tr($text, $domain);
@@ -61,8 +59,8 @@ abstract class System {
 
         $result = null;
 
-        if (array_key_exists($param_name, self::$params)) {
-            $result = self::$params[$param_name];
+        if ($this->hasStaticCache($param_name)) {
+            $result = $this->getStaticCache($param_name);
 
         } else {
             switch ($param_name) {
@@ -112,10 +110,41 @@ abstract class System {
             }
 
             if ( ! is_null($result)) {
-                self::$params[$param_name] = $result;
+                $this->setStaticCache($param_name, $result);
             }
         }
 
         return $result;
+    }
+
+
+    /**
+     * @param string $name
+     * @return bool
+     */
+    protected function hasStaticCache(string $name): bool {
+
+        return isset(self::$static_cache[$name]);
+    }
+
+
+    /**
+     * @param string $name
+     * @return mixed
+     */
+    protected function getStaticCache(string $name): mixed {
+
+        return $this->hasStaticCache($name) ? self::$static_cache[$name] : null;
+    }
+
+
+    /**
+     * @param string $name
+     * @param mixed  $value
+     * @return void
+     */
+    protected function setStaticCache(string $name, mixed $value): void {
+
+        self::$static_cache[$name] = $value;
     }
 }

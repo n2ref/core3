@@ -15,7 +15,8 @@ use Laminas\Db\TableGateway\Feature;
  */
 class Table extends AbstractTableGateway {
 
-    protected string $primary_key = 'id';
+    protected string       $primary_key  = 'id';
+    protected static array $static_cache = [];
 
 
     /**
@@ -131,6 +132,37 @@ class Table extends AbstractTableGateway {
      */
     public function find(array|int $id): ResultSetInterface {
 
-        return parent::select([$this->primary_key => $id]);
+        return $this->select([$this->primary_key => $id]);
+    }
+
+
+    /**
+     * @param string $name
+     * @return bool
+     */
+    protected function hasStaticCache(string $name): bool {
+
+        return array_key_exists($name, self::$static_cache);
+    }
+
+
+    /**
+     * @param string $name
+     * @return mixed
+     */
+    protected function getStaticCache(string $name): mixed {
+
+        return $this->hasStaticCache($name) ? self::$static_cache[$name] : null;
+    }
+
+
+    /**
+     * @param string $name
+     * @param mixed  $value
+     * @return void
+     */
+    protected function setStaticCache(string $name, mixed $value): void {
+
+        self::$static_cache[$name] = $value;
     }
 }

@@ -1,8 +1,6 @@
 <?php
 namespace Core3\Classes\Http\Router;
 
-use Core3\Exceptions\HttpException;
-
 /**
  * 
  */

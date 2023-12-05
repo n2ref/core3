@@ -1,6 +1,6 @@
 <?php
 namespace Core3\Classes\Http;
-use Core3\Exceptions\RuntimeException;
+use Core3\Exceptions\Exception;
 
 
 /**
@@ -37,7 +37,7 @@ class Response {
      */
     public function setContentTypeJson(): void {
 
-        $this->setHeader('Content-Type', 'application/json');
+        $this->setHeader('Content-Type', 'application/json; charset=utf-8');
     }
 
 
@@ -109,12 +109,12 @@ class Response {
     /**
      * @param mixed $content
      * @return void
-     * @throws RuntimeException
+     * @throws Exception
      */
     public function setContent(mixed $content): void {
 
         if ( ! is_scalar($content)) {
-            throw new RuntimeException('Incorrect content type');
+            throw new Exception('Incorrect content type');
         }
 
         $this->content = $content;
@@ -124,12 +124,22 @@ class Response {
     /**
      * @param mixed $content
      * @return void
-     * @throws RuntimeException
+     */
+    public function setContentJson(mixed $content): void {
+
+        $this->content = json_encode($content, JSON_UNESCAPED_UNICODE);
+    }
+
+
+    /**
+     * @param mixed $content
+     * @return void
+     * @throws Exception
      */
     public function appendContent(mixed $content): void {
 
         if ( ! is_scalar($content)) {
-            throw new RuntimeException('Incorrect content type');
+            throw new Exception('Incorrect content type');
         }
 
         $this->content = $content . $this->content;
@@ -139,12 +149,12 @@ class Response {
     /**
      * @param mixed $content
      * @return void
-     * @throws RuntimeException
+     * @throws Exception
      */
     public function prependContent(mixed $content): void {
 
         if ( ! is_scalar($content)) {
-            throw new RuntimeException('Incorrect content type');
+            throw new Exception('Incorrect content type');
         }
 
         $this->content .= $content;
@@ -180,9 +190,9 @@ class Response {
      * @param string $error_code
      * @param int    $http_code
      * @return Response
-     * @throws RuntimeException
+     * @throws Exception
      */
-    public static function errorJson(string $error_message, string $error_code, int $http_code = 200): Response {
+    public static function errorJson(string $error_message, string $error_code, int $http_code = 400): Response {
 
         $response = new Response();
         $response->setHttpCode($http_code);

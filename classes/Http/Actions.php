@@ -1,9 +1,10 @@
 <?php
 namespace Core3\Classes\Http;
 use Core3\Classes\Tools;
+use Core3\Classes\Validator;
 use Core3\Exceptions\DbException;
+use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
-use Core3\Exceptions\RuntimeException;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\Sql\Expression;
 use Psr\Container\ContainerExceptionInterface;
@@ -23,30 +24,34 @@ class Actions extends Common {
      * @throws ContainerExceptionInterface
      * @throws HttpException
      * @throws NotFoundExceptionInterface
-     * @throws RuntimeException
+     * @throws Exception
      */
     public function login(Request $request): array {
 
         $params = $request->getBody('json');
 
-        Validator::testParameters([
+        $fields = [
             'login'    => 'req,string',
             'password' => 'req,string',
             'fp'       => 'req,string',
-        ], $params);
+        ];
+
+        if ($errors = Validator::validateFields($fields, $params)) {
+            throw new HttpException(400, 'invalid_param', current($errors));
+        }
 
         $user = $this->modAdmin->tableUsers->getRowByLoginEmail($params['login']);
 
         if ( ! $user) {
-            throw new HttpException($this->_('Пользователя с таким логином нет'), 'login_not_found', 400);
+            throw new HttpException(400, 'login_not_found', $this->_('Пользователя с таким логином нет'));
         }
 
         if ($user->is_active_sw == 'N') {
-            throw new HttpException($this->_('Этот пользователь деактивирован'), 'user_inactive', 400);
+            throw new HttpException(400, 'user_inactive', $this->_('Этот пользователь деактивирован'));
         }
 
         if ($user->pass != Tools::passSalt($params['password'])) {
-            throw new HttpException($this->_('Неверный пароль'), 'pass_incorrect', 400);
+            throw new HttpException(400, 'pass_incorrect', $this->_('Неверный пароль') . Tools::passSalt($params['password']));
         }
 
 
@@ -83,7 +88,7 @@ class Actions extends Common {
     public function logout(): array {
 
         if (empty($this->auth)) {
-            throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
+            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
         }
 
         $session = $this->modAdmin->tableUsersSession->find($this->auth->getSessionId())->current();
@@ -101,16 +106,19 @@ class Actions extends Common {
      * @throws ContainerExceptionInterface
      * @throws HttpException
      * @throws NotFoundExceptionInterface
-     * @throws RuntimeException
+     * @throws Exception
      */
     public function refreshToken(Request $request): array {
 
         $params = $request->getBody('json');
-
-        Validator::testParameters([
+        $fields = [
             'refresh_token' => 'req,string',
             'fp'            => 'req,string',
-        ], $params);
+        ];
+
+        if ($errors = Validator::validateFields($fields, $params)) {
+            throw new HttpException(400, 'invalid_param', current($errors));
+        }
 
 
         $sign      = $this->config?->system?->auth?->token_sign ?: '';
@@ -123,17 +131,17 @@ class Actions extends Common {
             $token_exp  = $decoded['exp'] ?? 0;
 
         } catch (\Exception $e) {
-            throw new HttpException($this->_('Токен не прошел валидацию'), 'token_invalid', 403);
+            throw new HttpException(403, 'token_invalid', $this->_('Токен не прошел валидацию'));
         }
 
         if (empty($session_id) || ! is_numeric($session_id)) {
-            throw new HttpException($this->_('Некорректный токен'), 'token_incorrect', 403);
+            throw new HttpException(403, 'token_incorrect', $this->_('Некорректный токен'));
         }
 
         if ($token_exp < time() ||
             $token_iss != $_SERVER['SERVER_NAME']
         ) {
-            throw new HttpException($this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive', 403);
+            throw new HttpException(403, 'session_inactive', $this->_('Эта сессия больше не активна. Войдите заново'));
         }
 
 
@@ -141,28 +149,28 @@ class Actions extends Common {
         $session = $this->modAdmin->tableUsersSession->getRowById($session_id);
 
         if (empty($session)) {
-            throw new HttpException($this->_('Сессия не найдена'), 'session_not_found', 403);
+            throw new HttpException(403, 'session_not_found', $this->_('Сессия не найдена'));
         }
 
         if ($session->fingerprint != $params['fp']) {
             // TODO Добавить оповещение о перехвате токена
-            throw new HttpException($this->_('Некорректный отпечаток системы'), 'fingerprint_invalid', 403);
+            throw new HttpException(403, 'fingerprint_invalid', $this->_('Некорректный отпечаток системы'));
         }
 
         if ($session->token_hash != crc32($params['refresh_token'])) {
             // TODO Добавить оповещение о перехвате токена
-            throw new HttpException($this->_('Токен не активен'), 'token_invalid', 403);
+            throw new HttpException(403, 'token_invalid', $this->_('Токен не активен'));
         }
 
         if ($session->is_active_sw == 'N' || $session->date_expired < date('Y-m-d H:i:s')) {
-            throw new HttpException($this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive', 403);
+            throw new HttpException(403, 'session_inactive', $this->_('Эта сессия больше не активна. Войдите заново'));
         }
 
 
         $user = $this->modAdmin->tableUsers->find($session->user_id)->current();
 
         if (empty($user)) {
-            throw new HttpException($this->_('Пользователь не найден'), 'session_user_not_found', 403);
+            throw new HttpException(403, 'session_user_not_found', $this->_('Пользователь не найден'));
         }
 
         $refresh_token = $this->getRefreshToken($user->login, $session_id);
@@ -195,13 +203,17 @@ class Actions extends Common {
 
         $params = $request->getBody('json');
         // TODO Доделать
-        Validator::testParameters([
+        $fields = [
             'email'    => 'req,string(1-255),email',
             'login'    => 'req,string(1-255)',
             'name'     => 'string(1-255)',
             'password' => 'req,string(1-255)',
             'fp'       => 'req,string(1-255)',
-        ], $params);
+        ];
+
+        if ($errors = Validator::validateFields($fields, $params)) {
+            throw new HttpException(400, 'invalid_param', current($errors));
+        }
 
         $params['lname'] = htmlspecialchars($params['lname']);
 
@@ -209,7 +221,7 @@ class Actions extends Common {
 
         if ($user instanceof Clients\Client) {
             if ($user->status !== 'new') {
-                throw new HttpException('Пользователь с таким email уже зарегистрирован', 'email_isset', 400);
+                throw new HttpException(400, 'email_isset', 'Пользователь с таким email уже зарегистрирован');
             }
 
             if ( ! $user->reg_code ||
@@ -217,11 +229,11 @@ class Actions extends Common {
                 $user->reg_code != $params['code'] ||
                 $user->reg_expired <= date('Y-m-d H:i:s')
             ) {
-                throw new HttpException('Указан некорректный код, либо его действие закончилось', 'code_incorrect', 400);
+                throw new HttpException(400, 'code_incorrect', 'Указан некорректный код, либо его действие закончилось');
             }
 
         } else {
-            throw new HttpException('Введите email и получите код регистрации', 'email_not_found', 400);
+            throw new HttpException(400, 'email_not_found', 'Введите email и получите код регистрации');
         }
 
         $user->update([
@@ -269,7 +281,7 @@ class Actions extends Common {
      * Отправка проверочного кода на email
      * @param Request $request
      * @return array
-     * @throws RuntimeException
+     * @throws Exception
      */
     public function registrationEmailCheck(Request $request): array {
 
@@ -284,7 +296,7 @@ class Actions extends Common {
      * Восстановление пароля при помощи email
      * @param Request $request
      * @return array
-     * @throws RuntimeException
+     * @throws Exception
      */
     public function restorePass(Request $request): array {
 
@@ -298,7 +310,7 @@ class Actions extends Common {
      * Отправка проверочного кода на email для восстановления пароля
      * @param Request $request
      * @return array
-     * @throws RuntimeException
+     * @throws Exception
      */
     public function restorePassCheck(Request $request): array {
 
@@ -319,7 +331,7 @@ class Actions extends Common {
     public function getCabinet(): array {
 
         if (empty($this->auth)) {
-            throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
+            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
         }
 
         $modules = $this->getModules();
@@ -333,7 +345,6 @@ class Actions extends Common {
                 'sections'         => [
                     ["name" => "modules",  'title' => $this->_("Модули")],
                     ["name" => "settings", 'title' => $this->_("Конфигурация")],
-                    ["name" => "enums",    'title' => $this->_("Справочники")],
                     ["name" => "users",    'title' => $this->_("Пользователи")],
                     ["name" => "roles",    'title' => $this->_("Роли")],
                     ["name" => "monitor",  'title' => $this->_("Мониторинг")],
@@ -383,14 +394,14 @@ class Actions extends Common {
     public function getHome(): mixed {
 
         if (empty($this->auth)) {
-            throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
+            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
         }
 
         $location        = DOC_ROOT . "/mod/home";
         $controller_file = "{$location}/Controller.php";
 
         if ( ! file_exists($controller_file)) {
-            throw new HttpException($this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", ['home']));
+            throw new HttpException(500, 'broken', $this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", ['home']));
         }
 
         $autoload_file = "{$location}/vendor/autoload.php";
@@ -404,13 +415,13 @@ class Actions extends Common {
         $module_class_name = "\\Core3\\Mod\\Home\\Controller";
 
         if ( ! class_exists($module_class_name)) {
-            throw new HttpException($this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", ['home']));
+            throw new HttpException(500, 'broken', $this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", ['home']));
         }
 
         $controller = new $module_class_name();
 
         if ( ! method_exists($controller, 'index')) {
-            throw new HttpException($this->_("Модуль \"%s\" сломан. Не найден метод index.", ['home']));
+            throw new HttpException(500, 'broken', $this->_("Модуль \"%s\" сломан. Не найден метод index.", ['home']));
         }
 
         return $controller->index();
@@ -432,15 +443,15 @@ class Actions extends Common {
         $section_name = $request->getPathParam('section');
 
         if (empty($this->auth)) {
-            throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
+            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
         }
 
         if ( ! $this->isAllowed($module_name)) {
-            throw new HttpException($this->_("У вас нет доступа к модулю %s!", [$module_name]), 'forbidden', 403);
+            throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к модулю %s!", [$module_name]));
         }
 
         if ( ! $this->isAllowed("{$module_name}_{$section_name}")) {
-            throw new HttpException($this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden', 403);
+            throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к разделу %s!", [$section_name]));
         }
 
 
@@ -448,7 +459,7 @@ class Actions extends Common {
         $controller   = $this->getModuleController($module_name);
 
         if ( ! is_callable([$controller, "section{$section_name}"])) {
-            throw new HttpException($this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]), 'broken_section', 500);
+            throw new HttpException(404, 'broken_section', $this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]));
         }
 
         // Обнуление
@@ -470,47 +481,44 @@ class Actions extends Common {
      * @return array
      * @throws DbException
      * @throws HttpException
-     * @throws RuntimeException
+     * @throws Exception
      * @throws ExceptionInterface
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    public function getModHandler(Request $request): array {
+    public function getModHandler(Request $request): mixed {
 
         $module_name  = $request->getPathParam('module');
         $section_name = $request->getPathParam('section');
-        $handler_name = $request->getPathParam('handler');
+        $method_name  = $request->getPathParam('method');
 
         if (empty($this->auth)) {
-            throw new HttpException($this->_('У вас нет доступа к системе'), 'forbidden', '403');
+            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
         }
 
         if ( ! $this->isAllowed($module_name)) {
-            throw new HttpException($this->_("У вас нет доступа к модулю %s!", [$module_name]), 'forbidden', 403);
+            throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к модулю %s!", [$module_name]));
         }
 
         if ( ! $this->isAllowed("{$module_name}_{$section_name}")) {
-            throw new HttpException($this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden', 403);
+            throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к разделу %s!", [$section_name]));
         }
 
-        $handler        = $this->getModuleHandler($module_name);
-        $handler_method = $section_name . ucfirst($handler_name);
+        if (strpos($method_name, '_') !== false) {
+            $method_name_parts = explode('_', $method_name);
+            $method_name       = implode('', array_map('ucfirst', $method_name_parts));
+            $method_name       = lcfirst($method_name);
+        }
 
+        $handler = $this->getModuleHandler($module_name, $section_name);
 
-        if ( ! is_callable([$handler, $handler_method]) ||
-             ! in_array($handler_name, get_class_methods($handler_method))
+        if ( ! is_callable([$handler, $method_name]) ||
+             ! in_array($method_name, get_class_methods($handler))
         ) {
-            throw new HttpException($this->_("Ошибка. Не найден метод обработчика %s!", [$handler_name]), 'incorrect_handler_method', 403);
+            throw new HttpException(403, 'incorrect_handler_method', $this->_("Ошибка. Не найден метод обработчика %s!", [$method_name]));
         }
 
-        // Обнуление
-        $_GET     = [];
-        $_POST    = [];
-        $_REQUEST = [];
-        $_FILES   = [];
-        $_COOKIE  = [];
-
-        return $handler->$handler_method($request);
+        return $handler->$method_name($request);
     }
 
 
@@ -555,5 +563,57 @@ class Actions extends Common {
         }
 
         return $modules;
+    }
+
+
+    /**
+     * Обработчик модуля
+     * @param string $module_name
+     * @param string $section_name
+     * @return mixed
+     * @throws ExceptionInterface
+     * @throws Exception
+     * @throws DbException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
+    private function getModuleHandler(string $module_name, string $section_name): mixed {
+
+        $location = $this->getModuleLocation($module_name);
+
+        if ( ! $location) {
+            throw new Exception($this->_("Модуль \"%s\" не найден", [$module_name]));
+        }
+
+        if ( ! $this->isModuleActive($module_name)) {
+            throw new Exception($this->_('Модуль "%s" не активен', [$module_name]));
+        }
+
+        // Подключение файла с обработчиком
+        $section_name = ucfirst($section_name);
+        $file_handler = "{$location}/Handlers/{$section_name}.php";
+
+        if ( ! file_exists($file_handler)) {
+            throw new Exception($this->_('Не найден файл "%s" в модуле "%s"', [$file_handler, $module_name]));
+        }
+
+        $autoload_file = "{$location}/vendor/autoload.php";
+
+        if (file_exists($autoload_file)) {
+            require_once $autoload_file;
+        }
+
+        require_once $file_handler;
+
+        $handler_class_name = '\\Core3\\Mod\\' . ucfirst($module_name) . '\\Handlers\\' . $section_name;
+
+        // Инициализация обработчика
+        if ( ! class_exists($handler_class_name)) {
+            throw new Exception($this->_('Не найден класс "%s" в модуле "%s"', [$handler_class_name, $module_name]));
+        }
+
+
+        // Выполнение обработчика
+        return new $handler_class_name();
     }
 }

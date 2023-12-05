@@ -74,9 +74,8 @@ class Acl extends Db {
                     ORDER BY m.seq, ms.seq
                 ");
 
-                $role = $this->db->fetchRow("
-                    SELECT name, 
-                           privileges
+                $role_privileges = $this->db->fetchOne("
+                    SELECT privileges
                     FROM core_roles
                     WHERE id = ?
                 ", $this->auth->getRoleId());
@@ -106,7 +105,7 @@ class Acl extends Db {
                 }
 
 
-                $role_privileges = $role['privileges'] ? json_decode($role['privileges'], true) : [];
+                $role_privileges = $role_privileges ? json_decode($role_privileges, true) : [];
 
                 if ( ! empty($resources)) {
                     foreach ($resources as $resource => $privileges) {

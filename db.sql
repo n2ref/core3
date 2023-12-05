@@ -1,10 +1,12 @@
+
 CREATE TABLE `core_controls` (
-    `table_name` varchar(60) NOT NULL,
-    `field_name` varchar(60) NOT NULL,
-    `field_value` varchar(60) NOT NULL,
-    `last_user_id` int(11) unsigned DEFAULT NULL,
-    `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-    `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    `id` int unsigned NOT NULL AUTO_INCREMENT,
+    `table_name` varchar(255) NOT NULL,
+    `row_id` varchar(60) NOT NULL,
+    `date_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `table_name` (`table_name`),
+    KEY `row_id` (`row_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `core_enum` (
@@ -81,7 +83,7 @@ CREATE TABLE `core_modules_sections` (
 
 CREATE TABLE `core_roles` (
     `id` int unsigned NOT NULL AUTO_INCREMENT,
-    `name` varchar(255) NOT NULL,
+    `title` varchar(255) NOT NULL,
     `description` varchar(255) DEFAULT NULL,
     `privileges` json DEFAULT NULL,
     `author` varchar(255) NOT NULL DEFAULT '',
@@ -89,7 +91,7 @@ CREATE TABLE `core_roles` (
     `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
     `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `name` (`name`)
+    UNIQUE KEY `title` (`title`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `core_settings` (
@@ -121,7 +123,6 @@ CREATE TABLE `core_users` (
     `mname` varchar(255) DEFAULT '',
     `certificate` text,
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
-    `is_email_wrong_sw` enum('Y','N') NOT NULL DEFAULT 'N',
     `is_pass_changed_sw` enum('Y','N') NOT NULL DEFAULT 'N',
     `is_admin_sw` enum('Y','N') NOT NULL DEFAULT 'N',
     `last_user_id` int(11) unsigned DEFAULT NULL,

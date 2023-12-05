@@ -20,13 +20,22 @@ class Modules extends Table {
      */
     public function getRowsByActive(): ResultSetInterface {
 
-        $result = $this->fetchAll(function (Select $select) {
-            $select
-                ->where([
-                    'is_active_sw' => 'Y',
-                ])
-                ->order('seq');
-        });
+        $param_name = "active_modules";
+
+        if ($this->hasStaticCache($param_name)) {
+            $result = $this->getStaticCache($param_name);
+
+        } else {
+            $result = $this->fetchAll(function (Select $select) {
+                $select
+                    ->where([
+                        'is_active_sw' => 'Y',
+                    ])
+                    ->order('seq');
+            });
+
+            $this->setStaticCache($param_name, $result);
+        }
 
         return $result;
     }

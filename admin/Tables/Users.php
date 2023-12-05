@@ -4,6 +4,7 @@ use Core3\Classes\Db\Table;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Select;
+use Laminas\Db\Sql\Where;
 
 /**
  *
@@ -85,4 +86,48 @@ class Users extends Table {
 
         return $results->current();
 	}
+
+
+    /**
+     * Проверка повторения логина
+     * @param string   $login
+     * @param int|null $exception_user_id
+     * @return bool
+     */
+    public function isUniqueLogin(string $login, int $exception_user_id = null): bool {
+
+        $results = $this->select(function (Select $select) use ($login, $exception_user_id) {
+            $select
+                ->where([ 'login' => $login ])
+                ->limit(1);
+
+            if ($exception_user_id) {
+                $select->where->notEqualTo('id', $exception_user_id);
+            }
+        });
+
+        return $results->count() == 0;
+    }
+
+
+    /**
+     * Проверка повторения email
+     * @param string   $email
+     * @param int|null $exception_user_id
+     * @return bool
+     */
+    public function isUniqueEmail(string $email, int $exception_user_id = null): bool {
+
+        $results = $this->select(function (Select $select) use ($email, $exception_user_id) {
+            $select
+                ->where([ 'email' => $email ])
+                ->limit(1);
+
+            if ($exception_user_id) {
+                $select->where->notEqualTo('id', $exception_user_id);
+            }
+        });
+
+        return $results->count() == 0;
+    }
 }

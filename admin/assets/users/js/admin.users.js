@@ -1,65 +1,41 @@
-/**
- * @constructor
- */
-function AdminUsers() {};
 
-
-/**
- * @param userId
- */
-AdminUsers.loginUser = function(userId) {
+var adminUsers = {
 
     /**
+     * Вход под пользователем
      * @param userId
      */
-    function sendLoginUser(userId) {
+    loginUser: function(userId) {
 
-        preloader.show();
+        CoreUI.alert.create({
+            type          : 'warning',
+            title         : Core._('Войти под выбранным пользователем?'),
+            btnRejectText : Core._("Отмена"),
+            btnAcceptText : Core._("Да"),
+            btnAcceptColor: "#F57C00",
+            btnAcceptEvent: function () {
+                Core.menu.preloader.show();
 
-        $.post('index.php?module=admin&action=users&data=login_user', {
-                user_id: userId
-            },
-            function (data) {
-                preloader.hide();
+                $.ajax({
+                    url      : '/core/mod/admin/users/handler/login_user?id' + userId,
+                    method   : 'post',
+                    dataType : 'json',
+                    success  : function (response) {
+                        if (response.status !== 'success') {
+                            CoreUI.alert.danger(response.error_message || Core._("Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз."));
 
-                if (data.status !== 'success') {
-                    if (data.error_message) {
-                        alert(data.error_message);
-                    } else {
-                        alert("Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз.");
+                        } else {
+                            Core.menu.load("#/");
+                        }
+                    },
+                    error: function (response) {
+                        CoreUI.notice.danger(Core._("Ошибка. Попробуйте обновить страницу и выполните это действие еще раз."));
+                    },
+                    complete : function () {
+                        Core.menu.preloader.hide();
                     }
-
-                } else {
-                    window.location = 'index.php';
-                }
-            },
-            'json');
-    }
-
-
-    if (typeof swal === 'undefined') {
-        alertify.confirm('Вы уверены, что хотите войти под выбранным пользователем?', function(e){
-            if (e) {
-
-                sendLoginUser(userId);
-
-            } else return false;
+                });
+            }
         });
-
-    } else {
-        swal({
-            title: 'Вы уверены, что хотите войти под выбранным пользователем?',
-            type: "warning",
-            showCancelButton: true,
-            confirmButtonColor: '#f0ad4e',
-            confirmButtonText: "Да",
-            cancelButtonText: "Нет"
-        }).then(
-            function(result) {
-
-                sendLoginUser(userId);
-
-            }, function(dismiss) {}
-        );
     }
-};
+}

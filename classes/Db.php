@@ -10,17 +10,6 @@ use Laminas\Cache\Exception\ExceptionInterface;
  */
 abstract class Db extends System {
 
-    private static array $params = [];
-
-
-    /**
-     * @param string $k
-     * @return bool
-     */
-    public function __isset(string $k) {
-        return isset(self::$params[$k]);
-    }
-
 
     /**
      * @param string $param_name
@@ -31,16 +20,21 @@ abstract class Db extends System {
 
         $result = null;
 
-        if (array_key_exists($param_name, self::$params)) {
-            $result = self::$params[$param_name];
+        if ($this->hasStaticCache($param_name)) {
+            $result = $this->getStaticCache($param_name);
 
         } else {
-            if ($param_name == 'db') {
-                $result = $this->initConnection();
+            if (strpos($param_name, 'db') === 0) {
+                if (strlen($param_name) > 2) {
+                    $connection_name = strtolower(substr($param_name, 2));
+                    $result          = $this->initConnection($connection_name);
+                } else {
+                    $result = $this->initConnection();
+                }
             }
 
             if ( ! is_null($result)) {
-                self::$params[$param_name] = $result;
+                $this->setStaticCache($param_name, $result);
 
             } else {
                 $result = parent::__get($param_name);
@@ -61,12 +55,13 @@ abstract class Db extends System {
 
 
     /**
+     * @param string $connection_name
      * @return Adapter
      * @throws DbException
      */
-    public function initConnection(): Adapter {
+    public function initConnection(string $connection_name = 'base'): Adapter {
 
-        $settings = $this->config?->system?->database?->toArray();
+        $settings = $this->config?->system?->db?->{$connection_name}?->toArray();
 
         return $this->setupConnection((array)$settings);
     }
@@ -113,7 +108,7 @@ abstract class Db extends System {
             $is_active = true;
 
         } else {
-            $host = $this->config?->system?->database?->params?->database;
+            $host = $this->config?->system?->db?->base?->params?->database;
             $key  = "core2_mod_is_active{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
@@ -150,7 +145,7 @@ abstract class Db extends System {
 
         } else {
             $module_name = trim(strtolower($module_name));
-            $host        = $this->config?->system?->database?->params?->database;
+            $host        = $this->config?->system?->db?->base?->params?->database;
             $key         = "core3_mod_installed_{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
@@ -203,7 +198,7 @@ abstract class Db extends System {
             $folder = "core3/admin";
 
         } else {
-            $host = $this->config?->system?->database?->params?->database;
+            $host = $this->config?->system?->db?->base?->params?->database;
             $key  = "core3_mod_folder_{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
@@ -239,7 +234,7 @@ abstract class Db extends System {
      */
     final public function getModuleVersion(string $module_name): string {
 
-        $host = $this->config?->system?->database?->params?->database;
+        $host = $this->config?->system?->db?->base?->params?->database;
         $key  = "core3_mod_version_{$host}_{$module_name}";
 
         if ( ! $this->cache->test($key)) {
@@ -264,29 +259,46 @@ abstract class Db extends System {
 
 
     /**
-     * @return void
+     * Получение конфигурации модуля
+     * @param string $module_name
+     * @return Config|null
+     * @throws DbException
+     * @throws \Exception
      */
-    public function beginTransaction(): void {
+    final protected function getModuleConfig(string $module_name):? Config {
 
-        $this->db->driver->getConnection()->beginTransaction();
-    }
+        $key_name = "conf_mod_{$module_name}";
 
+        if ($this->hasStaticCache($key_name)) {
+            $result = $this->getStaticCache($key_name);
 
-    /**
-     * @return void
-     */
-    public function commit(): void {
+        } else {
+            $module_loc = $this->getModuleLocation($module_name);
+            $conf_file  = "{$module_loc}/conf.ini";
 
-        $this->db->driver->getConnection()->commit();
-    }
+            if (is_file($conf_file)) {
+                $config = new Config();
+                $config->addFileIni($conf_file);
 
+                if (isset($config->{$_SERVER['SERVER_NAME']})) {
+                    $config = $config->{$_SERVER['SERVER_NAME']};
 
-    /**
-     * @return void
-     */
-    public function rollback(): void {
+                } elseif (isset($config->production)) {
+                    $config = $config->production;
+                }
 
-        $this->db->driver->getConnection()->rollback();
+                $config->setReadOnly();
+
+                $result = $config;
+
+            } else {
+                $result = null;
+            }
+
+            $this->setStaticCache($key_name, $result);
+        }
+
+        return $result;
     }
 
 
@@ -295,7 +307,7 @@ abstract class Db extends System {
      * @return Adapter
      * @throws DbException
      */
-    protected function setupConnection(array $settings): Adapter {
+    private function setupConnection(array $settings): Adapter {
 
         if (empty($settings['params'])) {
             throw new DbException($this->_('Не указано название базы данных'));

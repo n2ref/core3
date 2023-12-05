@@ -1,6 +1,8 @@
 <?php
 namespace Core3;
 use Core3\Classes\Registry;
+use Core3\Classes\Config;
+use Core3\Classes\Translate;
 
 header('Content-Type: text/html; charset=utf-8');
 error_reporting(E_ALL);
@@ -55,7 +57,7 @@ require_once 'autoload.php';
 
 $core_conf_file = __DIR__ . "/conf.ini";
 
-$config = new Classes\Config();
+$config = new Config();
 $config->addFileIni($core_conf_file, 'production');
 $config->addFileIni($conf_file,      $_SERVER['SERVER_NAME'] ?? 'production');
 $config->setReadOnly();
@@ -71,4 +73,4 @@ if ($config->system->debug->on) {
 
 
 Registry::set('config',    $config);
-Registry::set('translate', new Classes\Translate($config));
+Registry::set('translate', new Translate($config));

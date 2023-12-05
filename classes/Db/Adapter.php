@@ -27,6 +27,16 @@ class Adapter extends \Laminas\Db\Adapter\Adapter {
      */
     public function fetchAll(string $sql, array|string $parameters = null): array {
 
+        if (is_array($parameters)) {
+            $parameters = [ $parameters ];
+
+        } elseif (is_string($parameters) || is_numeric($parameters)) {
+            $parameters = [ $parameters ];
+
+        } else {
+            $parameters = self::QUERY_MODE_PREPARE;
+        }
+
         $query_result = $this->query($sql, $parameters ?: self::QUERY_MODE_PREPARE);
         $result_set   = $query_result instanceof StatementInterface
             ? $query_result->execute()
@@ -49,6 +59,17 @@ class Adapter extends \Laminas\Db\Adapter\Adapter {
      * @return array|null
      */
     public function fetchRow(string $sql, array|string $parameters = null):? array {
+
+        if (is_array($parameters)) {
+            $parameters = [ $parameters ];
+
+        } elseif (is_string($parameters) || is_numeric($parameters)) {
+            $parameters = [ $parameters ];
+
+        } else {
+            $parameters = self::QUERY_MODE_PREPARE;
+        }
+
 
         $query_result = $this->query($sql, $parameters ?: self::QUERY_MODE_PREPARE);
         $result_set   = $query_result instanceof StatementInterface
@@ -125,5 +146,32 @@ class Adapter extends \Laminas\Db\Adapter\Adapter {
         }
 
         return current($result);
+    }
+
+
+    /**
+     * @return void
+     */
+    public function beginTransaction(): void {
+
+        $this->driver->getConnection()->beginTransaction();
+    }
+
+
+    /**
+     * @return void
+     */
+    public function commit(): void {
+
+        $this->driver->getConnection()->commit();
+    }
+
+
+    /**
+     * @return void
+     */
+    public function rollback(): void {
+
+        $this->driver->getConnection()->rollback();
     }
 }
