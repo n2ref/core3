@@ -25,6 +25,10 @@ class View extends Common {
             'id'             => "core_users",
             'url'            => $load_url,
             'method'         => 'GET',
+            'size'           => 'sm',
+            'striped'        => true,
+            'hover'          => true,
+            'class'          => 'table-core3',
             'recordsPerPage' => 25,
             'component'      => 'coreui.table',
             'primaryKey'     => 'id',
@@ -93,8 +97,14 @@ class View extends Common {
             ],
             'successLoadUrl' => '#/admin/users',
             'onSubmitSuccess' => "CoreUI.notice.info('Сохранено')",
+            'validResponse' => [
+                'headers' => [
+                    'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ]
+                ],
+                'dataType' => [ 'json' ],
+            ],
             'record' => [
-                'control[login]'              => $user->login,
+                'login'                      => $user->login,
                 'control[email]'              => $user->email,
                 'control[pass]'               => '***',
                 'control[role_id]'            => $user->role_id,
@@ -106,7 +116,7 @@ class View extends Common {
                 'control[is_active_sw]'       => $user->is_active_sw,
             ],
             'fields' => [
-                [ 'type' => 'text',           'name' => 'control[login]',              'label' => 'Логин',                         'width' => 200, 'readonly' => true ],
+                [ 'type' => 'text',           'name' => 'login',                       'label' => 'Логин',                         'width' => 200, 'readonly' => true ],
                 [ 'type' => 'email',          'name' => 'control[email]',              'label' => 'Email',                         'width' => 200 ],
                 [ 'type' => 'passwordRepeat', 'name' => 'control[pass]',               'label' => 'Пароль',                        'width' => 200, 'required' => true ],
                 [ 'type' => 'select',         'name' => 'control[role_id]',            'label' => 'Роль',                          'width' => 200, 'required' => true, 'options' => $roles ],
@@ -153,6 +163,12 @@ class View extends Common {
             'send'       => [
                 'url'    => "/core/mod/admin/users/handler/save",
                 'method' => 'post',
+            ],
+            'validResponse' => [
+                'headers' => [
+                    'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ]
+                ],
+                'dataType' => [ 'json' ],
             ],
             'successLoadUrl' => '#/admin/users',
             'onSubmitSuccess' => "CoreUI.notice.info('Сохранено')",

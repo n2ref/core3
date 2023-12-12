@@ -204,7 +204,9 @@ class Controller extends Common {
                         throw new AppException('Указанный пользователь не найден');
                     }
 
-                    $panel->setTitle("{$user->lname} {$user->fname} {$user->mname}", $this->_('Редактирование пользователя'), $base_url);
+                    $name = trim("{$user->lname} {$user->fname} {$user->mname}");
+
+                    $panel->setTitle($name ?: $user->login, $this->_('Редактирование пользователя'), $base_url);
                     $content[] = $view->getForm($base_url, $user);
 
                 } else {

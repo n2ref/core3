@@ -53,10 +53,10 @@ class Users extends Handler {
 
         if ( ! $user_id) {
             $fields['login'] = 'req,string(1-255),chars(alphanumeric|_|\\): Логин';
-        }
 
-        if (empty($this->config?->system?->ldap?->active)) {
-            $fields['pass'] = 'req,string(4-): Пароль';
+            if (empty($this->config?->system?->ldap?->active)) {
+                $fields['pass'] = 'req,string(4-): Пароль';
+            }
         }
 
         $controls = $this->clearData($controls);
@@ -65,7 +65,7 @@ class Users extends Handler {
             return $this->getResponseError($errors);
         }
 
-        if ( ! $this->modAdmin->tableUsers->isUniqueLogin($controls['login'], $user_id)) {
+        if ( ! empty($controls['login']) && ! $this->modAdmin->tableUsers->isUniqueLogin($controls['login'], $user_id)) {
             throw new AppException($this->_("Пользователь с таким логином уже существует."));
         }
 
@@ -229,7 +229,7 @@ class Users extends Handler {
                 'is_active_sw'  => $user['is_active_sw'],
                 'date_created'  => $user['date_created'],
                 'date_activity' => $user['date_last_activity'] ?? null,
-                'login_user'    => "<button class=\"btn btn-xs btn-outline-secondary\" onclick=\"adminUsers.loginUser('{$user['id']}')\">Войти</button>",
+                'login_user'    => "<button class=\"btn btn-xs btn-secondary\" onclick=\"adminUsers.loginUser('{$user['id']}')\">Войти</button>",
             ];
         }
 
