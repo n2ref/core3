@@ -292,7 +292,7 @@ $tab->beginContainer($this->translate->tr("Мониторинг"));
 
 		if (isset($_GET['edit'])) {
 
-			$tempFile = $this->config->temp . "/test.txt";
+			$tempFile = $this->config->tmp . "/test.txt";
 			$zipFile = $zipFolder . "/" . date("d_m_YvH-i-s") . ".zip";
 
 			$this->db->beginTransaction();

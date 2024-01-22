@@ -32,7 +32,7 @@ class View extends Common {
                 'version'       => $module->version,
                 'is_visible_sw' => $module->is_visible_sw == 'Y' ? '<span class="text-success">Да</span>' :  '<span class="text-danger">Нет</span>',
                 'is_active_sw'  => $module->is_active_sw,
-                'actions'       => "<button class=\"btn btn-xs btn-outline-danger\"><i class=\"bi bi-trash3-fill\"></i></button>",
+                'actions'       => "<button class=\"btn btn-sm btn-outline-danger\"><i class=\"bi bi-trash3-fill\"></i></button>",
             ];
         }
 
@@ -43,7 +43,7 @@ class View extends Common {
                 'total' => true,
             ],
             'controls' => [
-                [ 'type' => "link",   'content' => "<i class=\"bi bi-plus\"></i> Добавить", 'href' => "{$base_url}?edit=0", 'attr' => [ 'class' => 'btn btn-sm btn-success' ] ],
+                [ 'type' => "link",   'content' => "<i class=\"bi bi-plus\"></i> Добавить", 'href' => "{$base_url}?edit=0", 'attr' => [ 'class' => 'btn btn-success' ] ],
             ],
             'onClickUrl' => "{$base_url}?edit=[id]",
             'columns' => [

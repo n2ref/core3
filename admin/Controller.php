@@ -273,14 +273,12 @@ class Controller extends Common {
 
     /**
      * Роли и доступ
-     * @return string
+     * @return array
+     * @throws \Exception|\Laminas\Cache\Exception\ExceptionInterface
      */
-    public function sectionRoles() {
+    public function sectionRoles(): array {
 
-        ob_start();
-        $app   = "index.php?module=admin&action=roles";
-        $roles = new Roles();
-        $panel = new Panel('roles');
+        $panel = new \CoreUI\Panel();
         $panel->setTitle($this->_("Роли и доступ"));
 
         if ( ! empty($_GET['edit'])) {
@@ -289,8 +287,24 @@ class Controller extends Common {
 
         }
 
-        $panel->addContent(ob_get_clean());
-        return $panel->render();
+        $panel->setContent('');
+
+        $job_id = $this->startWorkerJob('jobName', ['22222']);
+
+        echo '<pre>';
+        print_r($this->worker->getInfo());
+        echo '</pre>';
+
+
+//        $this->worker->startJob('admin', 'jobName',  ['param1 data']);
+       // $this->worker->stop();
+        sleep(1);
+        echo '<pre>';
+        print_r($this->worker->getJobInfo($job_id));
+        echo '</pre>';
+//        $this->worker->restart();
+
+        return $panel->toArray();
     }
 
 
@@ -305,165 +319,5 @@ class Controller extends Common {
         } catch (\Exception $e) {
             Alert::danger($e->getMessage());
         }
-    }
-
-
-    /**
-     * @return string
-     */
-    public function sectionAudit() {
-
-        ob_start();
-        $app   = "index.php#module=admin&action=audit";
-        $panel = new Panel('audit');
-        $panel->addTab($this->_("База данных"),          'database',  $app);
-        $panel->addTab($this->_("Контроль целостности"), 'integrity', $app);
-
-        switch ($panel->getActiveTab()) {
-            case 'database':
-                $db_array_file = __DIR__ . "/classes/Audit/db_array.php";
-                if ( ! file_exists($db_array_file)) {
-                    echo Alert::danger(sprintf($this->_("Не найден файл %s"), $db_array_file));
-
-                } else {
-                    $DB_ARRAY = array();
-                    require_once $db_array_file;
-                    $db_master = new DBMaster($this->config);
-                    $a_result  = $db_master->checkCurrentDB($DB_ARRAY);
-                    $auditNamespace = new \Zend_Session_Namespace('Audit');
-                    // Выполнение обновления
-                    if (isset($_GET['db_update_one']) && $_GET['db_update_one'] == 1) {
-                        if ($a_result['COM'] > 0 && is_array($auditNamespace->RES)) {
-                            $a_tmp = explode('<!--NEW_LINE_FOR_DB_CORRECT_SCRIPT-->', $auditNamespace->RES['SQL'][$_GET['number']]);
-                            if ($a_tmp != '') {
-                                $db_master->exeSQL($a_tmp[0]);
-                            }
-                            $a_result = $db_master->checkCurrentDB($DB_ARRAY);
-                        }
-                    }
-
-                    $auditNamespace->RES = $a_result;
-
-                    // Выполнение всех обновлений
-                    if (isset($_GET['db_update']) && $_GET['db_update'] == 1) {
-                        if ($a_result['COM'] > 0) {
-                            while (list($key, $module) = each($a_result['COM'])) {
-                                $a_tmp = explode('<!--NEW_LINE_FOR_DB_CORRECT_SCRIPT-->', $a_result['SQL'][$key]);
-                                while (list($k, $v) = each($a_tmp)) {
-                                    if ($v != '') {
-                                        $db_master->exeSQL($v);
-                                    }
-                                }
-                            }
-                            $a_result = $db_master->checkCurrentDB($DB_ARRAY);
-                        }
-                    }
-
-
-                    // Ошибки
-                    if ( ! empty($a_result['COM'])) {
-                        $repair     = $this->_("Исправить");
-                        $repair_all = $this->_("Исправить все");
-
-                        foreach ($a_result['COM'] as $key => $error_title) {
-                            $sql        = "<i>{$a_result['SQL'][$key]}</i> ";
-                            $link       = "index.php?module=admin&action=audit&db_update_one=1&number={$key}";
-                            $btn_repair = "<a href=\"javascript:load('{$link}')\">{$repair}</a>";
-
-                            echo Alert::danger($sql . $btn_repair, $error_title);
-                        }
-
-
-                        echo "<input class=\"btn btn-warning\" type=\"button\" value=\"{$repair_all}\" 
-                                     onclick=\"load('index.php?module=admin&action=audit&db_update=1')\"/>";
-
-                        if ( ! empty($a_result['WARNING'])) {
-                            echo "<h3>" .  $this->_("Предупреждения") . ":</h3>";
-                            foreach ($a_result['WARNING'] as $warning) {
-                                echo $warning, '<br>';
-                            }
-                        }
-                    } else {
-                        echo Alert::success($this->_("Структура базы данных в норме."));
-                    }
-                }
-                break;
-
-            case 'integrity':
-                $install = new Modules_Install();
-
-                try {
-                    $is_ok       = true;
-                    $server      = $this->config->system->host;
-                    $admin_email = $this->getSetting('admin_email');
-                    $modules     = $this->db->fetchAll("
-                        SELECT name, 
-                               title 
-                        FROM core_modules 
-                        WHERE files_hash IS NOT NULL
-                    ");
-
-                    if ( ! empty($modules)) {
-                        foreach ($modules as $module) {
-                            $dirhash    = $install->extractHashForFiles($this->getModuleLocation($module['module_id']));
-                            $dbhash     = $install->getFilesHashFromDb($module['module_id']);
-                            $compare    = $install->compareFilesHash($dirhash, $dbhash);
-                            if ( ! empty($compare)) {
-                                $is_ok           = false;
-                                $module_problems = array();
-
-                                $br = $install->branchesCompareFilesHash($compare);
-                                foreach ($br as $type=>$branch) {
-                                    foreach ($branch as $n=>$f) {
-                                        if ($type != 'lost') {
-                                            $file = $this->getModuleLocation($module['module_id']) . "/" . $f;
-                                            $date = date("d.m.Y H:i:s", filemtime($file));
-                                            $br[$type][$n] = "{$file} (изменён {$date})";
-                                        }
-                                    }
-                                }
-
-                                $n = 0;
-                                if ( ! empty($br['added'])) {
-                                    $n += count($br['added']);
-                                    $module_problems[]= "Добавленные файлы:<br>&nbsp;&nbsp; - " . implode("<br>&nbsp;&nbsp; - ", $br['added']);
-                                }
-                                if ( ! empty($br['changed'])) {
-                                    $n += count($br['changed']);
-                                    $module_problems[]= "Измененные файлы:<br>&nbsp;&nbsp; - " . implode("<br>&nbsp;&nbsp; - ", $br['changed']);
-                                }
-                                if ( ! empty($br['lost'])) {
-                                    $n += count($br['lost']);
-                                    $module_problems[]= "Удаленные файлы:<br>&nbsp;&nbsp; - " . implode("<br>&nbsp;&nbsp; - ", $br['lost']);
-                                }
-                                echo Alert::danger(implode("<br>", $module_problems), sprintf($this->_('Обнаружены изменения в модуле "%s"'), $module['m_name']));
-
-                                //отправка уведомления
-                                if ($admin_email && $server) {
-                                    $is_send = $this->createEmail()
-                                        ->to($admin_email)
-                                        ->subject(sprintf($this->_("%s: обнаружены изменения в структуре модуля!"), $server))
-                                        ->body("<b>{$server}:</b> Обнаружены изменения в структуре модуля {$module['module_id']}. Обнаружено  {$n} несоответствий.")
-                                        ->send();
-                                    if ( ! $is_send) {
-                                        echo Alert::danger("Уведомление на email не отправлено", "Ошибка");
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if ($is_ok) {
-                        echo Alert::success('Файлы всех модулей соответствуют контрольной сумме', 'Проблем не найдено!');
-                    }
-
-                } catch (\Exception $e) {
-                    echo Alert::danger($e->getMessage(), "Ошибка");
-                }
-                break;
-        }
-
-        $panel->addContent(ob_get_clean());
-        return $panel->render();
     }
 }

@@ -42,16 +42,16 @@ class View extends Common {
                     'actions' =>
                         '<small class="text-muted">Обновлений нет</small><br>' .
                         '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
-                        '<button class="btn btn-xs btn-link text-secondary btn-update-core"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
+                        '<button class="btn btn-sm btn-link text-secondary btn-update-core"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
                 ],
                 [
                     'title'   => 'Версия web theme',
                     'value'   => 'Bootstrap 1.0.0',
                     'actions' =>
                         '<small class="text-success fw-bold">Доступна версия 1.1.0</small> ' .
-                        '<button class="btn btn-xs btn-success ms-1 btn-install-theme"><i class="bi bi-cloud-arrow-down"></i> обновить</button><br>' .
+                        '<button class="btn btn-sm btn-success ms-1 btn-install-theme"><i class="bi bi-cloud-arrow-down"></i> обновить</button><br>' .
                         '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
-                        '<button class="btn btn-xs btn-link text-secondary btn-update-theme"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
+                        '<button class="btn btn-sm btn-link text-secondary btn-update-theme"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
                 ],
                 [
                     'title'   => 'Установленные модули',
@@ -60,7 +60,7 @@ class View extends Common {
                         '<small class="text-success fw-bold">Доступны новые версии (1)</small> ' .
                         '<a href="#/admin/modules" class="text-success-emphasis fw-bold"><small>посмотреть</small></a><br>' .
                         '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
-                        '<button class="btn btn-xs btn-link text-secondary btn-update-modules"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
+                        '<button class="btn btn-sm btn-link text-secondary btn-update-modules"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
                 ],
                 [
                     'title'   => 'Пользователи системы',
@@ -77,7 +77,7 @@ class View extends Common {
                 [
                     'title'   => 'Кэш системы',
                     'value'   => $this->config?->system?->cache?->adapter ?: '-',
-                    'actions' => '<button class="btn btn-sm btn-outline-secondary" onclick="adminIndex.clearCache()"><i class="bi bi-trash"></i> Очистить</button>'
+                    'actions' => '<button class="btn btn-outline-secondary" onclick="adminIndex.clearCache()"><i class="bi bi-trash"></i> Очистить</button>'
                 ],
             ]
         ];

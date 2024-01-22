@@ -1,7 +1,9 @@
 <?php
 namespace Core3\Classes;
 use Exception;
+use Monolog\Handler\MissingExtensionException;
 use Monolog\Logger;
+use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SlackWebhookHandler;
 
@@ -23,9 +25,6 @@ class Log {
 
     /**
      * @param string $name
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     * @throws Exception
      */
     public function __construct(string $name = 'core3') {
 
@@ -35,7 +34,7 @@ class Log {
         if ($this->config?->system?->log?->on &&
             $this->config?->system?->log?->file
         ) {
-            $this->writer_default = $this->getAbsolutePath($this->config->system->log->file);
+            $this->writer_default = Tools::getAbsolutePath($this->config->system->log->file);
         }
     }
 
@@ -92,7 +91,7 @@ class Log {
      */
     public function file(string $filename): self {
 
-        $this->writer_custom = $this->getAbsolutePath($filename);
+        $this->writer_custom = Tools::getAbsolutePath($filename);
 
         return $this;
     }
@@ -147,7 +146,7 @@ class Log {
         }
 
         $this->setWriter();
-        $this->log->warning($message, $context);
+        $this->log->error($message, $context);
         $this->removeWriter();
     }
 
@@ -165,7 +164,7 @@ class Log {
         }
 
         $this->setWriter();
-        $this->log->warning($message, $context);
+        $this->log->debug($message, $context);
         $this->removeWriter();
     }
 
@@ -177,9 +176,15 @@ class Log {
     private function setWriter(): void {
 
         if ($this->writer_custom) {
-            $this->log->pushHandler(new StreamHandler($this->writer_custom));
+            $handler = new StreamHandler($this->writer_custom);
+            $handler->setFormatter(new LineFormatter(null, "Y-m-d H:i:s.u"));
+
+            $this->log->pushHandler($handler);
 
         } elseif ($this->writer_default) {
+            $handler = new StreamHandler($this->writer_default);
+            $handler->setFormatter(new LineFormatter(null, "Y-m-d H:i:s.u"));
+
             $this->log->pushHandler(new StreamHandler($this->writer_default));
         }
     }
@@ -203,6 +208,7 @@ class Log {
     /**
      * Установка обработчика
      * @param int $level Уровень журналирования
+     * @throws MissingExtensionException
      */
     private function setHandler(int $level): void {
 
@@ -216,21 +222,5 @@ class Log {
                 $this->log->pushHandler($handler);
             }
         }
-    }
-
-
-    /**
-     * @param string $file_path
-     * @return string
-     */
-    private function getAbsolutePath(string $file_path): string {
-
-        if (substr($file_path, 0, 1) === '/') {
-            return $file_path;
-        }
-
-        $file_path = trim($file_path, '/');
-
-        return DOC_ROOT . "/{$file_path}";
     }
 }

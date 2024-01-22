@@ -225,11 +225,11 @@ class Users extends Handler {
                 'email'         => $user['email'],
                 'role_title'    => $user['role_title'],
                 'avatar'        => "<img src=\"https://www.gravatar.com/avatar/{$gravatar}?&s=20&d=mm\" class=\"rounded-circle\"/>",
-                'is_admin_sw'   => $user['is_admin_sw'] == 'Y' ? '<span class="text-danger">Да</span>' : 'Нет',
+                'is_admin_sw'   => $user['is_admin_sw'] == 'Y' ? '<span class="badge text-bg-danger">Да</span>' : 'Нет',
                 'is_active_sw'  => $user['is_active_sw'],
                 'date_created'  => $user['date_created'],
                 'date_activity' => $user['date_last_activity'] ?? null,
-                'login_user'    => "<button class=\"btn btn-xs btn-secondary\" onclick=\"adminUsers.loginUser('{$user['id']}')\">Войти</button>",
+                'login_user'    => "<button class=\"btn btn-sm btn-secondary\" onclick=\"adminUsers.loginUser('{$user['id']}')\">Войти</button>",
             ];
         }
 

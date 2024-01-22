@@ -17,9 +17,12 @@ var adminUsers = {
                 Core.menu.preloader.show();
 
                 $.ajax({
-                    url      : '/core/mod/admin/users/handler/login_user?id' + userId,
+                    url      : '/core/mod/admin/users/handler/login_user',
                     method   : 'post',
                     dataType : 'json',
+                    data: {
+                        user_id: userId
+                    },
                     success  : function (response) {
                         if (response.status !== 'success') {
                             CoreUI.alert.danger(response.error_message || Core._("Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз."));

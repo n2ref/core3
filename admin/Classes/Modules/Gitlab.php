@@ -119,9 +119,9 @@ class Gitlab extends Common  {
             $body = $response->getBody()->getContents();
 
             $zip = new \ZipArchive();
-            $upload_dir 	    = $this->config->temp . '/' . SessionContainer::getDefaultManager()->getId();
+            $upload_dir 	    = $this->config->tmp . '/' . SessionContainer::getDefaultManager()->getId();
             $destinationFolder  = $upload_dir . '/gitlab_' . uniqid() . '/';
-            $fn                 = tempnam($this->config->temp, "gitlabzip");
+            $fn                 = tempnam($this->config->tmp, "gitlabzip");
             if (!$fn) throw new \Exception("Не удалось создать файл для установки");
             file_put_contents($fn, $body);
             $opened = $zip->open($fn);
@@ -137,7 +137,7 @@ class Gitlab extends Common  {
                     }
                 }
                 if ($dirToZip) {
-                    $fn     = tempnam($this->config->temp, "gitlabzip_") . ".zip";
+                    $fn     = tempnam($this->config->tmp, "gitlabzip_") . ".zip";
                     $res    = $zip->open($fn, \ZipArchive::CREATE);
                     if ($res === true) {
                         $this->zipDir($zip, $dirToZip);

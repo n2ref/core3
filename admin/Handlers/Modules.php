@@ -195,7 +195,7 @@ class Modules extends Handler {
 
         try {
             $sid 			= Zend_Session::getId();
-            $upload_dir 	= $this->config->temp . '/' . $sid;
+            $upload_dir 	= $this->config->tmp . '/' . $sid;
 
             $f = explode("###", $data['control']['files|name']);
             $fn = $upload_dir . '/' . $f[0];

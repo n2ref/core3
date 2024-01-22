@@ -104,7 +104,7 @@ abstract class System {
                     break;
 
                 case 'log':
-                    $name = $this->config?->system?->host ?: ($_SERVER['SERVER_NAME'] ?? null);
+                    $name = $this->config?->system?->host ?: ($_SERVER['SERVER_NAME'] ?? 'core3');
                     $result = new Log($name);
                     break;
             }

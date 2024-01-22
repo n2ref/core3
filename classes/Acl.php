@@ -34,8 +34,7 @@ class Acl extends Db {
 
 
     /**
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
+     *
      */
     public function __construct() {
         $this->auth = Registry::has('auth') ? Registry::get('auth') : null;

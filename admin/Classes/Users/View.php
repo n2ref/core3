@@ -40,8 +40,8 @@ class View extends Common {
                 'prePageList' => true,
             ],
             'controls' => [
-                [ 'type' => "link",   'content' => "<i class=\"bi bi-plus\"></i> Добавить", 'href' => "{$base_url}?edit=0", 'attr' => [ 'class' => 'btn btn-sm btn-success' ] ],
-                [ 'type' => "button", 'content' => "<i class=\"bi bi-trash\"></i> Удалить", 'onClick' => "Core.ui.table.get('core_users').deleteSelected('{$delete_url}', Core.menu.reload)", 'attr' => [ 'class' => 'btn btn-sm btn-warning' ] ],
+                [ 'type' => "link",   'content' => "<i class=\"bi bi-plus\"></i> Добавить", 'href' => "{$base_url}?edit=0", 'attr' => [ 'class' => 'btn btn-success' ] ],
+                [ 'type' => "button", 'content' => "<i class=\"bi bi-trash\"></i> Удалить", 'onClick' => "Core.ui.table.get('core_users').deleteSelected('{$delete_url}', Core.menu.reload)", 'attr' => [ 'class' => 'btn btn-warning' ] ],
             ],
             'onClickUrl' => "{$base_url}?edit=[id]",
             'columns' => [
@@ -128,8 +128,8 @@ class View extends Common {
                 [ 'type' => 'switch',         'name' => 'control[is_active_sw]',       'label' => 'Активен',                       'valueY' => 'Y', 'valueN' => 'N', ],
             ],
             'controls' => [
-                [ 'type' => "submit", 'content' => "Сохранить" ],
-                [ 'type' => "link",   'content' => "Отмена", 'href' => $base_url, 'attr' => [ 'class' => 'btn btn-sm btn-secondary' ] ],
+                [ 'type' => "submit", 'content' => "Сохранить", 'attr' => [ 'class' => 'btn btn-primary' ] ],
+                [ 'type' => "link",   'content' => "Отмена", 'href' => $base_url, 'attr' => [ 'class' => 'btn btn-secondary' ] ],
             ],
         ];
 
@@ -197,8 +197,8 @@ class View extends Common {
                 [ 'type' => 'switch',         'name' => 'control[is_active_sw]',       'label' => 'Активен',                       ],
             ],
             'controls' => [
-                [ 'type' => "submit", 'content' => "Сохранить" ],
-                [ 'type' => "link",   'content' => "Отмена", 'href' => $base_url, 'attr' => [ 'class' => 'btn btn-sm btn-secondary' ] ],
+                [ 'type' => "submit", 'content' => "Сохранить", 'attr' => [ 'class' => 'btn btn-primary' ] ],
+                [ 'type' => "link",   'content' => "Отмена", 'href' => $base_url, 'attr' => [ 'class' => 'btn btn-secondary' ] ],
             ],
         ];
 

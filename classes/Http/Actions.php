@@ -348,7 +348,6 @@ class Actions extends Common {
                     ["name" => "users",    'title' => $this->_("Пользователи")],
                     ["name" => "roles",    'title' => $this->_("Роли")],
                     ["name" => "monitor",  'title' => $this->_("Мониторинг")],
-                    ["name" => "audit",    'title' => $this->_("Аудит")],
                 ],
             ];
         }
