@@ -2,7 +2,9 @@
 namespace Core3\Classes;
 
 
+use Core3\Classes\Worker;
 use Core3\Exceptions\DbException;
+use Core3\Exceptions\Exception;
 use Laminas\Cache\Exception\ExceptionInterface;
 
 /**
@@ -16,11 +18,13 @@ class Cli extends Db {
      */
     public function getOptions(): array {
 
-        $options = getopt('m:e:p:l:nctavh', [
+        $options = getopt('m:e:p:l:nct:avhd', [
             'module:',
             'method:',
             'param:',
             'cli-methods',
+            'worker-start',
+            'worker-stop',
             'modules',
             'composer',
             'host',
@@ -50,6 +54,9 @@ class Cli extends Db {
             " -t    --host                   Section name in config file",
             " -l    --cli-methods            Getting information about available system methods",
             " -n    --modules                Getting information about installed modules",
+            "       --worker-start           Start worker",
+            " -d                             Daemonize worker",
+            "       --worker-stop            Stop worker",
             " -c    --composer               Control composer",
             " -a    --openapi                Generate openapi-core3.json file",
             " -h    --help                   Help info",
@@ -225,6 +232,62 @@ class Cli extends Db {
         }
 
         return $result;
+    }
+
+
+    /**
+     * Запуск менеджера задач
+     * @param bool $is_daemonize
+     * @return void
+     * @throws Exception
+     * @throws \Exception
+     */
+    public function startWorkerManager(bool $is_daemonize = false): void {
+
+        $manager = new Worker\Manager();
+        if ($manager->init()) {
+            if ($is_daemonize) {
+                $manager->daemonize();
+            }
+
+            $manager->start();
+        }
+    }
+
+
+    /**
+     * Остановка менеджера задач
+     * @param bool $force
+     * @return bool
+     * @throws Exception
+     */
+    public function stopWorkerManager(bool $force = false): bool {
+
+        $manager = new Worker\Manager();
+        return $manager->stop($force);
+    }
+
+
+    /**
+     * Перезапуск менеджера задач
+     * @param bool $force
+     * @return bool
+     * @throws Exception|ExceptionInterface
+     */
+    public function restartWorkerManager(bool $force = false): bool {
+
+        $manager = new Worker\Manager();
+
+        if ($manager->stop($force)) {
+            if ($manager->init()) {
+                $manager->daemonize();
+                $manager->start();
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
 

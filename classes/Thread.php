@@ -28,10 +28,10 @@ class Thread extends System {
             $php_path = $this->config->php && $this->config->php->path ? $this->config->php->path : '';
         }
 
-        if ( ! empty($options['temp'])) {
-            $tmp = $options['temp'];
+        if ( ! empty($options['tmp'])) {
+            $tmp = $options['tmp'];
         } else {
-            $tmp = $this->config->temp ? $this->config->temp : '';
+            $tmp = $this->config->tmp ? $this->config->tmp : '';
         }
 
         if ( ! empty($options['host'])) {

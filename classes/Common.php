@@ -1,8 +1,8 @@
 <?php
 namespace Core3\Classes;
+use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
-use Core3\Interfaces\Events;
 use Core3\Mod\Admin;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\TableGateway\AbstractTableGateway;
@@ -11,6 +11,7 @@ use Psr\Container\NotFoundExceptionInterface;
 
 /**
  * @property Admin\Controller $modAdmin
+ * @property Worker\Client    $worker
  */
 abstract class Common extends Acl {
 
@@ -19,8 +20,7 @@ abstract class Common extends Acl {
     protected $recource = '';
 
     /**
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
+     *
      */
 	public function __construct() {
 
@@ -38,7 +38,7 @@ abstract class Common extends Acl {
 
     /**
      * @param string $param_name
-     * @return self|Cache|Log|\Laminas\Db\Adapter\Adapter|AbstractTableGateway|mixed|null
+     * @return self|Cache|Log|\Laminas\Db\Adapter\Adapter|AbstractTableGateway|Worker\Client|mixed|null
      * @throws ContainerExceptionInterface
      * @throws DbException
      * @throws ExceptionInterface
@@ -62,6 +62,9 @@ abstract class Common extends Acl {
             } elseif (strpos($param_name, 'mod') === 0) {
                 $module_name = strtolower(substr($param_name, 3));
                 $result      = $this->getModuleController($module_name);
+
+            } elseif ($param_name === 'worker') {
+                $result = new Worker\Client();
             }
 
             if ( ! empty($result)) {
@@ -77,10 +80,28 @@ abstract class Common extends Acl {
 
 
     /**
+     * Запуск задачи на воркере
+     * @param string $job_name
+     * @param array  $arguments
+     * @return int|null
+     * @throws AppException
+     * @throws \Exception
+     */
+    protected function startWorkerJob(string $job_name, array $arguments):? int {
+
+        if ( ! $this->worker->isStart()) {
+            if ( ! $this->worker->start()) {
+                throw new AppException($this->_('Не удалось запустить процесс обработки'));
+            }
+        }
+
+        return $this->worker->startJob($this->module, $job_name, $arguments);
+    }
+
+
+    /**
      * @param string $src
      * @return void
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      */
     protected function addJs(string $src): void {
 
@@ -108,8 +129,6 @@ abstract class Common extends Acl {
     /**
      * @param string $src
      * @return void
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      */
     protected function addCss(string $src): void {
 
@@ -139,7 +158,6 @@ abstract class Common extends Acl {
      * @param string $src
      * @return void
      * @throws DbException
-     * @throws ExceptionInterface
      */
     protected function addCssModule(string $module, string $src): void {
 

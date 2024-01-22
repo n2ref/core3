@@ -4,7 +4,9 @@ use Core3\Classes\Http\Request;
 use Core3\Classes\Http\Response;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\HttpException;
+use Core3\Exceptions\Exception;
 use Core3\Mod\Admin;
+use Laminas\Cache\Exception\ExceptionInterface;
 
 
 /**
@@ -39,11 +41,11 @@ class Init extends Db {
 
     /**
      * @return string
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws Exception
+     * @throws ExceptionInterface
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \ReflectionException
-     * @throws \Exception
      */
     public function dispatch(): string {
 
@@ -58,8 +60,6 @@ class Init extends Db {
     /**
      * @return bool
      * @throws HttpException
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Exception
      */
     public function auth(): bool {
@@ -127,6 +127,8 @@ class Init extends Db {
      * Cli
      * @return string
      * @throws \ReflectionException
+     * @throws \Exception
+     * @throws ExceptionInterface
      */
     private function dispatchCli(): string {
 
@@ -153,7 +155,7 @@ class Init extends Db {
                 $params = $params === false ? [] : (is_array($params) ? $params : array($params));
                 $cli->cliComposer($params);
 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $result = $e->getMessage() . PHP_EOL;
             }
 
@@ -171,7 +173,36 @@ class Init extends Db {
         ) {
             $module = $options['module'] ?? $options['m'];
             $method = $options['method'] ?? $options['e'];
-            $result = $cli->runCliMethod($module, $method);
+
+            $params = $options['param'] ?? (isset($options['p']) ? $options['p'] : false);
+            $params = $params === false ? [] : (is_array($params) ? $params : array($params));
+
+            $result = $cli->runCliMethod($module, $method, $params);
+
+        // Start daemon worker manager
+        } elseif (isset($options['worker-start'])) {
+            $is_daemonize = isset($options['d']);
+            $cli->startWorkerManager($is_daemonize);
+
+        // Start daemon worker manager
+        } elseif (isset($options['worker-stop'])) {
+            $params = $options['param'] ?? (isset($options['p']) ? $options['p'] : false);
+            $params = $params === false ? [] : (is_array($params) ? $params : array($params));
+
+            $force  = isset($params[0]) && (bool)$params[0];
+            $result = $cli->stopWorkerManager($force)
+                ? "Worker stopped"
+                : "Failed to stop the process";
+
+        // Restart daemon worker manager
+        } elseif (isset($options['worker-restart'])) {
+            $params = $options['param'] ?? (isset($options['p']) ? $options['p'] : false);
+            $params = $params === false ? [] : (is_array($params) ? $params : array($params));
+
+            $force  = isset($params[0]) && (bool)$params[0];
+            $result = $cli->restartWorkerManager($force)
+                ? "Worker restarted"
+                : "Failed restarted the process";
         }
 
         return $result . PHP_EOL;

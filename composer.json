@@ -17,14 +17,16 @@
   "prefer-stable": true,
   "require": {
     "php": ">=8.0",
+    "ext-pdo": "*",
     "ext-json": "*",
     "ext-zip": "*",
     "ext-mbstring": "*",
     "ext-curl": "*",
     "ext-gd": "*",
     "ext-intl": "*",
-    "ext-pdo": "*",
     "ext-xml": "*",
+    "ext-posix": "*",
+    "ext-pcntl": "*",
 
     "laminas/laminas-session": "2.16.*",
     "laminas/laminas-serializer": "2.15.*",

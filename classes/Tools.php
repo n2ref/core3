@@ -75,6 +75,23 @@ class Tools {
 
 
     /**
+     * Получение полного пути до файла или папки
+     * @param string $file_path
+     * @return string
+     */
+    public static function getAbsolutePath(string $file_path): string {
+
+        if (str_starts_with($file_path, '/')) {
+            return $file_path;
+        }
+
+        $file_path = trim($file_path, '/');
+
+        return realpath(DOC_ROOT . "/{$file_path}");
+    }
+
+
+    /**
      * Salt password
      * @param  string $pass - password
      * @return string
