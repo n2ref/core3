@@ -6,7 +6,15 @@ use Laminas\Cache\Storage;
  *
  */
 class Cache {
+
+    /**
+     * @var Storage\Adapter\AbstractAdapter
+     */
     private $adapter;
+
+    /**
+     * @var string
+     */
     private $namespace;
 
 
@@ -22,15 +30,11 @@ class Cache {
 
 
     /**
-     * call native methods
-     * @link https://docs.zendframework.com/zend-cache/storage/adapter/#the-storageinterface
-     * @param string $name
-     * @param array  $arguments
-     * @return mixed
+     * @return Storage\Adapter\AbstractAdapter
      */
-    public function __call(string $name, array $arguments = []) {
+    public function getAdapter(): Storage\Adapter\AbstractAdapter {
 
-        return call_user_func_array(array($this->adapter, $name), $arguments);
+        return $this->adapter;
     }
 
 
