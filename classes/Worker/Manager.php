@@ -172,7 +172,13 @@ class Manager extends Db {
                 return;
             }
 
-            register_shutdown_function(function () {
+            $worker_pid = posix_getpid();
+
+            register_shutdown_function(function () use ($worker_pid) {
+                if ($worker_pid != posix_getpid()) {
+                    return;
+                }
+
                 $buffer = ob_get_clean();
                 $error  = error_get_last();
 
@@ -186,7 +192,7 @@ class Manager extends Db {
 
                 } else {
                     if (trim($buffer)) {
-                        $this->logWarning("Buffer data: " . trim($buffer));
+                        $this->logWarning("Worker buffer data: " . trim($buffer));
                     }
                     if ( ! $this->is_process_job) {
                         $this->logWarning("Stopped worker process");
@@ -595,15 +601,19 @@ class Manager extends Db {
             $this->is_process_job = true;
 
             ob_start(null, 10000);
-            //$job_pid = posix_getpid();
+            $job_pid = posix_getpid();
 
             // Tell the parent that we are done
-            register_shutdown_function(function () use ($socket_pairs, $job_id, $params) {
+            register_shutdown_function(function () use ($socket_pairs, $job_id, $params, $job_pid) {
+                if ($job_pid != posix_getpid()) {
+                    return;
+                }
+
                 $buffer = ob_get_clean();
                 $error  = error_get_last();
 
                 if (trim($buffer)) {
-                    $this->logWarning("Buffer data: " . trim($buffer));
+                    $this->logWarning("Worker job buffer data {$params['module']}->{$params['job_name']}: " . trim($buffer));
                 }
 
                 if ($error &&
@@ -612,7 +622,7 @@ class Manager extends Db {
                         E_CORE_WARNING, E_COMPILE_WARNING, E_PARSE
                     ])
                 ) {
-                    $this->logError("Emergency stopped worker job {$params['module']} -> {$params['job_name']}: " . json_encode($params['arguments'] ?? []));
+                    $this->logError("Emergency stopped worker job {$params['module']}->{$params['job_name']}: " . json_encode($params['arguments'] ?? []));
                 }
 
                 fwrite($socket_pairs[1], json_encode([
@@ -624,7 +634,7 @@ class Manager extends Db {
             $module_worker = $this->getModuleWorker($params['module'], $socket_pairs[1]);
 
             if ( ! is_callable([$module_worker, $params['job_name']])) {
-                $this->logError("Error. Not found worker job {$params['module']} -> {$params['job_name']}");
+                $this->logError("Error. Not found worker job {$params['module']}->{$params['job_name']}");
             }
 
             try {
