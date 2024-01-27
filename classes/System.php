@@ -50,8 +50,6 @@ abstract class System {
     /**
      * @param string $param_name
      * @return mixed
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      * @throws \Exception
      */
@@ -87,6 +85,11 @@ abstract class System {
                             $host                 = $this->config?->system?->host ?? ($_SERVER['SERVER_NAME'] ?? '');
                             $options['namespace'] = "{$host}:Core3";
                             $adapter              = new Storage\Adapter\Redis($options);
+                            break;
+
+                        case 'Memcached':
+                            $options['namespace'] = "Core3";
+                            $adapter              = new Storage\Adapter\Memcached($options);
                             break;
 
                         default:

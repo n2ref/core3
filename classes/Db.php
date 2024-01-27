@@ -15,6 +15,7 @@ abstract class Db extends System {
      * @param string $param_name
      * @return Cache|Log|Adapter|mixed|null
      * @throws DbException
+     * @throws ExceptionInterface
      */
 	public function __get(string $param_name) {
 
@@ -24,7 +25,7 @@ abstract class Db extends System {
             $result = $this->getStaticCache($param_name);
 
         } else {
-            if (strpos($param_name, 'db') === 0) {
+            if (str_starts_with($param_name, 'db')) {
                 if (strlen($param_name) > 2) {
                     $connection_name = strtolower(substr($param_name, 2));
                     $result          = $this->initConnection($connection_name);

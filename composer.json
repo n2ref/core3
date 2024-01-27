@@ -27,6 +27,7 @@
     "ext-xml": "*",
     "ext-posix": "*",
     "ext-pcntl": "*",
+    "ext-sockets": "*",
 
     "laminas/laminas-session": "2.16.*",
     "laminas/laminas-serializer": "2.15.*",
@@ -42,7 +43,6 @@
     "laminas/laminas-cache": "3.11.*",
     "laminas/laminas-db": "2.18.*",
 
-    "zf1/zend-config": "1.12.*",
     "shabuninil/coreui-panel-php": "1.0.*",
     "shabuninil/coreui-tabs-php": "1.0.*",
     "shabuninil/coreui-info-php": "1.0.*",

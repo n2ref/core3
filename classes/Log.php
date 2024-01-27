@@ -3,6 +3,7 @@ namespace Core3\Classes;
 use Exception;
 use Monolog\Handler\MissingExtensionException;
 use Monolog\Logger;
+use \Monolog\Level;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SlackWebhookHandler;
@@ -106,7 +107,7 @@ class Log {
     public function info(string $message, array $context = []): void {
 
         if ($this->handlers) {
-            $this->setHandler(Logger::INFO);
+            $this->setHandler(Level::Info);
         }
 
         $this->setWriter();
@@ -124,7 +125,7 @@ class Log {
     public function warning(string $message, array $context = []): void {
 
         if ($this->handlers) {
-            $this->setHandler(Logger::WARNING);
+            $this->setHandler(Level::Warning);
         }
 
         $this->setWriter();
@@ -142,7 +143,7 @@ class Log {
     public function error(string $message, array $context = []): void {
 
         if ($this->handlers) {
-            $this->setHandler(Logger::ERROR);
+            $this->setHandler(Level::Error);
         }
 
         $this->setWriter();
@@ -160,7 +161,7 @@ class Log {
     public function debug(string $message, array $context = []): void {
 
         if ($this->handlers) {
-            $this->setHandler(Logger::DEBUG);
+            $this->setHandler(Level::Debug);
         }
 
         $this->setWriter();
@@ -219,6 +220,8 @@ class Log {
         foreach ($this->handlers as $name => $params) {
             if ($name == 'slack') {
                 $handler = new SlackWebhookHandler($params[0], $params[1], $params[2], $params[3], $params[4], $params[5], $params[6], $level);
+                $handler->setFormatter(new LineFormatter(null, "Y-m-d H:i:s.u"));
+
                 $this->log->pushHandler($handler);
             }
         }
