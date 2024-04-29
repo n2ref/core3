@@ -176,7 +176,16 @@ class Server {
                 ]);
 
                 if (preg_match($regex, $output_line, $matches)) {
-                    $result[] = $matches;
+                    $result[] = [
+                        'pid'     => $matches['pid'] ?? null,
+                        'user'    => $matches['user'] ?? null,
+                        'group'   => $matches['group'] ?? null,
+                        'start'   => $matches['start'] ?? null,
+                        'cpu'     => $matches['cpu'] ?? null,
+                        'mem'     => $matches['mem'] ?? null,
+                        'size'    => $matches['size'] ?? null,
+                        'command' => $matches['command'] ?? null,
+                    ];
                 }
             }
         }

@@ -75,7 +75,7 @@ class Tools {
 
 
     /**
-     * Получение полного пути до файла или папки
+     * Получение полного пути до файла или папки относительно корня системы
      * @param string $file_path
      * @return string
      */
@@ -298,28 +298,42 @@ class Tools {
 
     /**
      * Сортировка массивов по элементу
-     * @param array  $array Массив
-     * @param string $field Ключ элемента
-     * @param int    $order Тип сортировки
+     * @param array $data
+     * @param array $fields Ключ элемента
      * @return array
      */
-    public static function arrayMultisort(array $array, $field, int $order = SORT_ASC): array {
+    public static function arrayMultisort(array $data, array $fields): array {
 
-        switch ($order) {
-            case SORT_ASC:
-                usort($array, function($a, $b) use ($field) {
-                    return strnatcasecmp((string)$a[$field], (string)$b[$field]);
-                });
-                break;
+        $args = [];
 
-            case SORT_DESC:
-                usort($array, function($a, $b) use ($field) {
-                    return strnatcasecmp((string)$b[$field], (string)$a[$field]);
-                });
-                break;
+        foreach ($fields as $field) {
+
+            if ( ! isset($field['field']) ||
+                 ! isset($field['order']) ||
+                 ! is_string($field['field']) ||
+                 ! is_string($field['order'])
+            ) {
+                continue;
+            }
+
+            $args[] = array_map(function($row) use($field) {
+                return is_array($row) ? ($row[$field['field']] ?? null) : null;
+            }, $data);
+
+            if ($field['order'] === 'asc') {
+                $args[] = SORT_ASC;
+            } else {
+                $args[] = SORT_DESC;
+            }
+
+            $args[] = $field['flag'] ?? SORT_REGULAR;
         }
 
-        return $array;
+        $args[] = &$data;
+
+        call_user_func_array("array_multisort", $args);
+
+        return $data;
     }
 
 

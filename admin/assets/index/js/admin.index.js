@@ -73,7 +73,7 @@ var adminIndex = {
      */
     showSystemProcessList: function () {
 
-        CoreUI.modal.showLoad("System process list", adminIndex._baseUrl + '/handler/get_system_process_list', {
+        CoreUI.modal.showLoad("System process list", adminIndex._baseUrl + '/handler/get_system_process', {
             size: "xl"
         });
     }

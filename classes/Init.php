@@ -36,6 +36,8 @@ class Init extends Db {
         if ( ! empty($tz)) {
             date_default_timezone_set($tz);
         }
+
+        $this->registerFatal();
     }
 
 
@@ -315,11 +317,10 @@ class Init extends Db {
             $this->log->file($this->config->system->log->access_file)
                 ->info($this->auth->getUserLogin(), [
                     'ip'     => $_SERVER['REMOTE_ADDR'] ?? '',
-                    'sid'    => $this->auth->getSessionId(),
                     'uid'    => $this->auth->getUserId(),
+                    'sid'    => $this->auth->getSessionId(),
                     'method' => $_SERVER['REQUEST_METHOD'] ?? '',
                     'uri'    => $_SERVER['REQUEST_URI'] ?? '',
-                    'query'  => $_SERVER['QUERY_STRING'] ?? '',
                 ]);
         }
     }
@@ -339,5 +340,26 @@ class Init extends Db {
                 ->file($this->config?->system?->log?->output_file)
                 ->info($response->getContent());
         }
+    }
+
+
+    /**
+     * @return void
+     * @throws \Monolog\Handler\MissingExtensionException
+     */
+    private function registerFatal(): void {
+
+        register_shutdown_function(function () {
+            $error = error_get_last();
+
+            if ($error &&
+                in_array($error['type'], [
+                    E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR,
+                    E_CORE_WARNING, E_COMPILE_WARNING, E_PARSE
+                ])
+            ) {
+                $this->log->error('Fatal error', debug_backtrace());
+            }
+        });
     }
 }

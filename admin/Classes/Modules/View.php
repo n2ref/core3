@@ -42,16 +42,30 @@ class View extends Common {
             'show'       => [
                 'total' => true,
             ],
-            'controls' => [
-                [ 'type' => "link",   'content' => "<i class=\"bi bi-plus\"></i> Добавить", 'href' => "{$base_url}?edit=0", 'attr' => [ 'class' => 'btn btn-success' ] ],
+            'header' => [
+                [
+                    'type' => 'out',
+                    'left' => [
+                        [ 'type' => "link",   'content' => "<i class=\"bi bi-plus\"></i> Добавить", 'href' => "{$base_url}?edit=0", 'attr' => [ 'class' => 'btn btn-success' ] ],
+                        [ 'type' => 'filter:text', 'field' => 'title', 'width' => 150, 'attr' => [ 'class' => "form-control" ] ],
+                        [ 'type' => 'filter:clear', 'content' => '<i class="bi bi-backspace"></i> Clear' ],
+                    ]
+                ]
+            ],
+            'footer' => [
+                [
+                    'type' => 'out',
+                    'left' => [
+                        [ 'type' => "total" ],
+                    ]
+                ]
             ],
             'onClickUrl' => "{$base_url}?edit=[id]",
             'columns' => [
-                [ 'type' => 'numbers', 'width' => 25, 'attr' => [ 'class' => "border-end text-end" ] ],
-                [ 'field' => 'is_active_sw',  'label' => 'Вкл',           'width' => 50,  'type' => 'switch' ],
-                [ 'field' => 'title',         'label' => 'Название',      'width' => 200, 'type' => 'html' ],
-                [ 'field' => 'version',       'label' => 'Версия' ],
-                [ 'field' => 'is_visible_sw', 'label' => 'Отображаемый',  'width' => 140, 'type' => 'html' ],
+                [ 'field' => 'is_active_sw',  'label' => 'Вкл',           'width' => 50,  'type' => 'switch', 'sortable' => true ],
+                [ 'field' => 'title',         'label' => 'Название',      'width' => 200, 'type' => 'html', 'sortable' => true ],
+                [ 'field' => 'version',       'label' => 'Версия', 'sortable' => true ],
+                [ 'field' => 'is_visible_sw', 'label' => 'Отображаемый',  'width' => 140, 'type' => 'html', 'sortable' => true ],
                 [ 'field' => 'actions',       'label' => '',              'width' => 50,  'type' => 'html' ],
             ],
             'records' => $records

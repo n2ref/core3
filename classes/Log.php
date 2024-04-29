@@ -1,27 +1,26 @@
 <?php
 namespace Core3\Classes;
-use Exception;
+use DiscordHandler\DiscordHandler;
 use Monolog\Handler\MissingExtensionException;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Handler\TelegramBotHandler;
 use Monolog\Logger;
-use \Monolog\Level;
+use Monolog\Level;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SlackWebhookHandler;
 
 
 /**
- * Обеспечение журналирования запросов пользователей
- * и других событий
- * Class Logger
- * @method slack($channel, $username)
+ * Журналирование событий
  */
 class Log {
 
-    private Logger $log;
+    private Logger $logger;
     private Config $config;
-    private string $writer_default = '';
-    private string $writer_custom  = '';
-    private array  $handlers       = [];
+    private string $file        = '';
+    private string $date_format = "Y-m-d H:i:s.u";
+    private array  $handlers    = [];
 
 
     /**
@@ -30,71 +29,13 @@ class Log {
     public function __construct(string $name = 'core3') {
 
         $this->config = Registry::has('config') ? Registry::get('config') : null;
-        $this->log    = new Logger($name);
+        $this->logger = new Logger($name);
 
         if ($this->config?->system?->log?->on &&
             $this->config?->system?->log?->file
         ) {
-            $this->writer_default = Tools::getAbsolutePath($this->config->system->log->file);
+            $this->file = $this->config->system->log->file;
         }
-    }
-
-
-    /**
-     * Обработчик метода не доступного через экземпляр
-     * @param string    $name       Имя метода
-     * @param array     $arguments  Параметры метода
-     * @return mixed
-     */
-    public function __call(string $name, array $arguments = []): mixed {
-
-        if ($name == 'slack') {
-            if ( ! $this->config?->log ||
-                 ! $this->config?->log?->webhook?->slack
-            ) {
-                return new \stdClass();
-            }
-
-            $channel                = $arguments[0] ?? null;
-            $username               = $arguments[1] ?? null;
-            $useAttachment          = true;
-            $iconEmoji              = null;
-            $useShortAttachment     = false;
-            $includeContextAndExtra = false;
-            $level                  = Logger::CRITICAL;
-            $bubble                 = true;
-            $excludeFields          = [];
-
-            $this->handlers[$name] = [
-                $this->config->log->webhook->slack?->url,
-                $channel,
-                $username,
-                $useAttachment,
-                $iconEmoji,
-                $useShortAttachment,
-                $includeContextAndExtra,
-                $level,
-                $bubble,
-                $excludeFields,
-            ];
-
-            return $this;
-        }
-
-        return null;
-    }
-
-
-    /**
-     * Дополнительный лог в заданный файл
-     * @param string $filename
-     * @return $this
-     */
-    public function file(string $filename): self {
-
-        $this->writer_custom = Tools::getAbsolutePath($filename);
-
-        return $this;
     }
 
 
@@ -102,17 +43,19 @@ class Log {
      * Информационная запись в лог
      * @param string $message
      * @param array  $context
-     * @throws Exception
+     * @throws \Exception
      */
     public function info(string $message, array $context = []): void {
 
         if ($this->handlers) {
-            $this->setHandler(Level::Info);
+            $this->setHandlers(Level::Info);
+        } else {
+            $this->setDefaultHandler();
+            $this->subscription(Level::Info);
         }
 
-        $this->setWriter();
-        $this->log->info($message, $context);
-        $this->removeWriter();
+        $this->logger->info($message, $context);
+        $this->clearHandlers();
     }
 
 
@@ -120,35 +63,49 @@ class Log {
      * Предупреждение в лог
      * @param string $message
      * @param array  $context
-     * @throws Exception
+     * @throws \Exception
      */
     public function warning(string $message, array $context = []): void {
 
         if ($this->handlers) {
-            $this->setHandler(Level::Warning);
+            $this->setHandlers(Level::Warning);
+        } else {
+            $this->setDefaultHandler();
+            $this->subscription(Level::Warning);
         }
 
-        $this->setWriter();
-        $this->log->warning($message, $context);
-        $this->removeWriter();
+        $this->logger->warning($message, $context);
+        $this->clearHandlers();
     }
 
 
     /**
      * Предупреждение в лог
-     * @param string $message
-     * @param array  $context
-     * @throws Exception
+     * @param string          $message
+     * @param array|\Exception $context
+     * @throws MissingExtensionException
+     * @throws \Exception
      */
-    public function error(string $message, array $context = []): void {
+    public function error(string $message, array|\Exception $context = []): void {
 
         if ($this->handlers) {
-            $this->setHandler(Level::Error);
+            $this->setHandlers(Level::Error);
+        } else {
+            $this->setDefaultHandler();
+            $this->subscription(Level::Error);
         }
 
-        $this->setWriter();
-        $this->log->error($message, $context);
-        $this->removeWriter();
+        if ($context instanceof \Exception) {
+            $context = [
+                'error_message' => $context->getMessage(),
+                'file'          => $context->getFile(),
+                'file_line'     => $context->getLine(),
+                'trace'         => $context->getTrace(),
+            ];
+        }
+
+        $this->logger->error($message, $context);
+        $this->clearHandlers();
     }
 
 
@@ -156,73 +113,248 @@ class Log {
      * Отладочная информация в лог
      * @param string $message
      * @param array  $context
-     * @throws Exception
+     * @throws \Exception
      */
     public function debug(string $message, array $context = []): void {
 
         if ($this->handlers) {
-            $this->setHandler(Level::Debug);
+            $this->setHandlers(Level::Debug);
+        } else {
+            $this->setDefaultHandler();
         }
 
-        $this->setWriter();
-        $this->log->debug($message, $context);
-        $this->removeWriter();
+        $this->logger->debug($message, $context);
+        $this->clearHandlers();
+    }
+
+
+    /**
+     * Лог в заданный файл
+     * @param string $filename
+     * @return $this
+     */
+    public function file(string $filename): self {
+
+        $this->handlerFile($filename);
+
+        return $this;
+    }
+
+
+    /**
+     * Отправка сообщения в Slack
+     * @return self|\stdClass
+     * @throws MissingExtensionException
+     */
+    public function slack(): \stdClass|self {
+
+        if ( ! $this->config?->system?->log?->webhook?->slack?->url ||
+             ! is_string($this->config->system->log->webhook->slack->url)
+        ) {
+            return new \stdClass();
+        }
+
+
+        $handler = new SlackWebhookHandler($this->config->system->log->webhook->slack->url);
+        $handler->setFormatter(new LineFormatter(null, $this->date_format));
+
+        $this->handlers[] = $handler;
+
+        return $this;
+    }
+
+
+    /**
+     * Отправка сообщения в Slack
+     * @return self|\stdClass
+     */
+    public function discord(): \stdClass|self {
+
+        if ( ! $this->config?->system?->log?->webhook?->discord?->url ||
+             ! is_string($this->config->system->log->webhook->discord->url)
+        ) {
+            return new \stdClass();
+        }
+
+
+        $handler = new DiscordHandler($this->config->system->log->webhook->discord->url);
+        $handler->setFormatter(new LineFormatter(null, $this->date_format));
+
+        $this->handlers[] = $handler;
+
+        return $this;
+    }
+
+
+    /**
+     * Отправка сообщения в Tg
+     * @return self|\stdClass
+     * @throws MissingExtensionException
+     */
+    public function telegram(): \stdClass|self {
+
+        if ( ! $this->config?->system->log?->webhook?->telegram?->apikey ||
+             ! $this->config?->system->log?->webhook?->telegram?->channels ||
+             ! is_string($this->config->system->log->webhook->telegram->apikey) ||
+             ! is_string($this->config->system->log->webhook->telegram->channels)
+        ) {
+            return new \stdClass();
+        }
+
+        $channels = explode(',', $this->config->system->log->webhook->telegram->channels);
+        $channels = array_map('trim', $channels);
+        $channels = array_filter($channels);
+
+        if (empty($channels)) {
+            return new \stdClass();
+        }
+
+        foreach ($channels as $channel) {
+            $handler = new TelegramBotHandler($this->config->system->log->webhook->telegram->apikey, $channel);
+            $handler->setFormatter(new LineFormatter(null, $this->date_format));
+
+            $this->handlers[] = $handler;
+        }
+
+        return $this;
     }
 
 
     /**
      * @return void
-     * @throws Exception
+     * @throws \Exception
      */
-    private function setWriter(): void {
+    private function setDefaultHandler(): void {
 
-        if ($this->writer_custom) {
-            $handler = new StreamHandler($this->writer_custom);
-            $handler->setFormatter(new LineFormatter(null, "Y-m-d H:i:s.u"));
-
-            $this->log->pushHandler($handler);
-
-        } elseif ($this->writer_default) {
-            $handler = new StreamHandler($this->writer_default);
-            $handler->setFormatter(new LineFormatter(null, "Y-m-d H:i:s.u"));
-
-            $this->log->pushHandler(new StreamHandler($this->writer_default));
+        if ($this->file) {
+            $this->handlerFile($this->file);
         }
     }
 
 
     /**
-     * Прекращение записи в заданный лог
+     * Запись лога в файл
+     * @param string $filename
+     * @return void
      */
-    private function removeWriter(): void {
+    private function handlerFile(string $filename): void {
 
-        if ($this->writer_custom) {
-            $this->log->popHandler();
-            $this->writer_custom = '';
+        $filename = str_starts_with($filename, '/')
+            ? $filename
+            : "{$this->config->system->log->dir}/{$filename}";
 
-        } elseif ($this->writer_default) {
-            $this->log->popHandler();
+        if ( ! $filename) {
+            return;
+        }
+
+        if ($this->config?->system->log?->rotate?->interval &&
+            is_string($this->config->system->log->rotate->interval) &&
+            in_array($this->config->system->log->rotate->interval, ['day', 'month', 'year'])
+        ) {
+            $interval = match ($this->config->system->log->rotate->interval) {
+                'day'   => RotatingFileHandler::FILE_PER_DAY,
+                'month' => RotatingFileHandler::FILE_PER_MONTH,
+                'year'  => RotatingFileHandler::FILE_PER_YEAR,
+            };
+
+            $max_files = $this->config?->system?->log?->rotate?->max_files &&
+                         is_numeric($this->config->system->log->rotate->max_files) &&
+                         $this->config->system->log->rotate->max_files >= 0
+                ? (int)$this->config->system->log->rotate->max_files
+                : 2;
+
+            $handler = new RotatingFileHandler($filename, $max_files);
+            $handler->setFilenameFormat('{filename}-{date}', $interval);
+
+        } else {
+            $handler = new StreamHandler($filename);
+        }
+
+
+        $handler->setFormatter(new LineFormatter(null, $this->date_format));
+
+        $this->handlers[] = $handler;
+    }
+
+
+    /**
+     * Удаление заданных ранее дополнительных обработчиков
+     * @return void
+     */
+    private function clearHandlers(): void {
+
+        $this->handlers = [];
+
+        $this->logger->setHandlers([]);
+    }
+
+
+    /**
+     * Установка обработчиков
+     * @param Level $level Уровень
+     * @return void
+     */
+    private function setHandlers(Level $level): void {
+
+        foreach ($this->handlers as $handler) {
+            $handler->setLevel($level);
+            $this->logger->pushHandler($handler);
         }
     }
 
 
     /**
-     * Установка обработчика
-     * @param int $level Уровень журналирования
+     * Подписка на события
+     * @param Level $level
+     * @return void
      * @throws MissingExtensionException
      */
-    private function setHandler(int $level): void {
+    private function subscription(Level $level): void {
 
-        while ($this->log->getHandlers()) {
-            $this->log->popHandler();
-        }
+        if ($this->config?->system?->log?->subscribe?->level &&
+            $this->config?->system?->log?->subscribe?->recipients &&
+            is_string($this->config->system->log->subscribe->level) &&
+            is_string($this->config->system->log->subscribe->recipients)
+        ) {
+            switch ($this->config->system->log->subscribe->level) {
+                case 'error':
+                    if ($level !== Level::Error) {
+                        return;
+                    }
+                    break;
 
-        foreach ($this->handlers as $name => $params) {
-            if ($name == 'slack') {
-                $handler = new SlackWebhookHandler($params[0], $params[1], $params[2], $params[3], $params[4], $params[5], $params[6], $level);
-                $handler->setFormatter(new LineFormatter(null, "Y-m-d H:i:s.u"));
+                case 'warning':
+                    if ( ! in_array($level, [Level::Error, Level::Warning])) {
+                        return;
+                    }
+                    break;
 
-                $this->log->pushHandler($handler);
+                case 'info':
+                    if ( ! in_array($level, [Level::Info, Level::Error, Level::Warning])) {
+                        return;
+                    }
+                    break;
+
+                default: return;
+            }
+
+
+            $recipients = explode(',', $this->config->system->log->subscribe->recipients);
+            $recipients = array_map('trim', $recipients);
+            $recipients = array_filter($recipients);
+
+            if ( ! empty($recipients)) {
+                if (isset($recipients['slack'])) {
+                    $this->slack();
+                }
+
+                if (isset($recipients['telegram'])) {
+                    $this->telegram();
+                }
+
+                if (isset($recipients['discord'])) {
+                    $this->discord();
+                }
             }
         }
     }

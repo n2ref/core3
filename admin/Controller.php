@@ -4,6 +4,8 @@ use \Core3\Classes\Common;
 use \Core3\Classes\Http\Request;
 use \Core3\Classes\Http\Router;
 use \Core3\Exceptions\AppException;
+use Core3\Exceptions\DbException;
+use Laminas\Cache\Exception\ExceptionInterface;
 
 require_once 'Classes/autoload.php';
 
@@ -39,7 +41,9 @@ class Controller extends Common {
 
         $panel_admin = new \CoreUI\Panel();
         $panel_admin->setTitle('Общие сведения');
-        $panel_admin->setControls('<button class="btn btn-outline-secondary" onclick="Core.menu.reload()"><i class="bi bi-arrow-clockwise"></i></button>');
+        $panel_admin->addControlButton('<i class="bi bi-arrow-clockwise"></i>')
+            ->setAttr('class', 'btn btn-outline-secondary')
+            ->setOnClick('Core.menu.reload()');
         $panel_admin->setContent($view->getTableCommon($service_info));
         $content[] = $panel_admin->toArray();
 
@@ -56,7 +60,9 @@ class Controller extends Common {
 
         $panel_system = new \CoreUI\Panel();
         $panel_system->setTitle('Системная информация');
-        $panel_system->setControls('<button class="btn btn-outline-secondary" onclick="adminIndex.showSystemProcessList()"><i class="bi bi-list-ul"></i></button>');
+        $panel_system->addControlButton('<i class="bi bi-list-ul"></i>')
+            ->setAttr('class', 'btn btn-outline-secondary')
+            ->setOnClick('adminIndex.showSystemProcessList()');
         $panel_system->setContent([
             $layout->toArray(),
             '<br><br>',
@@ -69,16 +75,23 @@ class Controller extends Common {
 
         $panel_php = new \CoreUI\Panel();
         $panel_php->setTitle('Php');
-        $panel_php->setControls('<button class="btn btn-outline-secondary" onclick="adminIndex.showPhpInfo()"><i class="bi bi-info"></i></button>');
+        $panel_php->addControlButton('<i class="bi bi-info"></i>')
+            ->setAttr('class', 'btn btn-outline-secondary')
+            ->setOnClick('adminIndex.showPhpInfo()');
         $panel_php->setContent($view->getPhp());
 
 
         $panel_db = new \CoreUI\Panel();
         $panel_db->setTitle('База данных');
-        $panel_db->setControls('
-            <button class="btn btn-outline-secondary" onclick="adminIndex.showDbVariablesList()"><i class="bi bi-info"></i></button>
-            <button class="btn btn-outline-secondary" onclick="adminIndex.showDbProcessList()"><i class="bi bi-plugin"></i></button>
-        ');
+
+        $panel_db->addControlButton('<i class="bi bi-info"></i>')
+            ->setAttr('class', 'btn btn-outline-secondary')
+            ->setOnClick('adminIndex.showDbVariablesList()');
+
+        $panel_db->addControlButton('<i class="bi bi-plugin"></i>')
+            ->setAttr('class', 'btn btn-outline-secondary')
+            ->setOnClick('adminIndex.showDbProcessList()');
+
         $panel_db->setContent($view->getDbInfo($service_info));
 
 
@@ -86,14 +99,12 @@ class Controller extends Common {
         $layout = new \CoreUI\Layout();
         $item = $layout->addItems();
         $item->widthColumn(12);
-        $item->addSize('lg');
-        $item->widthColumn(6);
+        $item->addSize('lg')->widthColumn(6);
         $item->content($panel_php->toArray());
 
         $item = $layout->addItems();
         $item->widthColumn(12);
-        $item->addSize('lg');
-        $item->widthColumn(6);
+        $item->addSize('lg')->widthColumn(6);
         $item->content($panel_db->toArray());
 
         $content[] = $layout->toArray();
@@ -136,9 +147,14 @@ class Controller extends Common {
 
         $base_url = "#/admin/modules";
         $panel    = new \CoreUI\Panel('tab');
+        $result   = [];
 
         try {
             if ($request->getQuery('edit') !== null) {
+                $breadcrumb = new \CoreUI\Breadcrumb();
+                $breadcrumb->addItem('Модули', $base_url);
+                $breadcrumb->addItem('Модуль');
+
                 if ($request->getQuery('edit')) {
                     $module = $this->tableModules->getRowById($request->getQuery('edit'));
 
@@ -152,11 +168,15 @@ class Controller extends Common {
                     $panel->setTitle($this->_('Добавление модуля'));
                 }
 
+                $result[] = $breadcrumb->toArray();
+
             } else {
                 $count_modules = $this->tableModules->getCount();
 
-                $panel->addTab($this->_("Установленные (%s)", [ $count_modules ]), 'installed', "{$base_url}?tab=installed");
-                $panel->addTab($this->_("Доступные"),                              'available', "{$base_url}?tab=available");
+                $load_url = "core/mod/admin/modules/handler/";
+
+                $panel->addTab($this->_("Установленные"), 'installed', "{$load_url}get_table_installed")->setUrlWindow("{$base_url}?tab=installed")->setCount($count_modules);
+                $panel->addTab($this->_("Доступные"),     'available', "{$load_url}get_table_available")->setUrlWindow("{$base_url}?tab=available");
 
                 $tab = $request->getQuery('tab') ?? 'installed';
 
@@ -173,9 +193,20 @@ class Controller extends Common {
             $panel->setContent(
                 \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'))
             );
+
+        } catch (\Exception $e) {
+            $this->log->error('admin_users', $e);
+            $panel->setContent(
+                \CoreUI\Info::danger(
+                    $this->config?->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
+                    $this->_('Ошибка')
+                )
+            );
         }
 
-        return $panel->toArray();
+        $result[] = $panel->toArray();
+
+        return $result;
     }
 
 
@@ -183,34 +214,50 @@ class Controller extends Common {
      * Справочник пользователей системы
      * @param Request $request
      * @return array
-     * @throws AppException
+     * @throws \Exception
      */
     public function sectionUsers(Request $request): array {
 
         $base_url = "#/admin/users";
 
-        $panel = new \CoreUI\Panel();
-        $view  = new Classes\Users\View();
+        $result = [];
+        $panel  = new \CoreUI\Panel();
+        $view   = new Classes\Users\View();
 
         $content   = [];
         $content[] = $this->getJsModule('admin', 'assets/users/js/admin.users.js');
 
         try {
-            if ($request->getQuery('edit') !== null) {
-                if ($request->getQuery('edit')) {
-                    $user = $this->tableUsers->getRowById((int)$request->getQuery('edit'));
+            if ($request->test('^/admin/users/.+$')) {
+                $params = $request->match('^/admin/users/{user_id}$', ['[0-9]+']);
+
+                if ( ! isset($params['user_id'])) {
+                    throw new AppException($this->_('Указан некорректный адрес. Вернитесь обратно и попробуйте снова'));
+                }
+
+                $breadcrumb = new \CoreUI\Breadcrumb();
+                $breadcrumb->addItem('Пользователи', $base_url);
+                $breadcrumb->addItem('Пользователь');
+
+                $result[] = $breadcrumb->toArray();
+
+                $panel->setContentFit($panel::FIT_MIN);
+
+
+                if ( ! empty($params['user_id'])) {
+                    $user = $this->tableUsers->getRowById($params['user_id']);
 
                     if (empty($user)) {
                         throw new AppException('Указанный пользователь не найден');
                     }
 
                     $name = trim("{$user->lname} {$user->fname} {$user->mname}");
+                    $panel->setTitle($name ?: $user->login, $this->_('Редактирование пользователя'));
 
-                    $panel->setTitle($name ?: $user->login, $this->_('Редактирование пользователя'), $base_url);
                     $content[] = $view->getForm($base_url, $user);
 
                 } else {
-                    $panel->setTitle($this->_('Добавление пользователя'), null, $base_url);
+                    $panel->setTitle($this->_('Добавление пользователя'));
                     $content[] = $view->getFormNew($base_url);
                 }
 
@@ -221,12 +268,24 @@ class Controller extends Common {
             $panel->setContent($content);
 
         } catch (AppException $e) {
+            $this->log->info($e->getMessage());
             $panel->setContent(
                 \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'))
             );
+
+        } catch (\Exception $e) {
+            $this->log->error('admin_users', $e);
+            $panel->setContent(
+                \CoreUI\Info::danger(
+                    $this->config?->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
+                    $this->_('Ошибка')
+                )
+            );
         }
 
-        return $panel->toArray();
+        $result[] = $panel->toArray();
+
+        return $result;
     }
 
 
@@ -298,7 +357,6 @@ class Controller extends Common {
 
 //        $this->worker->startJob('admin', 'jobName',  ['param1 data']);
        // $this->worker->stop();
-        sleep(1);
         echo '<pre>';
         print_r($this->worker->getJobInfo($job_id));
         echo '</pre>';

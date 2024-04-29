@@ -2,6 +2,7 @@
 namespace Core3\Mod\Admin\Classes\Index;
 use Core3\Classes\Common;
 use Core3\Classes\Tools;
+use CoreUI\Table;
 
 
 /**
@@ -23,66 +24,66 @@ class View extends Common {
         $count_active_now = $this->modAdmin->tableUsersSession->getCountActive(new \DateTime('-5 min'));
 
 
-        $table = [
-            'component' => 'coreui.table',
-            'size'    => '',
-            'striped' => false,
-            'show'    => [
-                'columnHeaders' => false
+        $table = new Table();
+        $table->setOverflow(true);
+        $table->setShowHeader(false);
+        $table->setTheadTop(-30);
+        $table->addColumns([
+            (new Table\Column\Text('title'))->setWidth(200)->setAttr('style', 'background-color:#f5f5f5;font-weight:600;border-right:1px solid #e0e0e0;'),
+            (new Table\Column\Html('value')),
+            (new Table\Column\Html('actions'))->setWidth('45%')
+        ]);
+
+        $table->setRecords([
+            [
+                'title'   => 'Версия ядра',
+                'value'   => $service_info['core_version'],
+                'actions' =>
+                    '<small class="text-muted">Обновлений нет</small><br>' .
+                    '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
+                    '<button class="btn btn-sm btn-link text-secondary btn-update-core"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
             ],
-            'columns' => [
-                [ 'field' => 'title',   'label' => 'Название', 'width' => 200, 'attr' => [ 'style' => 'background-color:#f5f5f5;font-weight:600;border-right:1px solid #e0e0e0;' ]],
-                [ 'field' => 'value',   'label' => 'Значение', 'type' => 'html' ],
-                [ 'field' => 'actions', 'label' => 'Действия', 'width' => '45%', 'type' => 'html'],
+            [
+                'title'   => 'Версия web theme',
+                'value'   => 'Bootstrap 1.0.0',
+                'actions' =>
+                    '<small class="text-success fw-bold">Доступна версия 1.1.0</small> ' .
+                    '<button class="btn btn-sm btn-success ms-1 btn-install-theme"><i class="bi bi-cloud-arrow-down"></i> обновить</button><br>' .
+                    '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
+                    '<button class="btn btn-sm btn-link text-secondary btn-update-theme"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
             ],
-            'records' => [
-                [
-                    'title'   => 'Версия ядра',
-                    'value'   => $service_info['core_version'],
-                    'actions' =>
-                        '<small class="text-muted">Обновлений нет</small><br>' .
-                        '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
-                        '<button class="btn btn-sm btn-link text-secondary btn-update-core"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
-                ],
-                [
-                    'title'   => 'Версия web theme',
-                    'value'   => 'Bootstrap 1.0.0',
-                    'actions' =>
-                        '<small class="text-success fw-bold">Доступна версия 1.1.0</small> ' .
-                        '<button class="btn btn-sm btn-success ms-1 btn-install-theme"><i class="bi bi-cloud-arrow-down"></i> обновить</button><br>' .
-                        '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
-                        '<button class="btn btn-sm btn-link text-secondary btn-update-theme"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
-                ],
-                [
-                    'title'   => 'Установленные модули',
-                    'value'   => $modules_count,
-                    'actions' =>
-                        '<small class="text-success fw-bold">Доступны новые версии (1)</small> ' .
-                        '<a href="#/admin/modules" class="text-success-emphasis fw-bold"><small>посмотреть</small></a><br>' .
-                        '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
-                        '<button class="btn btn-sm btn-link text-secondary btn-update-modules"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
-                ],
-                [
-                    'title'   => 'Пользователи системы',
-                    'value'   => "Всего: {$count_users} <br> Активных за текущий день: {$count_active_day} <br> Активных сейчас: {$count_active_now}",
-                    'actions' => '',
-                    'coreui'  => [
-                        'fields' => [
-                            'value' => [
-                                'attr' => [ 'class' => 'lh-sm' ]
-                            ]
+            [
+                'title'   => 'Установленные модули',
+                'value'   => $modules_count,
+                'actions' =>
+                    '<small class="text-success fw-bold">Доступны новые версии (1)</small> ' .
+                    '<a href="#/admin/modules" class="text-success-emphasis fw-bold"><small>посмотреть</small></a><br>' .
+                    '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
+                    '<button class="btn btn-sm btn-link text-secondary btn-update-modules"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
+            ],
+            [
+                'title'   => 'Пользователи системы',
+                'value'   => "Всего: {$count_users} <br> Активных за текущий день: {$count_active_day} <br> Активных сейчас: {$count_active_now}",
+                'actions' => '',
+                '_meta'  => [
+                    'fields' => [
+                        'value' => [
+                            'attr' => [ 'class' => 'lh-sm', 'colspan' => 2 ]
+                        ],
+                        'actions' => [
+                            'show' => false
                         ]
                     ]
-                ],
-                [
-                    'title'   => 'Кэш системы',
-                    'value'   => $this->config?->system?->cache?->adapter ?: '-',
-                    'actions' => '<button class="btn btn-outline-secondary" onclick="adminIndex.clearCache()"><i class="bi bi-trash"></i> Очистить</button>'
-                ],
-            ]
-        ];
+                ]
+            ],
+            [
+                'title'   => 'Кэш системы',
+                'value'   => $this->config?->system?->cache?->adapter ?: '-',
+                'actions' => '<button class="btn btn-outline-secondary" onclick="adminIndex.clearCache()"><i class="bi bi-trash"></i> Очистить</button>'
+            ],
+        ]);
 
-        return $table;
+        return $table->toArray();
     }
 
 
@@ -139,32 +140,31 @@ class View extends Common {
             default => '',
         };
 
-        $table_system = [
-            'component' => 'coreui.table',
-            'size'    => '',
-            'striped' => false,
-            'show'    => [
-                'columnHeaders' => false
-            ],
-            'columns' => [
-                [ 'field' => 'title',   'label' => 'Название', 'width' => 200, 'attr' => [ 'style' => 'background-color:#f5f5f5;font-weight:600;border-right:1px solid #e0e0e0;' ]],
-                [ 'field' => 'value',   'label' => 'Значение', 'type' => 'html'],
-            ],
-            'records' => [
-                [ 'title' => 'Host',          'value' => $service_info['network_info']['hostname'], ],
-                [ 'title' => 'OS name',       'value' => $service_info['os_name'], ],
-                [ 'title' => 'System time',   'value' => $service_info['date_time'], ],
-                [ 'title' => 'System uptime', 'value' => "{$days} дней {$hours} часов {$mins} минут", ],
-                [ 'title' => 'Cpu name',      'value' => $service_info['cpu_name'], ],
-                [ 'title' => 'Load avg',      'value' => implode(' / ', $load_avg) ],
-                [ 'title' => 'Memory',        'value' => "Всего {$mem_total} Mb / используется <span class=\"{$mem_style}\">{$mem_used}</span> Mb" ],
-                [ 'title' => 'Swap',          'value' => "Всего {$swap_total} Mb / используется <span class=\"{$swap_style}\">{$swap_used}</span> Mb" ],
-                [ 'title' => 'DNS',           'value' => $service_info['network_info']['dns'] ],
-                [ 'title' => 'Gateway',       'value' => $service_info['network_info']['gateway'] ],
-            ]
-        ];
 
-        return $table_system;
+
+        $table = new Table();
+        $table->setOverflow(true);
+        $table->setShowHeader(false);
+
+        $table->addColumns([
+            (new Table\Column\Text('title'))->setWidth(200)->setAttr('style', 'background-color:#f5f5f5;font-weight:600;border-right:1px solid #e0e0e0;'),
+            (new Table\Column\Html('value'))
+        ]);
+
+        $table->setRecords([
+            [ 'title' => 'Host',          'value' => $service_info['network_info']['hostname'], ],
+            [ 'title' => 'OS name',       'value' => $service_info['os_name'], ],
+            [ 'title' => 'System time',   'value' => $service_info['date_time'], ],
+            [ 'title' => 'System uptime', 'value' => "{$days} дней {$hours} часов {$mins} минут", ],
+            [ 'title' => 'Cpu name',      'value' => $service_info['cpu_name'], ],
+            [ 'title' => 'Load avg',      'value' => implode(' / ', $load_avg) ],
+            [ 'title' => 'Memory',        'value' => "Всего {$mem_total} Mb / используется <span class=\"{$mem_style}\">{$mem_used}</span> Mb" ],
+            [ 'title' => 'Swap',          'value' => "Всего {$swap_total} Mb / используется <span class=\"{$swap_style}\">{$swap_used}</span> Mb" ],
+            [ 'title' => 'DNS',           'value' => $service_info['network_info']['dns'] ],
+            [ 'title' => 'Gateway',       'value' => $service_info['network_info']['gateway'] ],
+        ]);
+
+        return $table->toArray();
     }
 
 
@@ -200,20 +200,21 @@ class View extends Common {
             ];
         }
 
-        $table_system = [
-            'component' => 'coreui.table',
-            'columns' => [
-                [ 'field' => 'mount',     'label' => 'Директория', 'width' => 150 ],
-                [ 'field' => 'device',    'label' => 'Устройство', 'width' => 200 ],
-                [ 'field' => 'fs',        'label' => 'Файловая система' ],
-                [ 'field' => 'total',     'label' => 'Всего',        'width' => 120 ],
-                [ 'field' => 'used',      'label' => 'Использовано', 'width' => 120, 'type' => 'html' ],
-                [ 'field' => 'available', 'label' => 'Свободно',     'width' => 120, 'type' => 'html' ],
-            ],
-            'records' => $records
-        ];
 
-        return $table_system;
+        $table = new Table();
+        $table->setOverflow(true);
+        $table->addColumns([
+            (new Table\Column\Text('mount',     $this->_('Директория')))->setWidth(150),
+            (new Table\Column\Text('device',    $this->_('Устройство')))->setWidth(200),
+            (new Table\Column\Text('fs',        $this->_('Файловая система')))->setWidth(140),
+            (new Table\Column\Text('total',     $this->_('Всего')))->setWidth(120),
+            (new Table\Column\Html('used',      $this->_('Использовано')))->setWidth(120),
+            (new Table\Column\Html('available', $this->_('Свободно')))->setWidth(120),
+        ]);
+
+        $table->setRecords($records);
+
+        return $table->toArray();
     }
 
 
@@ -222,23 +223,28 @@ class View extends Common {
      */
     public function getTableDbConnections(): array {
 
-        $connections = (new SysInfo\Database())->getConnections();
+        $table = new Table();
+        $table->setOverflow(true);
+        $table->setRecordsRequest('core/mod/admin/index/handler/get_db_connections_records');
+        $table->addHeaderIn()
+            ->left([
+                (new Table\Control\Total)
+            ])
+            ->right([
+                (new Table\Control\Button('<i class="bi bi-arrow-clockwise"></i>'))->setOnClick('table.reload()')
+            ]);
 
-        $table_system = [
-            'component' => 'coreui.table',
-            'columns' => [
-                [ 'field' => 'Id',    'label' => 'Id' ],
-                [ 'field' => 'User',  'label' => 'User' ],
-                [ 'field' => 'Host',  'label' => 'Host' ],
-                [ 'field' => 'db',    'label' => 'db' ],
-                [ 'field' => 'Time',  'label' => 'Time' ],
-                [ 'field' => 'State', 'label' => 'State' ],
-                [ 'field' => 'Info',  'label' => 'Info' ],
-            ],
-            'records' => $connections
-        ];
+        $table->addColumns([
+            (new Table\Column\Text('Id',    'Id'))->setSort(true),
+            (new Table\Column\Text('User',  'User'))->setSort(true),
+            (new Table\Column\Text('Host',  'Host'))->setSort(true),
+            (new Table\Column\Text('db',    'db'))->setSort(true),
+            (new Table\Column\Text('Time',  'Time'))->setSort(true),
+            (new Table\Column\Text('State', 'State'))->setSort(true),
+            (new Table\Column\Text('Info',  'Info'))->setSort(true),
+        ]);
 
-        return $table_system;
+        return $table->toArray();
     }
 
 
@@ -247,46 +253,67 @@ class View extends Common {
      */
     public function getTableDbVariables(): array {
 
+        $table = new Table();
+        $table->setOverflow(true);
+
+        $table->addHeaderOut()
+            ->left([
+                (new Table\Filter\Text('search'))->setAttr('placeholder', $this->_('Поиск')),
+                (new Table\Control\FilterClear()),
+            ]);
+
+        $table->addColumns([
+            (new Table\Column\Text('name',  'Name'))->setAttr('style', 'word-break: break-all'),
+            (new Table\Column\Text('value', 'Value'))->setNoWrap(true)->setNoWrapToggle(true)->setMinWidth(150)->setAttr('style', 'word-break: break-all'),
+        ]);
+
         $variables = (new SysInfo\Database())->getVariables();
 
-        $table_system = [
-            'component' => 'coreui.table',
-            'columns' => [
-                [ 'field' => 'name',  'label' => 'Name' ],
-                [ 'field' => 'value', 'label' => 'value' ],
-            ],
-            'records' => $variables
-        ];
+        foreach ($variables as $key => $variable) {
+            $variables[$key]['search'] = "{$variable['name']}|{$variable['value']}";
+        }
 
-        return $table_system;
+        $table->setRecords($variables);
+
+        return $table->toArray();
     }
 
 
     /**
      * @return array
      */
-    public function getTableProcessList(): array {
+    public function getTableProcess(): array {
 
-        $connections = (new SysInfo\Server())->getProcessList();
+        $table = new Table();
+        $table->setOverflow(true);
+        $table->setRecordsRequest('core/mod/admin/index/handler/get_system_process_list');
 
-        $connections = Tools::arrayMultisort($connections, 'cpu', SORT_DESC);
+        $table->addHeaderOut()
+            ->left([
+                (new Table\Filter\Text('command'))->setAttr('placeholder', 'Command'),
+                (new Table\Control\FilterClear()),
+            ]);
 
-        $table_system = [
-            'component' => 'coreui.table',
-            'columns' => [
-                [ 'field' => 'pid',     'label' => 'Pid' ],
-                [ 'field' => 'user',    'label' => 'User' ],
-                [ 'field' => 'group',   'label' => 'Group' ],
-                [ 'field' => 'start',   'label' => 'Start' ],
-                [ 'field' => 'cpu',     'label' => 'Cpu' ],
-                [ 'field' => 'mem',     'label' => 'Mem' ],
-                [ 'field' => 'size',    'label' => 'Size' ],
-                [ 'field' => 'command', 'label' => 'Command' ],
-            ],
-            'records' => $connections
-        ];
+        $table->addHeaderIn()
+            ->left([
+                (new Table\Control\Total)
+            ])
+            ->right([
+                (new Table\Control\Button('<i class="bi bi-arrow-clockwise"></i>'))->setOnClick('table.reload()'),
+            ]);
 
-        return $table_system;
+        $table->addColumns([
+            (new Table\Column\Text('pid',     'Pid',    80))->setSort(true),
+            (new Table\Column\Text('user',    'User',   90))->setSort(true),
+            (new Table\Column\Text('group',   'Group',  90))->setSort(true),
+            (new Table\Column\Text('start',   'Start',  200))->setSort(true),
+            (new Table\Column\Text('cpu',     'Cpu',    50))->setSort(true),
+            (new Table\Column\Text('mem',     'Mem',    50))->setSort(true),
+            (new Table\Column\Text('size',    'Size',   90))->setSort(true),
+            (new Table\Column\Text('command', 'Command'))->setSort(true)->setNoWrap(true)->setNoWrapToggle(true)->setMinWidth(150)->setAttr('style', 'word-break: break-all'),
+        ]);
+
+        return $table->toArray();
     }
 
 
@@ -317,20 +344,21 @@ class View extends Common {
             ];
         }
 
-        $table_system = [
-            'component' => 'coreui.table',
-            'columns' => [
-                [ 'field' => 'interface', 'label' => 'Интерфейс', 'width' => 150 ],
-                [ 'field' => 'ipv4',      'label' => 'IPv4',      'width' => 150 ],
-                [ 'field' => 'ipv6',      'label' => 'IPv6',      'width' => 200 ],
-                [ 'field' => 'mac',       'label' => 'Mac' ],
-                [ 'field' => 'duplex',    'label' => 'Duplex',    'width' => 150 ],
-                [ 'field' => 'status',    'label' => 'Status',    'width' => 150, 'type' => 'html' ],
-            ],
-            'records' => $records
-        ];
 
-        return $table_system;
+        $table = new Table();
+        $table->setOverflow(true);
+        $table->addColumns([
+            (new Table\Column\Text('interface', 'Интерфейс'))->setWidth(150),
+            (new Table\Column\Text('ipv4',      'IPv4'))->setWidth(150),
+            (new Table\Column\Text('ipv6',      'IPv6'))->setWidth(200)->setMinWidth(200)->setAttr('style', 'word-break: break-all'),
+            (new Table\Column\Text('mac',       'Mac')),
+            (new Table\Column\Text('duplex',    'Duplex'))->setWidth(150),
+            (new Table\Column\Html('status',    'Status'))->setWidth(150),
+        ]);
+
+        $table->setRecords($records);
+
+        return $table->toArray();
     }
 
 

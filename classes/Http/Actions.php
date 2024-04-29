@@ -121,7 +121,7 @@ class Actions extends Common {
         }
 
 
-        $sign      = $this->config?->system?->auth?->token_sign ?: '';
+        $sign      = $this->config?->system?->auth?->token_sign ?: 'gyctmn34ycrr0471yc4r';
         $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
         try {
@@ -377,6 +377,7 @@ class Actions extends Common {
         return [
             'name'  => $this->config?->system?->name,
             'logo'  => $this->config?->system?->logo,
+            'lang'  => $this->config?->system?->lang,
             'theme' => $this->config?->system?->theme?->toArray(),
         ];
     }

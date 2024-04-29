@@ -77,7 +77,7 @@ class Manager extends Db {
      */
     public function __construct() {
 
-        $lock_file = $this->config?->system?->worker?->lock_file ?: 'core3_worker.php';
+        $lock_file = $this->config?->system?->worker?->lock_file ?: 'core3_worker.lock';
 
         if (str_starts_with($lock_file, '/')) {
             $this->lock_file = $lock_file;
@@ -105,24 +105,13 @@ class Manager extends Db {
             throw new Exception('Function pcntl_fork not found');
         }
 
-        if ( ! $this->config?->system?->worker?->address) {
-            echo $this->getRedColor('Error') . ": empty config system.worker.address";
-            return false;
-        }
-
-        $this->address   = $this->config->system->worker->address;
+        $this->address   = $this->config?->system?->worker?->address ?: 'tcp://127.0.0.1:9501';
         $this->pool_size = $this->config?->system?->worker?->pool_size && is_numeric($this->config->system->worker->pool_size)
             ? (int)$this->config->system->worker->pool_size
             : 4;
 
         if ($this->config?->system?->log?->on) {
-            $log_file = $this->config?->system?->worker?->log_file ?: $this->config?->system?->log?->file;
-
-            $this->log_file = str_starts_with($log_file, '/')
-                ? $log_file
-                : "{$this->config->system->log}/{$log_file}";
-
-
+            $this->log_file  = $this->config->system?->worker?->log_file ?: $this->config->system?->log?->file;
             $this->log_level = $this->config?->system?->worker?->log_level ?: 'warning';
         }
 
@@ -847,16 +836,7 @@ class Manager extends Db {
     private function logError(string $message, \Exception $e = null): void {
 
         if (in_array($this->log_level, ['info', 'warning', 'error'])) {
-            $context = [];
-
-            if ($e instanceof \Exception) {
-                $context = [
-                    'error_message' => $e->getMessage(),
-                    'file'          => $e->getFile(),
-                    'file_line'     => $e->getLine(),
-                    'trace'         => $e->getTraceAsString(),
-                ];
-            }
+            $context = $e instanceof \Exception ? $e :[];
 
             $this->log->file($this->log_file)->error($message, $context);
         }

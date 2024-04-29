@@ -19,6 +19,11 @@ class Request {
     private string $query = '';
 
     /**
+     * @var string
+     */
+    private string $uri = '';
+
+    /**
      * @var array
      */
     private array $path_params = [];
@@ -42,7 +47,12 @@ class Request {
         $this->setPathParams($path_params);
 
         $this->query  = $_SERVER['QUERY_STRING'];
+        $this->uri    = $_SERVER['REQUEST_URI'];
         $this->method = strtolower($_SERVER['REQUEST_METHOD']);
+
+        if ($this->uri) {
+            $this->uri = preg_replace('~^/core/mod~', '', $this->uri);
+        }
 
         $this->props['GET']    = $_GET;
         $this->props['POST']   = $_POST;
@@ -85,6 +95,43 @@ class Request {
         }
 
         return $headers;
+    }
+
+
+    /**
+     * Проверка адреса
+     * @param string $path
+     * @return bool
+     */
+    public function test(string $path): bool {
+
+        $preparePath = $this->preparePath($path);
+
+        return (bool)preg_match("~{$preparePath}~u", $this->uri);
+    }
+
+
+    /**
+     * Поиск и получение данные из адреса
+     * @param string $path
+     * @param array  $params
+     * @return array|null
+     */
+    public function match(string $path, array $params = []):? array {
+
+        $result      = null;
+        $preparePath = $this->preparePath($path, $params);
+
+        if (preg_match("~{$preparePath}~u", $this->uri, $matches)) {
+            foreach ($matches as $key => $match) {
+                if (is_numeric($key)) {
+                    unset($matches[$key]);
+                }
+            }
+            $result = $matches;
+        }
+
+        return $result;
     }
 
 
@@ -329,5 +376,30 @@ class Request {
             'fields' => $data,
             'files'  => $files ?: null,
         ];
+    }
+
+
+    /**
+     * Замена названия на поисковые данные
+     * @param string $path
+     * @param array  $params
+     * @return string
+     */
+    private function preparePath(string $path, array $params = []): string {
+
+        if (preg_match_all('~\{[a-z0-9_]+\}~u', $path, $matches)) {
+
+            if ( ! empty($matches[0])) {
+                foreach ($matches[0] as $key => $match) {
+                    if (isset($params[$key])) {
+                        $count = 1;
+                        $name  = substr($match, 1, -1);
+                        $path  = str_replace($match, "(?<{$name}>{$params[$key]})", $path, $count);
+                    }
+                }
+            }
+        }
+
+        return $path;
     }
 }

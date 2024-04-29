@@ -81,6 +81,6 @@ class Error {
         }
 
         $log = new Log();
-        $log->error($e->getMessage());
+        $log->error('Critical error', $e);
     }
 }

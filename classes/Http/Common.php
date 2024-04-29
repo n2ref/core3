@@ -25,7 +25,7 @@ abstract class Common extends Classes\Common {
             throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.refresh_token.expiration'), 'error_refresh_token', 500);
         }
 
-        $sign      = $this->config?->system?->auth?->token_sign ?: '';
+        $sign      = $this->config?->system?->auth?->token_sign ?: 'gyctmn34ycrr0471yc4r';
         $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
         $token = new Token((string)$sign, (string)$algorithm);
@@ -51,7 +51,7 @@ abstract class Common extends Classes\Common {
             throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.access_token.expiration'), 'error_access_token', 500);
         }
 
-        $sign      = $this->config?->system?->auth?->token_sign ?: '';
+        $sign      = $this->config?->system?->auth?->token_sign ?: 'gyctmn34ycrr0471yc4r';
         $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
         $token = new Token($sign, $algorithm);

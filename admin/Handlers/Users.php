@@ -7,6 +7,8 @@ use Core3\Classes\Tools;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\HttpException;
 use Core3\Exceptions\Exception;
+use CoreUI\Table;
+use CoreUI\Table\Adapters\Mysql\Search;
 use Laminas\Cache\Exception\ExceptionInterface;
 
 
@@ -44,7 +46,6 @@ class Users extends Handler {
             'fname'              => 'string(0-255): Имя',
             'lname'              => 'string(0-255): Фамилия',
             'mname'              => 'string(0-255): Отчество',
-            'is_pass_changed_sw' => 'string(Y|N): Предупреждение о смене пароля',
             'is_admin_sw'        => 'string(Y|N): Администратор безопасности',
             'is_active_sw'       => 'string(Y|N): Активен',
         ];
@@ -184,15 +185,44 @@ class Users extends Handler {
      * Данные для таблицы
      * @param Request $request
      * @return Response
+     * @throws Table\Exception
      */
     public function table(Request $request): Response {
 
-        $page   = (int)$request->getQuery('page');
-        $count  = (int)($request->getQuery('count') ?: 25);
-        $offset = (int)(($page - 1) * $count);
+        $table = new Table\Adapters\Mysql();
+        $table->setConnection($this->db->getDriver()->getConnection()->getResource());
 
-        $users = $this->db->fetchAll("
-            SELECT SQL_CALC_FOUND_ROWS u.id,
+        $table->setPage($request->getQuery('page') ?? 1, $request->getQuery('count') ?? 25);
+
+        $sort = $request->getQuery('sort');
+
+        if ($sort && is_array($sort)) {
+            $table->setSort($sort, [
+                'avatar'        => 'u.avatar',
+                'login'         => 'u.login',
+                'name'          => "CONCAT_WS(' ', u.lname, u.fname, u.mname)",
+                'email'         => 'u.email',
+                'role_title'    => 'r.title',
+                'date_activity' => '(SELECT us.date_last_activity FROM core_users_sessions AS us WHERE u.id = us.user_id ORDER BY date_last_activity DESC LIMIT 1)',
+                'date_created'  => 'u.date_created',
+                'is_admin_sw'   => 'u.is_admin_sw',
+            ]);
+        }
+
+
+        $search = $request->getQuery('search');
+
+        if ($search && is_array($search)) {
+            $table->setSearch($search, [
+                'login'        => (new Search\Like())->setField('u.login'),
+                'role'         => (new Search\Equal())->setField('u.role_id'),
+                'date_created' => (new Search\Between())->setField('u.date_created'),
+                'is_admin_sw'  => (new Search\Equal())->setField('u.is_admin_sw'),
+            ]);
+        }
+
+        $table->setQuery("
+            SELECT u.id,
                    u.login,
                    u.email,
                    CONCAT_WS(' ', u.lname, u.fname, u.mname) AS name,
@@ -205,38 +235,28 @@ class Users extends Handler {
                     FROM core_users_sessions AS us 
                     WHERE u.id = us.user_id
                     ORDER BY date_last_activity DESC
-                    LIMIT 1) AS date_last_activity
+                    LIMIT 1) AS date_activity
             FROM core_users AS u
                 LEFT JOIN core_roles AS r ON u.role_id = r.id
-            LIMIT {$offset}, {$count}
         ");
 
-        $total   = (int)$this->db->fetchOne('SELECT FOUND_ROWS()');
-        $records = [];
+        $records = $table->fetchRecords();
 
-        foreach ($users as $user) {
+        foreach ($records as $record) {
 
-            $gravatar = md5($user['email'] ?? '');
+            $gravatar = md5($record->email ?? '');
 
-            $records[] = [
-                'id'            => $user['id'],
-                'name'          => $user['name'],
-                'login'         => $user['login'],
-                'email'         => $user['email'],
-                'role_title'    => $user['role_title'],
-                'avatar'        => "<img src=\"https://www.gravatar.com/avatar/{$gravatar}?&s=20&d=mm\" class=\"rounded-circle\"/>",
-                'is_admin_sw'   => $user['is_admin_sw'] == 'Y' ? '<span class="badge text-bg-danger">Да</span>' : 'Нет',
-                'is_active_sw'  => $user['is_active_sw'],
-                'date_created'  => $user['date_created'],
-                'date_activity' => $user['date_last_activity'] ?? null,
-                'login_user'    => "<button class=\"btn btn-sm btn-secondary\" onclick=\"adminUsers.loginUser('{$user['id']}')\">Войти</button>",
+            $record->login       = ['content' => $record->login, 'url' => "#/admin/users/{$record->id}"];
+            $record->avatar      = "<img src=\"https://www.gravatar.com/avatar/{$gravatar}?&s=20&d=mm\" style=\"width: 20px\" class=\"rounded-circle\"/>";
+            $record->is_admin_sw = $record->is_admin_sw == 'Y' ? '<span class="badge text-bg-danger">Да</span>' : 'Нет';
+            $record->login_user  = [
+                'content' => 'Войти',
+                'attr'    => ['class' => 'btn btn-sm btn-secondary'],
+                'onClick' => "adminUsers.loginUser('{$record->id}');",
             ];
         }
 
-        return $this->getResponseSuccess([
-            'total'   => $total,
-            'records' => $records
-        ]);
+        return $this->getResponseSuccess($table->getResult());
     }
 
 

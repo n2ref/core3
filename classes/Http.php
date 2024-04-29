@@ -100,7 +100,7 @@ class Http extends Common {
     private function getAuthByToken(string $access_token): ?Auth {
 
         try {
-            $sign      = $this->config?->system?->auth?->token_sign ?: '';
+            $sign      = $this->config?->system?->auth?->token_sign ?: 'gyctmn34ycrr0471yc4r';
             $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
 
             $decoded    = Http\Token::decode($access_token, $sign, $algorithm);

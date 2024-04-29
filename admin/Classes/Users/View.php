@@ -1,7 +1,7 @@
 <?php
 namespace Core3\Mod\Admin\Classes\Users;
-use Core3\Mod\Admin\Classes\Users\User;
 use Core3\Classes\Common;
+use CoreUI\Table;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 
 
@@ -21,46 +21,66 @@ class View extends Common {
         $switch_url = "/core/mod/admin/users/handler/switch_active?id=[id]";
         $load_url   = "/core/mod/admin/users/handler/table";
 
-        $table = [
-            'id'             => "core_users",
-            'url'            => $load_url,
-            'method'         => 'GET',
-            'size'           => 'sm',
-            'striped'        => true,
-            'hover'          => true,
-            'class'          => 'table-core3',
-            'recordsPerPage' => 25,
-            'component'      => 'coreui.table',
-            'primaryKey'     => 'id',
-            'maxHeight'      => 800,
-            'show' => [
-                'total'       => true,
-                'pages'       => true,
-                'pagesJump'   => true,
-                'prePageList' => true,
-            ],
-            'controls' => [
-                [ 'type' => "link",   'content' => "<i class=\"bi bi-plus\"></i> Добавить", 'href' => "{$base_url}?edit=0", 'attr' => [ 'class' => 'btn btn-success' ] ],
-                [ 'type' => "button", 'content' => "<i class=\"bi bi-trash\"></i> Удалить", 'onClick' => "Core.ui.table.get('core_users').deleteSelected('{$delete_url}', Core.menu.reload)", 'attr' => [ 'class' => 'btn btn-warning' ] ],
-            ],
-            'onClickUrl' => "{$base_url}?edit=[id]",
-            'columns' => [
-                [ 'type' => 'numbers', 'width' => 25, 'attr' => [ 'class' => "border-end text-end" ] ],
-                [ 'type' => 'select' ],
-                [ 'field' => 'is_active_sw',  'label' => '',                     'width' => 45,  'type' => 'switch', 'onChange' => "Core.ui.table.get('core_users').switch('{$switch_url}', checked, id)"],
-                [ 'field' => 'avatar',        'label' => '',                     'width' => 40,  'type' => 'html' ],
-                [ 'field' => 'login',         'label' => 'Логин',                'width' => 130 ],
-                [ 'field' => 'name',          'label' => 'ФИО' ],
-                [ 'field' => 'email',         'label' => 'Email',                'width' => 180, 'type' => 'text' ],
-                [ 'field' => 'role_title',    'label' => 'Роль',                 'width' => 180, 'type' => 'text' ],
-                [ 'field' => 'date_activity', 'label' => 'Последняя активность', 'width' => 220, 'type' => 'datetime' ],
-                [ 'field' => 'date_created',  'label' => 'Дата регистрации',     'width' => 200, 'type' => 'datetime' ],
-                [ 'field' => 'is_admin_sw',   'label' => 'Админ',                'width' => 70,  'type' => 'html' ],
-                [ 'field' => 'login_user',    'label' => '',                     'width' => 1,   'type' => 'html', 'attr' => [ 'onClick' => 'event.stopPropagation();'] ],
-            ]
-        ];
 
-        return $table;
+        $roles = $this->modAdmin->tableRoles->fetchPairs('id', 'title');
+
+
+        $table = new Table('core_users');
+        $table->setClass('table-hover table-striped');
+        $table->setRecordsRequest($load_url);
+        $table->setMaxHeight(800);
+        $table->setClickUrl("{$base_url}/[id]");
+
+        $table->addHeaderOut()
+            ->left([
+                (new Table\Control\Link('<i class=\"bi bi-plus\"></i> ' . $this->_('Добавить'), "{$base_url}/0"))->setAttr('class', 'btn btn-success'),
+                (new Table\Control\Button('<i class=\"bi bi-trash\"></i> ' . $this->_('Удалить')))
+                    ->setOnClick("Core.ui.table.get('core_users').deleteSelected('{$delete_url}', Core.menu.reload)")
+                    ->setAttr('class', 'btn btn-warning')
+            ]);
+
+        $table->addHeaderOut()
+            ->left([
+                (new Table\Filter\Text('login'))->setAttributes(['placeholder' => $this->_('Логин / ФИО / Email')])->setWidth(200),
+                (new Table\Filter\Select('role', $this->_('Роль')))->setWidth(200)->setOptions($roles),
+                (new Table\Control\FilterClear()),
+            ])
+            ->right([
+                (new Table\Control\Search()),
+                (new Table\Control\Columns())->setButton('<i class="bi bi-layout-three-columns"></i>', ['class' => 'btn btn-secondary']),
+            ]);
+
+        $table->addFooterOut()
+            ->left([
+                (new Table\Control\Pages()),
+                (new Table\Control\Total)
+            ])
+            ->right([
+                (new Table\Control\PageJump()),
+                (new Table\Control\PageSize([ 25, 50, 100, 1000 ]))
+            ]);
+
+        $table->addSearch([
+           (new Table\Search\DatetimeRange('date_created', $this->_('Дата регистрации'))),
+           (new Table\Search\Radio('is_admin_sw',          $this->_('Админ')))->setOptions(['Y' => $this->_('Да'), 'N' => $this->_('Нет')])
+        ]);
+
+
+        $table->addColumns([
+            (new Table\Column\Select()),
+            (new Table\Column\Toggle('is_active_sw',    $this->_('Активность'),             45))->setOnChange("Core.ui.table.get('core_users').switch('{$switch_url}', checked, id)")->setShowLabel(false),
+            (new Table\Column\Html('avatar',            $this->_('Аватар'),                 40))->setSort(true)->setShowLabel(false),
+            (new Table\Column\Link('login',             $this->_('Логин')))->setMinWidth(100)->setSort(true),
+            (new Table\Column\Text('name',              $this->_('ФИО')))->setNoWrap(true)->setMinWidth(150)->setSort(true),
+            (new Table\Column\Text('email',             $this->_('Email'),                  200))->setSort(true),
+            (new Table\Column\Text('role_title',        $this->_('Роль'),                   200))->setSort(true),
+            (new Table\Column\Datetime('date_activity', $this->_('Последняя активность'),   185))->setMinWidth(185)->setSort(true),
+            (new Table\Column\Datetime('date_created',  $this->_('Дата регистрации'),       155))->setMinWidth(155)->setSort(true),
+            (new Table\Column\Html('is_admin_sw',       $this->_('Админ'),                  80))->setMinWidth(80)->setSort(true),
+            (new Table\Column\Button('login_user',      $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
+        ]);
+
+        return $table->toArray();
     }
 
 
@@ -88,7 +108,6 @@ class View extends Common {
         $form = [
             'component'  => 'coreui.form',
             'validate'   => true,
-            'lang'       => 'ru',
             'labelWidth' => 225,
             'send'       => [
                 'url'    => "/core/mod/admin/users/handler/save?id={$user->id}&v={$control->version}",
@@ -104,28 +123,26 @@ class View extends Common {
                 'dataType' => [ 'json' ],
             ],
             'record' => [
-                'login'                      => $user->login,
-                'control[email]'              => $user->email,
-                'control[pass]'               => '***',
-                'control[role_id]'            => $user->role_id,
-                'control[fname]'              => $user->fname,
-                'control[lname]'              => $user->lname,
-                'control[mname]'              => $user->mname,
-                'control[is_pass_changed_sw]' => $user->is_pass_changed_sw,
-                'control[is_admin_sw]'        => $user->is_admin_sw,
-                'control[is_active_sw]'       => $user->is_active_sw,
+                'login'                 => $user->login,
+                'control[email]'        => $user->email,
+                'control[pass]'         => '***',
+                'control[role_id]'      => $user->role_id,
+                'control[fname]'        => $user->fname,
+                'control[lname]'        => $user->lname,
+                'control[mname]'        => $user->mname,
+                'control[is_admin_sw]'  => $user->is_admin_sw,
+                'control[is_active_sw]' => $user->is_active_sw,
             ],
             'fields' => [
-                [ 'type' => 'text',           'name' => 'login',                       'label' => 'Логин',                         'width' => 200, 'readonly' => true ],
-                [ 'type' => 'email',          'name' => 'control[email]',              'label' => 'Email',                         'width' => 200 ],
-                [ 'type' => 'passwordRepeat', 'name' => 'control[pass]',               'label' => 'Пароль',                        'width' => 200, 'required' => true ],
-                [ 'type' => 'select',         'name' => 'control[role_id]',            'label' => 'Роль',                          'width' => 200, 'required' => true, 'options' => $roles ],
-                [ 'type' => 'text',           'name' => 'control[lname]',              'label' => 'Фамилия',                       'width' => 200 ],
-                [ 'type' => 'text',           'name' => 'control[fname]',              'label' => 'Имя',                           'width' => 200 ],
-                [ 'type' => 'text',           'name' => 'control[mname]',              'label' => 'Отчество',                      'width' => 200 ],
-                [ 'type' => 'switch',         'name' => 'control[is_pass_changed_sw]', 'label' => 'Предупреждение о смене пароля', 'valueY' => 'Y', 'valueN' => 'N', ],
-                [ 'type' => 'switch',         'name' => 'control[is_admin_sw]',        'label' => 'Администратор безопасности',    'valueY' => 'Y', 'valueN' => 'N',  'description' => 'полный доступ' ],
-                [ 'type' => 'switch',         'name' => 'control[is_active_sw]',       'label' => 'Активен',                       'valueY' => 'Y', 'valueN' => 'N', ],
+                [ 'type' => 'text',           'name' => 'login',                 'label' => 'Логин',                      'width' => 200, 'readonly' => true ],
+                [ 'type' => 'email',          'name' => 'control[email]',        'label' => 'Email',                      'width' => 200 ],
+                [ 'type' => 'passwordRepeat', 'name' => 'control[pass]',         'label' => 'Пароль',                     'width' => 200, 'required' => true ],
+                [ 'type' => 'select',         'name' => 'control[role_id]',      'label' => 'Роль',                       'width' => 200, 'required' => true, 'options' => $roles ],
+                [ 'type' => 'text',           'name' => 'control[lname]',        'label' => 'Фамилия',                    'width' => 200 ],
+                [ 'type' => 'text',           'name' => 'control[fname]',        'label' => 'Имя',                        'width' => 200 ],
+                [ 'type' => 'text',           'name' => 'control[mname]',        'label' => 'Отчество',                   'width' => 200 ],
+                [ 'type' => 'switch',         'name' => 'control[is_admin_sw]',  'label' => 'Администратор безопасности', 'valueY' => 'Y', 'valueN' => 'N',  'description' => 'полный доступ' ],
+                [ 'type' => 'switch',         'name' => 'control[is_active_sw]', 'label' => 'Активен',                    'valueY' => 'Y', 'valueN' => 'N', ],
             ],
             'controls' => [
                 [ 'type' => "submit", 'content' => "Сохранить", 'attr' => [ 'class' => 'btn btn-primary' ] ],
@@ -158,7 +175,6 @@ class View extends Common {
         $form = [
             'component'  => 'coreui.form',
             'validate'   => true,
-            'lang'       => 'ru',
             'labelWidth' => 225,
             'send'       => [
                 'url'    => "/core/mod/admin/users/handler/save",
@@ -180,7 +196,6 @@ class View extends Common {
                 'control[fname]'              => "",
                 'control[lname]'              => "",
                 'control[mname]'              => "",
-                'control[is_pass_changed_sw]' => "N",
                 'control[is_admin_sw]'        => "N",
                 'control[is_active_sw]'       => "Y",
             ],
@@ -192,7 +207,6 @@ class View extends Common {
                 [ 'type' => 'text',           'name' => 'control[lname]',              'label' => 'Фамилия',                       'width' => 200 ],
                 [ 'type' => 'text',           'name' => 'control[fname]',              'label' => 'Имя',                           'width' => 200 ],
                 [ 'type' => 'text',           'name' => 'control[mname]',              'label' => 'Отчество',                      'width' => 200 ],
-                [ 'type' => 'switch',         'name' => 'control[is_pass_changed_sw]', 'label' => 'Предупреждение о смене пароля', ],
                 [ 'type' => 'switch',         'name' => 'control[is_admin_sw]',        'label' => 'Администратор безопасности',    'description' => 'полный доступ' ],
                 [ 'type' => 'switch',         'name' => 'control[is_active_sw]',       'label' => 'Активен',                       ],
             ],

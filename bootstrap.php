@@ -57,12 +57,9 @@ require_once $vendor_autoload_file;
 require_once 'autoload.php';
 
 
-
-$core_conf_file = __DIR__ . "/conf.ini";
-
 $config = new Config();
-$config->addFileIni($core_conf_file, 'production');
-$config->addFileIni($conf_file,      $_SERVER['SERVER_NAME'] ?? 'production');
+$config->addFileIni(__DIR__ . "/conf.ini", 'production');
+$config->addFileIni($conf_file,            $_SERVER['SERVER_NAME'] ?? 'production');
 
 $config->system->cache->dir = $config->system?->cache?->dir
     ? Tools::getAbsolutePath($config->system->cache->dir)
@@ -74,32 +71,6 @@ $config->system->tmp = $config->system?->tmp
 
 if ($config->system?->log?->dir) {
     $config->system->log->dir = Tools::getAbsolutePath($config->system->log->dir);
-}
-
-if ($config->system?->log?->file) {
-    $config->system->log->file = str_starts_with($config->system->log->file, '/')
-        ? $config->system->log->file
-        : "{$config->system->log->dir}/{$config->system->log->file}";
-}
-
-if ($config->system?->log?->access_file) {
-    $config->system->log->access_file = str_starts_with($config->system->log->access_file, '/')
-        ? $config->system->log->access_file
-        : "{$config->system->log->dir}/{$config->system->log->access_file}";
-}
-
-if ($config->system?->log?->profile?->file) {
-    $config->system->log->profile->file = str_starts_with($config->system->log->profile->file, '/')
-        ? $config->system->log->profile->file
-        : "{$config->system->log->dir}/{$config->system->log->profile->file}";
-}
-
-if ($config->system?->worker?->log_file) {
-    $config->system->worker->log_file = str_starts_with($config->system->worker->log_file, '/')
-        ? $config->system->worker->log_file
-        : "{$config->system->log->dir}/{$config->system->worker->log_file}";
-} else {
-    $config->system->worker->log_file = $config->system?->log?->file;
 }
 
 $config->setReadOnly();

@@ -2,15 +2,40 @@
 namespace Core3\Mod\Admin\Handlers;
 use Core3\Classes\Handler;
 use Core3\Classes\Http\Request;
-use Core3\Classes\Tools;
-use Core3\Exceptions\AppException;
-use Core3\Exceptions\HttpException;
+use Core3\Mod\Admin\Classes\Modules\View;
 
 
 /**
  *
  */
 class Modules extends Handler {
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getTableInstalled(Request $request): array {
+
+        $base_url = "#/admin/modules";
+        $view     = new View();
+        return $view->getTableInstalled($base_url);
+    }
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getTableAvailable(Request $request): array {
+
+        $base_url = "#/admin/modules";
+        $view     = new View();
+        return $view->getTableAvailable($base_url);
+    }
+
 
     /**
      * @param $data

@@ -123,7 +123,6 @@ CREATE TABLE `core_users` (
     `mname` varchar(255) DEFAULT '',
     `certificate` text,
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
-    `is_pass_changed_sw` enum('Y','N') NOT NULL DEFAULT 'N',
     `is_admin_sw` enum('Y','N') NOT NULL DEFAULT 'N',
     `last_user_id` int(11) unsigned DEFAULT NULL,
     `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
