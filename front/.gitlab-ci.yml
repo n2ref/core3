@@ -1,0 +1,17 @@
+
+.php_scripts:
+  script:
+    - '! find . -type f -name "*.php" -exec php -d error_reporting=32767 -l {} \; | grep "^No syntax errors" -v'
+
+stages:
+  - test
+
+
+test_js:
+  stage: test
+  image: node
+  script:
+    - npm i -g eslint
+    - eslint -c .eslintrc.json --max-warnings 100 --ext .js .
+
+

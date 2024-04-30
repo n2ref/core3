@@ -1,0 +1,76 @@
+<div class="container container-login" style="display: none">
+    <div class="mdc-card">
+        <div class="mdc-card__content">
+            <img src="" alt="logo" class="logo" style="display: none">
+
+            <form class="mb-5" novalidate>
+                <span class="text-danger"></span>
+                <div class="form-controls mb-5">
+                    <div class="mb-3 text-start">
+                        <label class="form-label" for="auth-login">Логин или Email</label>
+                        <div class="control-icon position-relative">
+                            <input type="text" name="login" class="form-control" id="auth-login" required>
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                    </div>
+                    <div class="mb-5 text-start">
+                        <label class="form-label" for="auth-password">Пароль</label>
+                        <div class="control-icon position-relative">
+                            <input type="password" name="password" class="form-control" id="auth-password" required>
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary w-100 py-2" type="submit">Войти</button>
+                </div>
+            </form>
+
+            <div class="links-container">
+                <a class="install-button" style="display: none">Установить</a>
+                <a href="#/registration" class="reg-button">Регистрация</a>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container container-registration" style="display: none">
+    <div class="mdc-card">
+        <div class="mdc-card__content">
+            <img src="" alt="logo" class="logo" style="display: none">
+
+            <p class="mdc-typography--headline5">Регистрация</p>
+            <div class="text-danger mdc-typography--subtitle2"></div>
+            <div class="text-success mdc-typography--subtitle2"></div>
+
+            <form class="mb-5" novalidate>
+                <div class="form-controls mb-5">
+                    <div class="mb-3 text-start">
+                        <label class="form-label" for="registration-name">Имя</label>
+                        <input type="text" name="name" class="form-control" id="registration-name" required>
+                    </div>
+
+                    <div class="mb-3 text-start">
+                        <label class="form-label" for="registration-email">Email</label>
+                        <input type="email" name="email" class="form-control" id="registration-email" required>
+                    </div>
+
+                    <div class="mb-3 text-start">
+                        <label class="form-label" for="registration-pass">Пароль</label>
+                        <input type="password" name="password" class="form-control" id="registration-pass" required>
+                    </div>
+
+                    <div class="mb-5 text-start">
+                        <label class="form-label" for="registration-pass2">Пароль еще раз</label>
+                        <input type="password" class="form-control" id="registration-pass2" required>
+                    </div>
+
+                    <button class="btn btn-primary w-100 py-2" type="submit">Зарегистрироваться</button>
+                </div>
+            </form>
+
+            <div class="links-container">
+                <a class="install-button" style="display: none">Установить</a>
+                <a href="#" class="login-button">Войти</a>
+            </div>
+        </div>
+    </div>
+</div>
