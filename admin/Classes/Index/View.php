@@ -44,15 +44,6 @@ class View extends Common {
                     '<button class="btn btn-sm btn-link text-secondary btn-update-core"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
             ],
             [
-                'title'   => 'Версия web theme',
-                'value'   => 'Bootstrap 1.0.0',
-                'actions' =>
-                    '<small class="text-success fw-bold">Доступна версия 1.1.0</small> ' .
-                    '<button class="btn btn-sm btn-success ms-1 btn-install-theme"><i class="bi bi-cloud-arrow-down"></i> обновить</button><br>' .
-                    '<small class="text-muted">последняя проверка 04.07.2023</small> ' .
-                    '<button class="btn btn-sm btn-link text-secondary btn-update-theme"><i class="bi bi-arrow-clockwise"></i> проверить</button>'
-            ],
-            [
                 'title'   => 'Установленные модули',
                 'value'   => $modules_count,
                 'actions' =>
@@ -225,7 +216,7 @@ class View extends Common {
 
         $table = new Table();
         $table->setOverflow(true);
-        $table->setRecordsRequest('core/mod/admin/index/handler/get_db_connections_records');
+        $table->setRecordsRequest('core3/mod/admin/index/handler/get_db_connections_records');
         $table->addHeaderIn()
             ->left([
                 (new Table\Control\Total)
@@ -286,7 +277,7 @@ class View extends Common {
 
         $table = new Table();
         $table->setOverflow(true);
-        $table->setRecordsRequest('core/mod/admin/index/handler/get_system_process_list');
+        $table->setRecordsRequest('core3/mod/admin/index/handler/get_system_process_list');
 
         $table->addHeaderOut()
             ->left([

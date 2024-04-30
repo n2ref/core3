@@ -1,7 +1,7 @@
 {
     "openapi": "3.0.0",
     "paths": {
-        "/core/auth/login": {
+        "/core3/auth/login": {
             "post": {
                 "tags": [
                     "Получение данных для выхода"
@@ -53,7 +53,7 @@
                 }
             }
         },
-        "/core/auth/refresh": {
+        "/core3/auth/refresh": {
             "post": {
                 "tags": [
                     "Обновление ключей данных для использования системы"
@@ -114,7 +114,7 @@
                 }
             }
         },
-        "/core/registration/email": {
+        "/core3/registration/email": {
             "post": {
                 "tags": [
                     "Доступ"
@@ -167,7 +167,7 @@
                 }
             }
         },
-        "/core/mod/{name}/{section}": {
+        "/core3/mod/{name}/{section}": {
             "get": {
                 "tags": [
                     "Кабинет"

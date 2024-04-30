@@ -51,7 +51,7 @@ class Request {
         $this->method = strtolower($_SERVER['REQUEST_METHOD']);
 
         if ($this->uri) {
-            $this->uri = preg_replace('~^/core/mod~', '', $this->uri);
+            $this->uri = preg_replace('~^/core3/mod~', '', $this->uri);
         }
 
         $this->props['GET']    = $_GET;

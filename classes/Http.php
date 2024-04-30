@@ -20,18 +20,18 @@ class Http extends Common {
     public function dispatch(): mixed {
 
         $router = new Router();
-        $router->addPath('/core/auth/login')->post('login');
-        $router->addPath('/core/auth/logout')->put('logout');
-        $router->addPath('/core/auth/refresh')->post('refreshToken');
-        $router->addPath('/core/registration/email')->post('registrationEmail');
-        $router->addPath('/core/registration/email/check')->post('registrationEmailCheck');
-        $router->addPath('/core/restore')->post('restorePass');
-        $router->addPath('/core/restore/check')->post('restorePassCheck');
-        $router->addPath('/core/conf')->get('getConf');
-        $router->addPath('/core/cabinet')->get('getCabinet');
-        $router->addPath('/core/home')->get('getHome');
-        $router->addPath('/core/mod/{module}/{section}/handler/{method}', ['[a-z0-9_]+', '[a-z0-9_]+', '[a-z0-9_/]+'])->any('getModHandler');
-        $router->addPath('/core/mod/{module}/{section}{mod_query}', ['[a-z0-9_]+', '[a-z0-9_]+', '(?:/[a-z0-9_/]+|)'])->any('getModSection');
+        $router->addPath('/core3/auth/login')->post('login');
+        $router->addPath('/core3/auth/logout')->put('logout');
+        $router->addPath('/core3/auth/refresh')->post('refreshToken');
+        $router->addPath('/core3/registration/email')->post('registrationEmail');
+        $router->addPath('/core3/registration/email/check')->post('registrationEmailCheck');
+        $router->addPath('/core3/restore')->post('restorePass');
+        $router->addPath('/core3/restore/check')->post('restorePassCheck');
+        $router->addPath('/core3/conf')->get('getConf');
+        $router->addPath('/core3/cabinet')->get('getCabinet');
+        $router->addPath('/core3/home')->get('getHome');
+        $router->addPath('/core3/mod/{module}/{section}/handler/{method}', ['[a-z0-9_]+', '[a-z0-9_]+', '[a-z0-9_/]+'])->any('getModHandler');
+        $router->addPath('/core3/mod/{module}/{section}{mod_query}', ['[a-z0-9_]+', '[a-z0-9_]+', '(?:/[a-z0-9_/]+|)'])->any('getModSection');
 
         // TODO добавить возможность работы в папке
         $route = $router->getRoute($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

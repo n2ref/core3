@@ -17,9 +17,9 @@ class View extends Common {
      */
     public function getTable(string $base_url): array {
 
-        $delete_url = "/core/mod/admin/users/handler/delete";
-        $switch_url = "/core/mod/admin/users/handler/switch_active?id=[id]";
-        $load_url   = "/core/mod/admin/users/handler/table";
+        $delete_url = "/core3/mod/admin/users/handler/delete";
+        $switch_url = "/core3/mod/admin/users/handler/switch_active?id=[id]";
+        $load_url   = "/core3/mod/admin/users/handler/table";
 
 
         $roles = $this->modAdmin->tableRoles->fetchPairs('id', 'title');
@@ -110,7 +110,7 @@ class View extends Common {
             'validate'   => true,
             'labelWidth' => 225,
             'send'       => [
-                'url'    => "/core/mod/admin/users/handler/save?id={$user->id}&v={$control->version}",
+                'url'    => "/core3/mod/admin/users/handler/save?id={$user->id}&v={$control->version}",
                 'method' => 'put',
                 'format' => 'form',
             ],
@@ -177,7 +177,7 @@ class View extends Common {
             'validate'   => true,
             'labelWidth' => 225,
             'send'       => [
-                'url'    => "/core/mod/admin/users/handler/save",
+                'url'    => "/core3/mod/admin/users/handler/save",
                 'method' => 'post',
             ],
             'validResponse' => [

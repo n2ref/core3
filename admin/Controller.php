@@ -152,7 +152,8 @@ class Controller extends Common {
         try {
             if ($request->getQuery('edit') !== null) {
                 $breadcrumb = new \CoreUI\Breadcrumb();
-                $breadcrumb->addItem('Модули', $base_url);
+                $breadcrumb->addItem('Модули',        $base_url);
+                $breadcrumb->addItem('Установленные', "{$base_url}?tab=installed");
                 $breadcrumb->addItem('Модуль');
 
                 if ($request->getQuery('edit')) {
@@ -178,10 +179,9 @@ class Controller extends Common {
                 $panel->addTab($this->_("Установленные"), 'installed', "{$load_url}get_table_installed")->setUrlWindow("{$base_url}?tab=installed")->setCount($count_modules);
                 $panel->addTab($this->_("Доступные"),     'available', "{$load_url}get_table_available")->setUrlWindow("{$base_url}?tab=available");
 
-                $tab = $request->getQuery('tab') ?? 'installed';
-
                 $view = new Classes\Modules\View();
 
+                $tab = $request->getQuery('tab') ?? 'installed';
                 $panel->setActiveTab($tab);
                 switch ($tab) {
                     case 'installed': $panel->setContent($view->getTableInstalled($base_url)); break;
