@@ -5,10 +5,9 @@ import coreTools   from './core.tools';
 import coreMain    from './core.main';
 import coreAuth    from './core.auth';
 
-import '../../../node_modules/ejs/ejs.min';
-import '../../../node_modules/@material/ripple/dist/mdc.ripple.min';
-import '../../../node_modules/@material/linear-progress/dist/mdc.linearProgress.min';
-import '../../../node_modules/@material/circular-progress/dist/mdc.circularProgress.min';
+import 'ejs/ejs.min';
+import {MDCRipple}         from '@material/ripple';
+import {MDCLinearProgress} from '@material/linear-progress';
 
 
 let coreMenu = {
@@ -57,7 +56,7 @@ let coreMenu = {
         // Инициализация кнопок
         let buttons = document.querySelectorAll('.page-menu .mdc-button');
         for (let button of buttons) {
-            new mdc.ripple.MDCRipple(button);
+            new MDCRipple(button);
         }
 
 
@@ -258,7 +257,7 @@ let coreMenu = {
             $('.page-menu > header').append(coreTpl['menu/loader.html']);
 
             let loaderElement = $('#loader .loader-progress');
-            let linearProgress   = new mdc['linear-progress'].MDCLinearProgress(loaderElement[0]);
+            let linearProgress   = new MDCLinearProgress(loaderElement[0]);
             linearProgress.determinate = false;
         },
 
@@ -478,7 +477,7 @@ let coreMenu = {
 
             let menuItems = document.querySelectorAll('.page-menu .menu-list-item a');
             for (let menuItem of menuItems) {
-                new mdc.ripple.MDCRipple(menuItem);
+                new MDCRipple(menuItem);
 
                 $(menuItem).on('click', function (event) {
                     if (event.button === 0 && ! event.ctrlKey) {
@@ -497,7 +496,7 @@ let coreMenu = {
             }
             let buttons = document.querySelectorAll('.page-menu .menu-list-item .menu-icon-button');
             for (let button of buttons) {
-                new mdc.ripple.MDCRipple(button);
+                new MDCRipple(button);
                 $(button).on('click', function () {
                     $(this).parent().parent().toggleClass('menu-item-nested-open');
                 });
@@ -514,11 +513,11 @@ let coreMenu = {
         $('.page-menu .menu-logout').on('click', function (e) {
             e.preventDefault();
 
-            CoreUI.alert.warning('Уверены, что хотите выйти?', '', {
-                btnAcceptText: "Да",
-                btnAcceptColor: "#F57C00",
-                btnAcceptEvent: coreAuth.logout,
-                btnRejectText: "Отмена"
+            CoreUI.alert.warning( Core._('Уверены, что хотите выйти?'), '', {
+                buttons: [
+                    { text: Core._('Отмена') },
+                    { text: Core._('Да'), type: 'warning', click: coreAuth.logout }
+                ]
             });
         });
 
@@ -539,7 +538,7 @@ let coreMenu = {
 
         let buttons = document.querySelectorAll('.page-menu .mdc-ripple-surface');
         for (let button of buttons) {
-            new mdc.ripple.MDCRipple(button);
+            new MDCRipple(button);
         }
 
 
@@ -641,10 +640,11 @@ let coreMenu = {
         $('header .mdc-top-app-bar__title').text(titles[0] || '');
         $('header .mdc-top-app-bar__subtitle').text(titles[1] || '');
 
-        let title = coreMenu._system.name;
-        title += titles.hasOwnProperty(0)
-            ? ' - ' + titles[0] + (titles.hasOwnProperty(1) ? ' - ' + titles[1] : '')
+        let title = titles.hasOwnProperty(0)
+            ? (titles.hasOwnProperty(1) ? ' - ' + titles[1] : '') + titles[0]
             : '';
+
+        title = (title ? ' - ' : '') + coreMenu._system.name
 
         $('head title').text(title);
     },
@@ -810,21 +810,6 @@ let coreMenu = {
         }
     }
 }
-
-
-$(function () {
-
-    coreMain.on('hashchange', function () {
-
-        if ($('.page.page-menu')[0]) {
-            if (window.screen.width < 600 && $('.page.page-menu.drawer-toggle')[0]) {
-                coreMenu._drawerToggle();
-            }
-
-            coreMenu.load('/mod' + location.hash.substring(1));
-        }
-    });
-});
 
 
 export default coreMenu;

@@ -1,6 +1,5 @@
 
-@import "../../../node_modules/coreui-table/src/css/vars";
-@import "../../../node_modules/coreui-breadcrumb/src/css/vars";
+@import "coreui-breadcrumb/src/css/_variables";
 
 $coreui-table-thead-bg: #f3f5f9;
 $coreui-table-tbody-bg: #FFF;
@@ -22,13 +21,13 @@ $coreui-breadcrumb-item-link-hover-color:           #02193b;
 
 
 
-@import '../../../node_modules/coreui-panel/src/css/main';
-@import '../../../node_modules/coreui-tabs/src/css/coreui.tabs';
-@import '../../../node_modules/coreui-alert/src/css/coreui-alert';
-@import '../../../node_modules/coreui-notice/src/css/coreui.notice';
-@import '../../../node_modules/coreui-table/src/css/coreui.table';
-@import '../../../node_modules/coreui-chart/src/css/coreui.chart';
-@import '../../../node_modules/coreui-breadcrumb/src/css/coreui-breadcrumb';
+@import 'coreui-panel/src/css/main';
+@import 'coreui-tabs/src/css/main';
+@import 'coreui-alert/src/css/main';
+@import 'coreui-notice/src/css/main';
+@import 'coreui-table/src/css/main';
+@import 'coreui-chart/src/css/coreui.chart';
+@import 'coreui-breadcrumb/src/css/coreui-breadcrumb';
 
 
 //

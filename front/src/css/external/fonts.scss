@@ -6,9 +6,9 @@ $bootstrap-icons-font-dir : "../fonts";
 
 
 
-@import '../../../node_modules/bootstrap-icons/font/bootstrap-icons';
-@import '../../../node_modules/@fortawesome/fontawesome-free/scss/fontawesome';
-@import '../../../node_modules/@fortawesome/fontawesome-free/scss/solid';
-@import '../../../node_modules/@fortawesome/fontawesome-free/scss/brands';
-@import '../../../node_modules/@fortawesome/fontawesome-free/scss/regular';
-@import '../../../node_modules/material-icons/iconfont/material-icons';
+@import 'bootstrap-icons/font/bootstrap-icons';
+@import '@fortawesome/fontawesome-free/scss/fontawesome';
+@import '@fortawesome/fontawesome-free/scss/solid';
+@import '@fortawesome/fontawesome-free/scss/brands';
+@import '@fortawesome/fontawesome-free/scss/regular';
+@import 'material-icons/iconfont/material-icons';

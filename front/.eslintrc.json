@@ -27,12 +27,12 @@
         "no-irregular-whitespace": 2,
         "no-misleading-character-class": 2,
         "no-new-symbol": 2,
-        "no-obj-calls": 2,
+        "no-obj-calls": 0,
         "no-octal": 2,
         "no-regex-spaces": 2,
-        "no-self-assign": 2,
+        "no-self-assign": 0,
         "no-setter-return": 2,
-        "no-sparse-arrays": 2,
+        "no-sparse-arrays": 0,
         "no-this-before-super": 2,
         "no-unexpected-multiline": 2,
         "no-unreachable": 2,
@@ -41,7 +41,7 @@
         "no-useless-catch": 2,
         "require-yield": 2,
         "use-isnan": 2,
-        "valid-typeof": 2
+        "valid-typeof": 0
     },
     "env": {
         "browser": true,

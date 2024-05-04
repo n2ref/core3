@@ -29,6 +29,7 @@ class View extends Common {
         $table->setClass('table-hover table-striped');
         $table->setRecordsRequest($load_url);
         $table->setMaxHeight(800);
+        $table->setShowScrollShadow(true);
         $table->setClickUrl("{$base_url}/[id]");
 
         $table->addHeaderOut()

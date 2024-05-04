@@ -1,8 +1,7 @@
 
-@import '../../node_modules/@material/ripple/dist/mdc.ripple.min';
-@import '../../node_modules/@material/linear-progress/dist/mdc.linear-progress.min';
-@import '../../node_modules/@material/circular-progress/dist/mdc.circular-progress.min';
-@import '../../node_modules/@material/top-app-bar/dist/mdc.top-app-bar.min';
+@import '@material/ripple/dist/mdc.ripple.min';
+@import '@material/linear-progress/dist/mdc.linear-progress.min';
+@import '@material/top-app-bar/dist/mdc.top-app-bar.min';
 
 
 @import "external/bootstrap";

@@ -1,10 +1,10 @@
 
-import coreMain   from './core.main';
-import coreTools  from './core.tools';
-import coreTokens from './core.tokens';
-import coreTpl    from './core.templates';
-import MD5        from '../../../node_modules/blueimp-md5-es6/js/md5';
-import '../../../node_modules/@material/ripple/dist/mdc.ripple.min';
+import coreMain    from './core.main';
+import coreTools   from './core.tools';
+import coreTokens  from './core.tokens';
+import coreTpl     from './core.templates';
+import MD5         from 'blueimp-md5-es6/js/md5';
+import {MDCRipple} from '@material/ripple';
 
 let coreAuth = {
 
@@ -28,7 +28,7 @@ let coreAuth = {
         // Инициализация кнопок
         let buttons = document.querySelectorAll('.page-auth .mdc-button');
         for (let button of buttons) {
-            new mdc.ripple.MDCRipple(button);
+            new MDCRipple(button);
         }
 
         $('.container-login form').on('submit', function () {
@@ -489,16 +489,5 @@ let coreAuth = {
         }
     }
 }
-
-
-
-$(function () {
-
-    coreMain.on('hashchange', function () {
-        if ($('.page-auth')[0]) {
-            coreAuth.viewActualContainer();
-        }
-    });
-});
 
 export default coreAuth;

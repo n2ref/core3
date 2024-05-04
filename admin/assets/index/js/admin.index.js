@@ -1,3 +1,4 @@
+
 var adminIndex = {
 
     _baseUrl: 'core3/mod/admin/index',
@@ -8,32 +9,36 @@ var adminIndex = {
     clearCache: function() {
 
         CoreUI.alert.warning("Очистить кэш системы?", '', {
-            btnRejectText: "Отмена",
-            btnAcceptText: "Да",
-            btnAcceptColor: "#F57C00",
-            btnAcceptEvent: function () {
-                Core.menu.preloader.show();
+            buttons: [
+                { text: Core._('Отмена') },
+                {
+                    text: Core._('Да'),
+                    type: 'warning',
+                    click: function () {
+                        Core.menu.preloader.show();
 
-                $.ajax({
-                    url: adminIndex._baseUrl + '/handler/clear_cache',
-                    method: 'post',
-                    dataType: 'json',
-                    success: function (response) {
-                        if (response.status !== 'success') {
-                            CoreUI.notice.danger(response.error_message || "Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз.");
+                        $.ajax({
+                            url: adminIndex._baseUrl + '/handler/clear_cache',
+                            method: 'post',
+                            dataType: 'json',
+                            success: function (response) {
+                                if (response.status !== 'success') {
+                                    CoreUI.notice.danger(response.error_message || "Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз.");
 
-                        } else {
-                            CoreUI.notice.success('Кэш очищен')
-                        }
-                    },
-                    error: function (response) {
-                        CoreUI.notice.danger("Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз.");
-                    },
-                    complete : function () {
-                        Core.menu.preloader.hide();
+                                } else {
+                                    CoreUI.notice.success('Кэш очищен')
+                                }
+                            },
+                            error: function (response) {
+                                CoreUI.notice.danger("Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз.");
+                            },
+                            complete : function () {
+                                Core.menu.preloader.hide();
+                            }
+                        });
                     }
-                });
-            }
+                },
+            ]
         });
     },
 

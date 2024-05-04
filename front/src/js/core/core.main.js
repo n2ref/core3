@@ -1,5 +1,7 @@
 
 import coreTokens from './core.tokens';
+import coreMenu from "./core.menu";
+import coreAuth from "./core.auth";
 
 let coreMain = {
 
@@ -91,7 +93,22 @@ let coreMain = {
 }
 
 
-$(function () {
+document.addEventListener('DOMContentLoaded', function () {
+
+    coreMain.on('hashchange', function () {
+        if ($('.page-auth')[0]) {
+            coreAuth.viewActualContainer();
+        }
+
+        if ($('.page.page-menu')[0]) {
+            if (window.screen.width < 600 && $('.page.page-menu.drawer-toggle')[0]) {
+                coreMenu._drawerToggle();
+            }
+
+            coreMenu.load('/mod' + location.hash.substring(1));
+        }
+    });
+
     // Событие установки
     coreMain.install.promise = new Promise(function (resolve, reject) {
 
