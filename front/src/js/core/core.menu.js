@@ -641,10 +641,10 @@ let coreMenu = {
         $('header .mdc-top-app-bar__subtitle').text(titles[1] || '');
 
         let title = titles.hasOwnProperty(0)
-            ? (titles.hasOwnProperty(1) ? ' - ' + titles[1] : '') + titles[0]
+            ? (titles.hasOwnProperty(1) ? titles[1] + ' - ' : '') + titles[0]
             : '';
 
-        title = (title ? ' - ' : '') + coreMenu._system.name
+        title = (title ? title + ' - ' : '') + coreMenu._system.name
 
         $('head title').text(title);
     },
