@@ -3,42 +3,46 @@ var adminUsers = {
 
     /**
      * Вход под пользователем
-     * @param userId
+     * @param {int} userId
      */
     loginUser: function(userId) {
 
         CoreUI.alert.create({
-            type          : 'warning',
-            title         : Core._('Войти под выбранным пользователем?'),
-            btnRejectText : Core._("Отмена"),
-            btnAcceptText : Core._("Да"),
-            btnAcceptColor: "#F57C00",
-            btnAcceptEvent: function () {
-                Core.menu.preloader.show();
+            type: 'warning',
+            title: Core._('Войти под выбранным пользователем?'),
+            buttons : [
+                { text: Core._("Отмена") },
+                {
+                    text: Core._("Да"),
+                    type: 'warning',
+                    click: function () {
+                        Core.menu.preloader.show();
 
-                $.ajax({
-                    url      : 'core3/mod/admin/users/handler/login_user',
-                    method   : 'post',
-                    dataType : 'json',
-                    data: {
-                        user_id: userId
-                    },
-                    success  : function (response) {
-                        if (response.status !== 'success') {
-                            CoreUI.alert.danger(response.error_message || Core._("Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз."));
+                        $.ajax({
+                            url      : 'core3/mod/admin/users/handler/login_user',
+                            method   : 'post',
+                            dataType : 'json',
+                            data: {
+                                user_id: userId
+                            },
+                            success  : function (response) {
+                                if (response.status !== 'success') {
+                                    CoreUI.alert.danger(response.error_message || Core._("Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз."));
 
-                        } else {
-                            Core.menu.load("#/");
-                        }
-                    },
-                    error: function (response) {
-                        CoreUI.notice.danger(Core._("Ошибка. Попробуйте обновить страницу и выполните это действие еще раз."));
-                    },
-                    complete : function () {
-                        Core.menu.preloader.hide();
+                                } else {
+                                    Core.menu.load("#/");
+                                }
+                            },
+                            error: function (response) {
+                                CoreUI.notice.danger(Core._("Ошибка. Попробуйте обновить страницу и выполните это действие еще раз."));
+                            },
+                            complete : function () {
+                                Core.menu.preloader.hide();
+                            }
+                        });
                     }
-                });
-            }
+                },
+            ]
         });
     }
 }
