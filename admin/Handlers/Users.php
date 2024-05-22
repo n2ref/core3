@@ -40,23 +40,27 @@ class Users extends Handler {
         }
 
         $fields = [
-            'email'              => 'email: Email',
-            'role_id'            => 'req,int(1-): Роль',
-            'pass'               => 'string(4-): Пароль',
-            'fname'              => 'string(0-255): Имя',
-            'lname'              => 'string(0-255): Фамилия',
-            'mname'              => 'string(0-255): Отчество',
-            'is_admin_sw'        => 'string(Y|N): Администратор безопасности',
-            'is_active_sw'       => 'string(Y|N): Активен',
+            'email'        => 'email: Email',
+            'role_id'      => 'req,int(1-): Роль',
+            'pass'         => 'string(4-): Пароль',
+            'fname'        => 'string(0-255): Имя',
+            'lname'        => 'string(0-255): Фамилия',
+            'mname'        => 'string(0-255): Отчество',
+            'is_admin_sw'  => 'string(Y|N): Администратор безопасности',
+            'is_active_sw' => 'string(Y|N): Активен',
         ];
 
-        $controls = $request->getFormContent()['control'] ?? [];
+        $controls = $request->getFormContent() ?? [];
 
         if ( ! $user_id) {
             $fields['login'] = 'req,string(1-255),chars(alphanumeric|_|\\): Логин';
 
             if (empty($this->config?->system?->ldap?->active)) {
                 $fields['pass'] = 'req,string(4-): Пароль';
+            }
+        } else {
+            if (isset($controls['login'])) {
+                unset($controls['login']);
             }
         }
 

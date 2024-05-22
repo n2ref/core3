@@ -42,6 +42,7 @@
 
     "n2ref/coreui-panel": "1.0.3",
     "n2ref/coreui-table": "dev-main",
+    "n2ref/coreui-form": "dev-main",
     "n2ref/coreui-tabs": "v1.0.0",
     "n2ref/coreui-info": "v1.0.0",
     "n2ref/coreui-layout": "v1.0.1",

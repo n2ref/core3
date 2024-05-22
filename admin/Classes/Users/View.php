@@ -1,6 +1,7 @@
 <?php
 namespace Core3\Mod\Admin\Classes\Users;
 use Core3\Classes\Common;
+use CoreUI\Form;
 use CoreUI\Table;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 
@@ -106,52 +107,54 @@ class View extends Common {
 
         $control = $this->modAdmin->tableControls->createRow($this->modAdmin->tableUsers->getTable(), $user->id);
 
-        $form = [
-            'component'  => 'coreui.form',
-            'validate'   => true,
-            'labelWidth' => 225,
-            'send'       => [
-                'url'    => "/core3/mod/admin/users/handler/save?id={$user->id}&v={$control->version}",
-                'method' => 'put',
-                'format' => 'form',
-            ],
-            'successLoadUrl' => '#/admin/users',
-            'onSubmitSuccess' => "CoreUI.notice.info('Сохранено')",
-            'validResponse' => [
-                'headers' => [
-                    'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ]
-                ],
-                'dataType' => [ 'json' ],
-            ],
-            'record' => [
-                'login'                 => $user->login,
-                'control[email]'        => $user->email,
-                'control[pass]'         => '***',
-                'control[role_id]'      => $user->role_id,
-                'control[fname]'        => $user->fname,
-                'control[lname]'        => $user->lname,
-                'control[mname]'        => $user->mname,
-                'control[is_admin_sw]'  => $user->is_admin_sw,
-                'control[is_active_sw]' => $user->is_active_sw,
-            ],
-            'fields' => [
-                [ 'type' => 'text',           'name' => 'login',                 'label' => 'Логин',                      'width' => 200, 'readonly' => true ],
-                [ 'type' => 'email',          'name' => 'control[email]',        'label' => 'Email',                      'width' => 200 ],
-                [ 'type' => 'passwordRepeat', 'name' => 'control[pass]',         'label' => 'Пароль',                     'width' => 200, 'required' => true ],
-                [ 'type' => 'select',         'name' => 'control[role_id]',      'label' => 'Роль',                       'width' => 200, 'required' => true, 'options' => $roles ],
-                [ 'type' => 'text',           'name' => 'control[lname]',        'label' => 'Фамилия',                    'width' => 200 ],
-                [ 'type' => 'text',           'name' => 'control[fname]',        'label' => 'Имя',                        'width' => 200 ],
-                [ 'type' => 'text',           'name' => 'control[mname]',        'label' => 'Отчество',                   'width' => 200 ],
-                [ 'type' => 'switch',         'name' => 'control[is_admin_sw]',  'label' => 'Администратор безопасности', 'valueY' => 'Y', 'valueN' => 'N',  'description' => 'полный доступ' ],
-                [ 'type' => 'switch',         'name' => 'control[is_active_sw]', 'label' => 'Активен',                    'valueY' => 'Y', 'valueN' => 'N', ],
-            ],
-            'controls' => [
-                [ 'type' => "submit", 'content' => "Сохранить", 'attr' => [ 'class' => 'btn btn-primary' ] ],
-                [ 'type' => "link",   'content' => "Отмена", 'href' => $base_url, 'attr' => [ 'class' => 'btn btn-secondary' ] ],
-            ],
+        $form = new Form('user');
+        $form->setValidate(true);
+        $form->setWidthLabel(225);
+        $form->setSend("/core3/mod/admin/users/handler/save?id={$user->id}&v={$control->version}", 'put');
+        $form->setSuccessLoadUrl('#/admin/users');
+        $form->setValidResponseHeaders([ 'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ] ]);
+        $form->setValidResponseType([ 'json' ]);
+
+        $form->setRecord([
+            'login'        => $user->login,
+            'email'        => $user->email,
+            'pass'         => '***',
+            'role_id'      => $user->role_id,
+            'fname'        => $user->fname,
+            'lname'        => $user->lname,
+            'mname'        => $user->mname,
+            'avatar_type'  => 'generate',
+            'avatar'       => [['name' => '111.jpg', 'urlPreview' => 'https://www.gravatar.com/avatar/9dd10adaa1333208b4cf36935c73bbd7?&s=32&d=mm']],
+            'is_admin_sw'  => $user->is_admin_sw,
+            'is_active_sw' => $user->is_active_sw,
+        ]);
+
+        $avatar_types = [
+            ['value' => 'generate', 'text' => 'Генерация аватара', 'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
+            ['value' => 'upload',   'text' => 'Загрузить',         'onchange' => "CoreUI.form.get('user').getField('avatar').show();" ],
+            ['value' => 'none',     'text' => 'Без аватара',       'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
         ];
 
-        return $form;
+        $form->addFields([
+            (new Form\Field\Text('login',             $this->_('Логин')))->setWidth(200)->setReadonly(true),
+            (new Form\Field\Email('email',            $this->_('Email')))->setWidth(200),
+            (new Form\Field\PasswordRepeat('pass',    $this->_('Пароль')))->setWidth(200)->setRequired(true),
+            (new Form\Field\Select('role_id',         $this->_('Роль')))->setWidth(200)->setRequired(true)->setOptions($roles),
+            (new Form\Field\Text('lname',             $this->_('Фамилия')))->setWidth(200),
+            (new Form\Field\Text('fname',             $this->_('Имя')))->setWidth(200),
+            (new Form\Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
+            (new Form\Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
+            (new Form\Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setUrl('/core3/mod/admin/users/handler/avatar')->setShow(false),
+            (new Form\Field\Toggle('is_admin_sw',     $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
+            (new Form\Field\Toggle('is_active_sw',    $this->_('Активен'))),
+        ]);
+
+        $form->addControls([
+            (new Form\Control\Submit($this->_('Сохранить'))),
+            (new Form\Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+        ]);
+
+        return $form->toArray();
     }
 
 

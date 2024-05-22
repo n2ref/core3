@@ -59,7 +59,7 @@ class Handler extends Common {
         $errors_result = [];
 
         foreach ($errors as $error) {
-            $errors_result[] = "- {$error}";
+            $errors_result[] = count($errors) > 1 ? "- {$error}" : $error;
         }
 
         return Response::errorJson(implode("<br>", $errors_result), $error_code, $http_code);

@@ -144,7 +144,7 @@ CREATE TABLE `core_users_files` (
     `field_name` varchar(255) DEFAULT NULL,
     `thumb` longblob,
     `content` longblob,
-    `date_last_activity` timestamp NULL DEFAULT NULL,
+    `date_modify` timestamp NULL DEFAULT NULL,
     `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     KEY `user_id` (`user_id`),
