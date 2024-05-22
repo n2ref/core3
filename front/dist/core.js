@@ -6505,8 +6505,8 @@
       var titles = getModuleTitles(moduleName, sectionName);
       $('header .mdc-top-app-bar__title').text(titles[0] || '');
       $('header .mdc-top-app-bar__subtitle').text(titles[1] || '');
-      var title = titles.hasOwnProperty(0) ? (titles.hasOwnProperty(1) ? ' - ' + titles[1] : '') + titles[0] : '';
-      title = (title ? ' - ' : '') + coreMenu._system.name;
+      var title = titles.hasOwnProperty(0) ? (titles.hasOwnProperty(1) ? titles[1] + ' - ' : '') + titles[0] : '';
+      title = (title ? title + ' - ' : '') + coreMenu._system.name;
       $('head title').text(title);
     },
     /**

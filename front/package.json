@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": "gulp build_tpl && gulp build_js_coreui && gulp build_js && gulp build_js_min && gulp build_js_all_min && gulp build_css_min && npm run test_js",
+    "build_all": "gulp build_tpl && gulp build_js_coreui && gulp build_js && gulp build_js_min && gulp build_js_all_min && gulp build_css_min && npm run test_js",
 
     "build_tpl": "gulp build_tpl",
     "build_js": "gulp build_js && gulp build_js_all_min",
@@ -35,8 +35,8 @@
     "coreui-notice": "1.1.1",
     "coreui-tabs": "1.0.2",
     "coreui-layout": "1.0.9",
-    "coreui-form": "1.0.26",
-    "coreui-table": "1.1.24",
+    "coreui-form": "1.0.31",
+    "coreui-table": "1.1.27",
     "coreui-chart": "1.0.9",
     "coreui-breadcrumb": "1.0.3"
   },
