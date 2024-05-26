@@ -3366,7 +3366,7 @@
   tpl['menu/loader.html'] = '<div id="loader"> <div role="progressbar" class="mdc-linear-progress loader-progress" aria-label="Example Progress Bar" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"> <div class="mdc-linear-progress__buffer"> <div class="mdc-linear-progress__buffer-bar"></div> <div class="mdc-linear-progress__buffer-dots"></div> </div> <div class="mdc-linear-progress__bar mdc-linear-progress__primary-bar"> <span class="mdc-linear-progress__bar-inner"></span> </div> <div class="mdc-linear-progress__bar mdc-linear-progress__secondary-bar"> <span class="mdc-linear-progress__bar-inner"></span> </div> </div> <div class="loader-block"></div> </div>';
   tpl['menu/main.html'] = '<header class="mdc-top-app-bar mdc-top-app-bar--fixed app-bar"> <div class="mdc-top-app-bar__row"> <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start"> <button class="mdc-ripple-surface open-menu"><i class="fa-solid fa-bars"></i></button> <div class="header-title-container"> <span class="mdc-top-app-bar__title"></span> <span class="mdc-top-app-bar__subtitle"></span> </div> </section> <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-end" role="toolbar"></section> </div> </header> <aside class="menu-drawer"> <div class="menu-drawer__content"> <div class="menu-drawer__header"> <a class="module-home" href="#/"> <span class="fa-solid fa-house"></span> <h3 class="system-title"></h3> </a> </div> <ul class="menu-list level-1"></ul> </div> </aside> <div class="menu-drawer-scrim"></div> <div class="menu-drawer-swipe"></div> <div class="menu-drawer-app"> <main class="main-content"> <div class="main-wrapper"></div> </main> </div>';
   tpl['menu/module.html'] = '<li class="menu-list-item core-module core-module-<%= module.name %> <% if (module.sections && module.sections.length > 0) { %>menu-item-nested<% } %>"> <div class="item-control"> <a href="#/<%= module.name %>/<%= module.index %>" class="mdc-ripple-surface" data-module="<%= module.name %>" data-section="<%= module.index %>"> <% if (module.icon) { %> <i class="<%= module.icon %>"></i> <% } else { %> <span class="module-icon-letter"><%= module.title.trim().substring(0, 1) %></span> <% } %> <span class="menu-list-item__text"><%= module.title %></span> </a> <% if (module.sections && module.sections.length > 0) { %> <button class="menu-icon-button mdc-ripple-surface"><i class="fa-solid fa-sort-down"></i></button> <% } %> </div> <ul class="menu-list level-2"> <li class="menu-list-item core-module-section-index"> <a href="#/<%= module.name %>/<%= module.index %>" class="mdc-ripple-surface" data-module="<%= module.name %>" data-section="<%= module.index %>"> <%= module.title %> </a> </li> <% if (module.sections && module.sections.length > 0) { %> <% module.sections.forEach(function(section) { %> <li class="menu-list-item core-module-section core-module-<%= module.name %>-<%= section.name %>"> <a href="#/<%= module.name %>/<%= section.name %>" class="mdc-ripple-surface" data-module="<%= module.name %>" data-section="<%= section.name %>"> <span class="menu-list-item__text"><%= section.title %></span> </a> </li> <% }); %> <% } %> </ul> </li>';
-  tpl['menu/navbar.html'] = '<ul class="navbar-nav"> <li class="nav-item dropdown cabinet-user"> <button class="btn btn-link text-dark dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown"> <% if (user.avatar) { %> <img src="<%= user.avatar %>" alt="avatar" class="rounded-circle" loading="lazy"/> <% } else { %> <i class="fa-solid fa-circle-user"></i> <% } %> </button> <ul class="dropdown-menu shadow"> <li class="cabinet-user-info"> <b class="cabinet-user-name"><%= user.name %></b><br> <span class="cabinet-user-login"><%= user.login %></span> </li> <li> <hr class="dropdown-divider"/> </li> <li> <a class="dropdown-item menu-logout" href="#"> <i class="fa-solid fa-arrow-right-from-bracket"></i> Выйти </a> </li> </ul> </li> </ul>';
+  tpl['menu/navbar.html'] = '<ul class="navbar-nav"> <li class="nav-item dropdown cabinet-user"> <button class="btn btn-link text-dark dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown"> <% if (user.avatar) { %> <img src="<%= user.avatar %>" alt="avatar" class="rounded-circle border" loading="lazy"/> <% } else { %> <i class="fa-solid fa-circle-user"></i> <% } %> </button> <ul class="dropdown-menu shadow"> <li class="cabinet-user-info"> <b class="cabinet-user-name"><%= user.name %></b><br> <span class="cabinet-user-login"><%= user.login %></span> </li> <li> <hr class="dropdown-divider"/> </li> <li> <a class="dropdown-item menu-logout" href="#"> <i class="fa-solid fa-arrow-right-from-bracket"></i> Выйти </a> </li> </ul> </li> </ul>';
   tpl['menu/preloader.html'] = '<div id="preloader"> <div class="loading-lock"></div> <div class="loading-block"> <div class="spinner-border text-secondary"> <span class="visually-hidden"></span> </div> <div class="loading-text"><%= text %></div> </div> </div>';
 
   function commonjsRequire(path) {
@@ -6736,6 +6736,17 @@
     if ("onhashchange" in window) {
       window.onhashchange = coreMain.hashChange;
     }
+
+    /**
+     * Замена alert
+     * @param message
+     */
+    alert = function alert(message) {
+      CoreUI.alert.create({
+        type: 'warning',
+        message: message
+      });
+    };
   });
 
   /*

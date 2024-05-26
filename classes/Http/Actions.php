@@ -5,6 +5,8 @@ use Core3\Classes\Validator;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
+use Gumlet\ImageResize;
+use Gumlet\ImageResizeException;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\Sql\Expression;
 use Psr\Container\ContainerExceptionInterface;
@@ -312,12 +314,43 @@ class Actions extends Common {
      * @return array
      * @throws Exception
      */
-    public function restorePassCheck(Request $request): array {
+    public function restorePassCheck(Request $request): Response {
 
         $params = $request->getBody('json');
 
         // TODO Доделать
         return [];
+    }
+
+
+    /**
+     * Получение файла аватара
+     * @param Request $request
+     * @return Response
+     * @throws HttpException
+     * @throws ImageResizeException
+     * @throws Exception
+     */
+    public function getUserAvatar(Request $request): Response {
+
+        $user_id = $request->getPathParam('id');
+
+        if ( ! $user_id) {
+            throw new HttpException(400, 'empty_user_id', $this->_('Не указан id пользователя'));
+        }
+
+        $user = $this->modAdmin->tableUsers->getRowById($user_id);
+
+        if ( ! $user) {
+            throw new HttpException(400, 'user_not_found', $this->_('Указанный пользователь не найден'));
+        }
+
+        if ($user->avatar_type === 'none') {
+            return $this->getAvatarDefault();
+
+        } else {
+            return $this->getAvatarUser($user_id);
+        }
     }
 
 
@@ -352,12 +385,14 @@ class Actions extends Common {
             ];
         }
 
+        $user_id = $this->auth->getUserId();
+
         return [
             'user'    => [
-                'id'     => $this->auth->getUserId(),
+                'id'     => $user_id,
                 'name'   => $this->auth->getUserName(),
                 'login'  => $this->auth->getUserLogin(),
-                'avatar' => 'https://www.gravatar.com/avatar/' . md5($this->auth->getUserEmail()) . '?&s=32&d=mm',
+                'avatar' => "core3/user/{$user_id}/avatar",
             ],
             'system'  => [
                 'name' => $this->config?->system?->name ?: '',
@@ -563,6 +598,119 @@ class Actions extends Common {
         }
 
         return $modules;
+    }
+
+
+    /**
+     * @return Response
+     * @throws HttpException
+     * @throws Exception
+     */
+    private function getAvatarDefault(): Response {
+
+        $file_path = DOC_ROOT. '/core3/front/src/img/default.png';
+
+        if ( ! is_file($file_path)) {
+            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
+        }
+
+        $file_content = file_get_contents($file_path);
+        $file_type    = mime_content_type($file_path);
+        $file_hash    = md5($file_content);
+
+        if ( ! $file_type || ! preg_match('~image/.*~', $file_type)) {
+            throw new HttpException(404, 'file_is_not_image', $this->_('Указанный файл не является картинкой'));
+        }
+
+        $response = new Response();
+        $response->setHeader('Content-Type',        $file_type);
+        $response->setHeader('Content-Length',      strlen($file_content));
+        $response->setHeader('Content-Disposition', "filename=\"avatar.png\"");
+
+        if ($file_hash) {
+            $etagHeader = (isset($_SERVER['HTTP_IF_NONE_MATCH']) ? trim($_SERVER['HTTP_IF_NONE_MATCH']) : false);
+
+            $response->setHeader('Etag',          $file_hash);
+            $response->setHeader('Cache-Control', 'public');
+
+            //check if page has changed. If not, send 304 and exit
+            if ($etagHeader == $file_hash) {
+                $response->setHttpCode(304);
+                return $response;
+            }
+        }
+
+        $response->setContent($file_content);
+
+        return $response;
+    }
+
+
+    /**
+     * @param int $user_id
+     * @return Response
+     * @throws Exception
+     * @throws HttpException
+     * @throws ImageResizeException
+     */
+    private function getAvatarUser(int $user_id): Response {
+
+        $file = $this->modAdmin->tableUsersFiles->getRowsByUser($user_id, 'avatar', 1);
+
+        if ( ! $file) {
+            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
+        }
+
+        if ( ! $file->content) {
+            throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
+        }
+
+        if ( ! $file->thumb && ( ! $file->file_type || ! preg_match('~image/.*~', $file->file_type))) {
+            throw new HttpException(404, 'file_is_not_image', $this->_('Указанный файл не является картинкой'));
+        }
+
+        $response = new Response();
+
+        if ($file->file_type) {
+            $response->setHeader('Content-Type', $file->file_type);
+        }
+
+        if ($file->file_name) {
+            $filename_encode = rawurlencode($file->file_name);
+            $response->setHeader('Content-Disposition', "filename=\"{$file->file_name}\"; filename*=utf-8''{$filename_encode}\"");
+        }
+
+
+        if ($file->file_hash) {
+            $etagHeader = (isset($_SERVER['HTTP_IF_NONE_MATCH']) ? trim($_SERVER['HTTP_IF_NONE_MATCH']) : false);
+
+            $response->setHeader('Etag',          $file->file_hash);
+            $response->setHeader('Cache-Control', 'public');
+
+            //check if page has changed. If not, send 304 and exit
+            if ($etagHeader == $file->file_hash) {
+                $response->setHttpCode(304);
+                return $response;
+            }
+        }
+
+        if ( ! $file->thumb) {
+            $image = ImageResize::createFromString($file->content);
+            $image->resizeToBestFit(80, 80);
+
+            // $weight = $image->getDestWidth();
+            // $height = $image->getDestHeight();
+            // $size   = min($weight, $height);
+            // $image->crop($size, $size);
+
+            $file->thumb = $image->getImageAsString(IMAGETYPE_PNG);
+            $file->save();
+        }
+
+        $response->setHeader('Content-Length', strlen($file->thumb));
+        $response->setContent($file->thumb);
+
+        return $response;
     }
 
 

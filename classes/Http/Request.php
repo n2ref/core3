@@ -354,7 +354,7 @@ class Request {
                     $name_part = &$name_structure;
 
                     foreach ($path as $key) {
-                        if ( ! empty($key)) {
+                        if ($key !== '') {
                             if ( ! is_array($name_part)) {
                                 $name_part = array();
                             }
@@ -364,9 +364,9 @@ class Request {
                     $name_part = $value;
 
                     if ($is_file) {
-                        $files = array_merge_recursive($files, $name_structure);
+                        $files = $this->array_merge_recursive_distinct($files, $name_structure);
                     } else {
-                        $data = array_merge_recursive($data, $name_structure);
+                        $data = $this->array_merge_recursive_distinct($data, $name_structure);
                     }
                 }
             }
@@ -401,5 +401,27 @@ class Request {
         }
 
         return $path;
+    }
+
+
+    /**
+     * Объединение массивов без дублирования
+     * @param array $array1
+     * @param array $array2
+     * @return array
+     */
+    private function array_merge_recursive_distinct(array &$array1, array &$array2): array {
+
+        $merged = $array1;
+
+        foreach ($array2 as $key => &$value) {
+            if (is_array($value) && isset ($merged[$key]) && is_array($merged[$key])) {
+                $merged[$key] = $this->array_merge_recursive_distinct($merged[$key], $value);
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged;
     }
 }

@@ -111,22 +111,22 @@ CREATE TABLE `core_settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `core_users` (
-    `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-    `role_id` int(11) unsigned DEFAULT NULL,
+    `id` int unsigned NOT NULL AUTO_INCREMENT,
+    `role_id` int unsigned DEFAULT NULL,
     `login` varchar(255) NOT NULL,
     `email` varchar(255) DEFAULT NULL,
     `pass` varchar(36) DEFAULT NULL,
     `pass_reset_token` varchar(255) DEFAULT NULL,
     `pass_reset_date` timestamp NULL DEFAULT NULL,
+    `name` varchar(255) DEFAULT NULL,
     `fname` varchar(255) DEFAULT '',
     `lname` varchar(255) DEFAULT '',
     `mname` varchar(255) DEFAULT '',
-    `certificate` text,
     `is_active_sw` enum('Y','N') NOT NULL DEFAULT 'Y',
     `is_admin_sw` enum('Y','N') NOT NULL DEFAULT 'N',
-    `last_user_id` int(11) unsigned DEFAULT NULL,
+    `avatar_type` enum('none','generate','upload') NOT NULL DEFAULT 'none',
     `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-    `date_last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `date_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     UNIQUE KEY `login` (`login`),
     UNIQUE KEY `email` (`email`),
@@ -134,9 +134,21 @@ CREATE TABLE `core_users` (
     CONSTRAINT `fk1_core_users` FOREIGN KEY (`role_id`) REFERENCES `core_roles` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE `core_users_files` (
+CREATE TABLE `core_users_data` (
     `id` int unsigned NOT NULL AUTO_INCREMENT,
     `user_id` int unsigned NOT NULL,
+    `name` varchar(255) NOT NULL,
+    `value` text,
+    `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `date_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `name` (`name`),
+    KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `core_users_files` (
+    `id` int unsigned NOT NULL AUTO_INCREMENT,
+    `ref_id` int unsigned NOT NULL,
     `file_name` varchar(255) NOT NULL,
     `file_size` int unsigned NOT NULL,
     `file_hash` varchar(128) NOT NULL,
@@ -144,11 +156,13 @@ CREATE TABLE `core_users_files` (
     `field_name` varchar(255) DEFAULT NULL,
     `thumb` longblob,
     `content` longblob,
-    `date_modify` timestamp NULL DEFAULT NULL,
+    `date_modify` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    KEY `user_id` (`user_id`),
-    CONSTRAINT `fk1_core_users_files` FOREIGN KEY (`user_id`) REFERENCES `core_users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+    KEY `field_name` (`field_name`),
+    KEY `ref_id` (`ref_id`),
+    KEY `file_hash` (`file_hash`),
+    CONSTRAINT `fk1_core_users_files` FOREIGN KEY (`ref_id`) REFERENCES `core_users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `core_users_sessions` (

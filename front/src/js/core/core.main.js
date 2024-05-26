@@ -138,6 +138,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if ("onhashchange" in window) {
         window.onhashchange = coreMain.hashChange;
     }
+
+
+    /**
+     * Замена alert
+     * @param message
+     */
+    alert = function (message) {
+        CoreUI.alert.create({ type: 'warning', message: message });
+    }
 });
 
 

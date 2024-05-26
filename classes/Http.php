@@ -30,6 +30,7 @@ class Http extends Common {
         $router->addPath('/core3/conf')->get('getConf');
         $router->addPath('/core3/cabinet')->get('getCabinet');
         $router->addPath('/core3/home')->get('getHome');
+        $router->addPath('/core3/user/{id}/avatar', ['[0-9_]+'])->get('getUserAvatar');
         $router->addPath('/core3/mod/{module}/{section}/handler/{method}', ['[a-z0-9_]+', '[a-z0-9_]+', '[a-z0-9_/]+'])->any('getModHandler');
         $router->addPath('/core3/mod/{module}/{section}{mod_query}', ['[a-z0-9_]+', '[a-z0-9_]+', '(?:/[a-z0-9_/]+|)'])->any('getModSection');
 

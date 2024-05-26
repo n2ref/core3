@@ -15,6 +15,8 @@ require_once 'Classes/autoload.php';
  * @property Tables\ModulesSections $tableModulesSections
  * @property Tables\Roles           $tableRoles
  * @property Tables\Users           $tableUsers
+ * @property Tables\UsersData       $tableUsersData
+ * @property Tables\UsersFiles      $tableUsersFiles
  * @property Tables\UsersSession    $tableUsersSession
  * @property Tables\Controls        $tableControls
  * @property Model\Users            $modelUsers
@@ -198,7 +200,7 @@ class Controller extends Common {
             $this->log->error('admin_users', $e);
             $panel->setContent(
                 \CoreUI\Info::danger(
-                    $this->config?->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
+                    $this->config?->system->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
                     $this->_('Ошибка')
                 )
             );
@@ -252,7 +254,8 @@ class Controller extends Common {
                     }
 
                     $name = trim("{$user->lname} {$user->fname} {$user->mname}");
-                    $panel->setTitle($name ?: $user->login, $this->_('Редактирование пользователя'));
+                    $avatar = "<img src=\"core3/user/{$user->id}/avatar\" style=\"width: 32px;height: 32px\" class=\"rounded-circle border border-secondary-subtle\"> ";
+                    $panel->setTitle($avatar . ($name ?: $user->login), $this->_('Редактирование пользователя'));
 
                     $content[] = $view->getForm($base_url, $user);
 
@@ -277,7 +280,7 @@ class Controller extends Common {
             $this->log->error('admin_users', $e);
             $panel->setContent(
                 \CoreUI\Info::danger(
-                    $this->config?->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
+                    $this->config?->system->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
                     $this->_('Ошибка')
                 )
             );

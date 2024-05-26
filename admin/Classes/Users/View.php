@@ -43,7 +43,7 @@ class View extends Common {
 
         $table->addHeaderOut()
             ->left([
-                (new Table\Filter\Text('login'))->setAttributes(['placeholder' => $this->_('Логин / ФИО / Email')])->setWidth(200),
+                (new Table\Filter\Text('login'))->setAttributes(['placeholder' => $this->_('Логин / Имя / Email')])->setWidth(200),
                 (new Table\Filter\Select('role', $this->_('Роль')))->setWidth(200)->setOptions($roles),
                 (new Table\Control\FilterClear()),
             ])
@@ -58,7 +58,6 @@ class View extends Common {
                 (new Table\Control\Total)
             ])
             ->right([
-                (new Table\Control\PageJump()),
                 (new Table\Control\PageSize([ 25, 50, 100, 1000 ]))
             ]);
 
@@ -73,7 +72,7 @@ class View extends Common {
             (new Table\Column\Toggle('is_active_sw',    $this->_('Активность'),             45))->setOnChange("Core.ui.table.get('core_users').switch('{$switch_url}', checked, id)")->setShowLabel(false),
             (new Table\Column\Html('avatar',            $this->_('Аватар'),                 40))->setSort(true)->setShowLabel(false),
             (new Table\Column\Link('login',             $this->_('Логин')))->setMinWidth(100)->setSort(true),
-            (new Table\Column\Text('name',              $this->_('ФИО')))->setNoWrap(true)->setMinWidth(150)->setSort(true),
+            (new Table\Column\Text('name',              $this->_('Имя')))->setNoWrap(true)->setMinWidth(150)->setSort(true),
             (new Table\Column\Text('email',             $this->_('Email'),                  200))->setSort(true),
             (new Table\Column\Text('role_title',        $this->_('Роль'),                   200))->setSort(true),
             (new Table\Column\Datetime('date_activity', $this->_('Последняя активность'),   185))->setMinWidth(185)->setSort(true),
@@ -115,6 +114,22 @@ class View extends Common {
         $form->setValidResponseHeaders([ 'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ] ]);
         $form->setValidResponseType([ 'json' ]);
 
+        $avatar = null;
+
+        if ($user->avatar_type == 'upload') {
+            $avatar_row = $this->modAdmin->tableUsersFiles->getRowsByUser($user->id, 'avatar', 1);
+
+            if ($avatar_row) {
+                $avatar = [[
+                   'id'          => $avatar_row->id,
+                   'name'        => $avatar_row->file_name,
+                   'size'        => $avatar_row->file_size,
+                   'urlPreview'  => "/core3/mod/admin/users/handler/get_avatar_preview?id={$avatar_row->id}",
+                   'urlDownload' => "/core3/mod/admin/users/handler/get_avatar_download?id={$avatar_row->id}",
+               ]];
+            }
+        }
+
         $form->setRecord([
             'login'        => $user->login,
             'email'        => $user->email,
@@ -123,8 +138,8 @@ class View extends Common {
             'fname'        => $user->fname,
             'lname'        => $user->lname,
             'mname'        => $user->mname,
-            'avatar_type'  => 'generate',
-            'avatar'       => [['name' => '111.jpg', 'urlPreview' => 'https://www.gravatar.com/avatar/9dd10adaa1333208b4cf36935c73bbd7?&s=32&d=mm']],
+            'avatar_type'  => $user->avatar_type,
+            'avatar'       => $avatar,
             'is_admin_sw'  => $user->is_admin_sw,
             'is_active_sw' => $user->is_active_sw,
         ]);
@@ -138,13 +153,13 @@ class View extends Common {
         $form->addFields([
             (new Form\Field\Text('login',             $this->_('Логин')))->setWidth(200)->setReadonly(true),
             (new Form\Field\Email('email',            $this->_('Email')))->setWidth(200),
-            (new Form\Field\PasswordRepeat('pass',    $this->_('Пароль')))->setWidth(200)->setRequired(true),
+            (new Form\Field\PasswordRepeat('pass',    $this->_('Пароль')))->setWidth(200),
             (new Form\Field\Select('role_id',         $this->_('Роль')))->setWidth(200)->setRequired(true)->setOptions($roles),
             (new Form\Field\Text('lname',             $this->_('Фамилия')))->setWidth(200),
             (new Form\Field\Text('fname',             $this->_('Имя')))->setWidth(200),
             (new Form\Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
             (new Form\Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
-            (new Form\Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setUrl('/core3/mod/admin/users/handler/avatar')->setShow(false),
+            (new Form\Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setUrl('/core3/mod/admin/users/handler/upload_avatar')->setShow($user->avatar_type == 'upload'),
             (new Form\Field\Toggle('is_admin_sw',     $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
             (new Form\Field\Toggle('is_active_sw',    $this->_('Активен'))),
         ]);
@@ -170,56 +185,59 @@ class View extends Common {
         ];
 
         foreach ($roles_rows as $role) {
-            $roles[] = [
-                'value' => $role->id,
-                'text'  => $role->title
-            ];
+            $roles[] = [ 'value' => $role->id, 'text' => $role->title ];
         }
 
-        $form = [
-            'component'  => 'coreui.form',
-            'validate'   => true,
-            'labelWidth' => 225,
-            'send'       => [
-                'url'    => "/core3/mod/admin/users/handler/save",
-                'method' => 'post',
-            ],
-            'validResponse' => [
-                'headers' => [
-                    'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ]
-                ],
-                'dataType' => [ 'json' ],
-            ],
-            'successLoadUrl' => '#/admin/users',
-            'onSubmitSuccess' => "CoreUI.notice.info('Сохранено')",
-            'record' => [
-                'control[login]'              => '',
-                'control[email]'              => '',
-                'control[pass]'               => "",
-                'control[role_id]'            => "",
-                'control[fname]'              => "",
-                'control[lname]'              => "",
-                'control[mname]'              => "",
-                'control[is_admin_sw]'        => "N",
-                'control[is_active_sw]'       => "Y",
-            ],
-            'fields' => [
-                [ 'type' => 'text',           'name' => 'control[login]',              'label' => 'Логин',                         'width' => 200, 'required' => true ],
-                [ 'type' => 'email',          'name' => 'control[email]',              'label' => 'Email',                         'width' => 200 ],
-                [ 'type' => 'passwordRepeat', 'name' => 'control[pass]',               'label' => 'Пароль',                        'width' => 200, 'required' => true ],
-                [ 'type' => 'select',         'name' => 'control[role_id]',            'label' => 'Роль',                          'width' => 200, 'required' => true, 'options' => $roles ],
-                [ 'type' => 'text',           'name' => 'control[lname]',              'label' => 'Фамилия',                       'width' => 200 ],
-                [ 'type' => 'text',           'name' => 'control[fname]',              'label' => 'Имя',                           'width' => 200 ],
-                [ 'type' => 'text',           'name' => 'control[mname]',              'label' => 'Отчество',                      'width' => 200 ],
-                [ 'type' => 'switch',         'name' => 'control[is_admin_sw]',        'label' => 'Администратор безопасности',    'description' => 'полный доступ' ],
-                [ 'type' => 'switch',         'name' => 'control[is_active_sw]',       'label' => 'Активен',                       ],
-            ],
-            'controls' => [
-                [ 'type' => "submit", 'content' => "Сохранить", 'attr' => [ 'class' => 'btn btn-primary' ] ],
-                [ 'type' => "link",   'content' => "Отмена", 'href' => $base_url, 'attr' => [ 'class' => 'btn btn-secondary' ] ],
-            ],
+
+
+        $form = new Form('user');
+        $form->setValidate(true);
+        $form->setWidthLabel(225);
+        $form->setSend("/core3/mod/admin/users/handler/save", 'post');
+        $form->setSuccessLoadUrl('#/admin/users');
+        $form->setValidResponseHeaders([ 'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ] ]);
+        $form->setValidResponseType([ 'json' ]);
+        $form->setOnSubmitSuccess("CoreUI.notice.info('Сохранено')");
+
+        $form->setRecord([
+            'login'        => '',
+            'email'        => '',
+            'pass'         => '',
+            'role_id'      => '',
+            'fname'        => '',
+            'lname'        => '',
+            'mname'        => '',
+            'avatar_type'  => '',
+            'avatar'       => '',
+            'is_admin_sw'  => 'N',
+            'is_active_sw' => 'Y',
+        ]);
+
+        $avatar_types = [
+            ['value' => 'generate', 'text' => 'Генерация аватара', 'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
+            ['value' => 'upload',   'text' => 'Загрузить',         'onchange' => "CoreUI.form.get('user').getField('avatar').show();" ],
+            ['value' => '',         'text' => 'Без аватара',       'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
         ];
 
-        return $form;
+        $form->addFields([
+            (new Form\Field\Text('login',             $this->_('Логин')))->setWidth(200)->setRequired(true),
+            (new Form\Field\Email('email',            $this->_('Email')))->setWidth(200),
+            (new Form\Field\PasswordRepeat('pass',    $this->_('Пароль')))->setWidth(200)->setRequired(true),
+            (new Form\Field\Select('role_id',         $this->_('Роль')))->setWidth(200)->setRequired(true)->setOptions($roles),
+            (new Form\Field\Text('lname',             $this->_('Фамилия')))->setWidth(200),
+            (new Form\Field\Text('fname',             $this->_('Имя')))->setWidth(200),
+            (new Form\Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
+            (new Form\Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
+            (new Form\Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setUrl('/core3/mod/admin/users/handler/upload_avatar')->setShow(false),
+            (new Form\Field\Toggle('is_admin_sw',     $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
+            (new Form\Field\Toggle('is_active_sw',    $this->_('Активен'))),
+        ]);
+
+        $form->addControls([
+            (new Form\Control\Submit($this->_('Сохранить'))),
+            (new Form\Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+        ]);
+
+        return $form->toArray();
     }
 }

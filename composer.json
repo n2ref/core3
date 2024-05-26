@@ -48,6 +48,8 @@
     "n2ref/coreui-layout": "v1.0.1",
     "n2ref/coreui-breadcrumb": "v1.0.1",
 
+    "gumlet/php-image-resize": "2.0.4",
+    "jdenticon/jdenticon": "1.0.2",
     "lefuturiste/monolog-discord-handler": "0.4",
     "monolog/monolog": "3.6.0",
     "guzzlehttp/guzzle": "7.8.1",
