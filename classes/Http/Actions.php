@@ -550,7 +550,7 @@ class Actions extends Common {
         if ( ! is_callable([$handler, $method_name]) ||
              ! in_array($method_name, get_class_methods($handler))
         ) {
-            throw new HttpException(403, 'incorrect_handler_method', $this->_("Ошибка. Не найден метод обработчика %s!", [$method_name]));
+            throw new HttpException(403, 'incorrect_handler_method', $this->_("Ошибка. Не найден метод обработчика: %s", [$method_name]));
         }
 
         return $handler->$method_name($request);
@@ -618,7 +618,7 @@ class Actions extends Common {
         $file_type    = mime_content_type($file_path);
         $file_hash    = md5($file_content);
 
-        if ( ! $file_type || ! preg_match('~image/.*~', $file_type)) {
+        if ( ! $file_type || ! preg_match('~^image/.*~', $file_type)) {
             throw new HttpException(404, 'file_is_not_image', $this->_('Указанный файл не является картинкой'));
         }
 
@@ -665,7 +665,7 @@ class Actions extends Common {
             throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
         }
 
-        if ( ! $file->thumb && ( ! $file->file_type || ! preg_match('~image/.*~', $file->file_type))) {
+        if ( ! $file->thumb && ( ! $file->file_type || ! preg_match('~^image/.*~', $file->file_type))) {
             throw new HttpException(404, 'file_is_not_image', $this->_('Указанный файл не является картинкой'));
         }
 

@@ -4,7 +4,6 @@ use Core3\Classes\Db\Table;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Select;
-use Laminas\Db\Sql\Where;
 
 /**
  *

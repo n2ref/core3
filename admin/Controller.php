@@ -2,10 +2,7 @@
 namespace Core3\Mod\Admin;
 use \Core3\Classes\Common;
 use \Core3\Classes\Http\Request;
-use \Core3\Classes\Http\Router;
 use \Core3\Exceptions\AppException;
-use Core3\Exceptions\DbException;
-use Laminas\Cache\Exception\ExceptionInterface;
 
 require_once 'Classes/autoload.php';
 
@@ -216,7 +213,7 @@ class Controller extends Common {
      * Справочник пользователей системы
      * @param Request $request
      * @return array
-     * @throws \Exception
+     * @throws AppException
      */
     public function sectionUsers(Request $request): array {
 
@@ -277,10 +274,12 @@ class Controller extends Common {
             );
 
         } catch (\Exception $e) {
-            $this->log->error('admin_users', $e);
+            $this->log->error('Admin users', $e);
             $panel->setContent(
                 \CoreUI\Info::danger(
-                    $this->config?->system->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
+                    $this->config?->system->debug?->on
+                        ? $e->getMessage()
+                        : $this->_('Обновите страницу или попробуйте позже'),
                     $this->_('Ошибка')
                 )
             );
@@ -296,7 +295,7 @@ class Controller extends Common {
      * Конфигурация
      * @return string
      */
-    public function sectionSettings () {
+    public function sectionSettings (): string {
 
         ob_start();
         $url = "/admin/settings";

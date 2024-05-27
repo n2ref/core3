@@ -1,7 +1,5 @@
 <?php
 namespace Core3\Classes\Db;
-
-use Laminas\Db\ResultSet\ResultSet;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 use Laminas\Db\RowGateway\RowGateway;

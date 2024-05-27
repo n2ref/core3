@@ -1,8 +1,11 @@
 <?php
 namespace Core3\Mod\Admin\Classes\Users;
 use Core3\Classes\Common;
-use CoreUI\Form;
+use Core3\Classes\Form;
+use Core3\Exceptions\Exception;
 use CoreUI\Table;
+use CoreUI\Form\Field;
+use CoreUI\Form\Control;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 
 
@@ -86,49 +89,22 @@ class View extends Common {
 
 
     /**
+     * Редактирование пользователя
      * @param string             $base_url
      * @param AbstractRowGateway $user
      * @return array
+     * @throws Exception
      */
     public function getForm(string $base_url, AbstractRowGateway $user): array {
 
-        $roles_rows = $this->modAdmin->tableRoles->fetchAll();
-        $roles      = [
-            [ 'value' => '', 'text' => '--' ]
-        ];
-
-        foreach ($roles_rows as $role) {
-            $roles[] = [
-                'value' => $role->id,
-                'text'  => $role->title,
-            ];
-        }
-
-        $control = $this->modAdmin->tableControls->createRow($this->modAdmin->tableUsers->getTable(), $user->id);
-
-        $form = new Form('user');
-        $form->setValidate(true);
-        $form->setWidthLabel(225);
-        $form->setSend("/core3/mod/admin/users/handler/save?id={$user->id}&v={$control->version}", 'put');
+        $form = new Form('admin', 'users', 'user');
+        $form->setTable($this->modAdmin->tableUsers, $user->id);
+        $form->setHandler('save', 'put');
         $form->setSuccessLoadUrl('#/admin/users');
-        $form->setValidResponseHeaders([ 'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ] ]);
-        $form->setValidResponseType([ 'json' ]);
 
-        $avatar = null;
-
-        if ($user->avatar_type == 'upload') {
-            $avatar_row = $this->modAdmin->tableUsersFiles->getRowsByUser($user->id, 'avatar', 1);
-
-            if ($avatar_row) {
-                $avatar = [[
-                   'id'          => $avatar_row->id,
-                   'name'        => $avatar_row->file_name,
-                   'size'        => $avatar_row->file_size,
-                   'urlPreview'  => "/core3/mod/admin/users/handler/get_avatar_preview?id={$avatar_row->id}",
-                   'urlDownload' => "/core3/mod/admin/users/handler/get_avatar_download?id={$avatar_row->id}",
-               ]];
-            }
-        }
+        $avatar = $user->avatar_type == 'upload'
+            ? $form->getFiles($this->modAdmin->tableUsersFiles, 'avatar', $user->id)
+            : [];
 
         $form->setRecord([
             'login'        => $user->login,
@@ -150,23 +126,32 @@ class View extends Common {
             ['value' => 'none',     'text' => 'Без аватара',       'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
         ];
 
+        $roles_rows = $this->modAdmin->tableRoles->fetchAll();
+        $roles      = [
+            [ 'value' => '', 'text' => '--', 'disabled' => 'disabled' ]
+        ];
+
+        foreach ($roles_rows as $role) {
+            $roles[] = [ 'value' => $role->id, 'text' => $role->title ];
+        }
+
         $form->addFields([
-            (new Form\Field\Text('login',             $this->_('Логин')))->setWidth(200)->setReadonly(true),
-            (new Form\Field\Email('email',            $this->_('Email')))->setWidth(200),
-            (new Form\Field\PasswordRepeat('pass',    $this->_('Пароль')))->setWidth(200),
-            (new Form\Field\Select('role_id',         $this->_('Роль')))->setWidth(200)->setRequired(true)->setOptions($roles),
-            (new Form\Field\Text('lname',             $this->_('Фамилия')))->setWidth(200),
-            (new Form\Field\Text('fname',             $this->_('Имя')))->setWidth(200),
-            (new Form\Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
-            (new Form\Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
-            (new Form\Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setUrl('/core3/mod/admin/users/handler/upload_avatar')->setShow($user->avatar_type == 'upload'),
-            (new Form\Field\Toggle('is_admin_sw',     $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
-            (new Form\Field\Toggle('is_active_sw',    $this->_('Активен'))),
+            (new Field\Text('login',             $this->_('Логин')))->setWidth(200)->setReadonly(true),
+            (new Field\Email('email',            $this->_('Email')))->setWidth(200),
+            (new Field\PasswordRepeat('pass',    $this->_('Пароль')))->setWidth(200),
+            (new Field\Select('role_id',         $this->_('Роль')))->setWidth(200)->setRequired(true)->setOptions($roles),
+            (new Field\Text('lname',             $this->_('Фамилия')))->setWidth(200),
+            (new Field\Text('fname',             $this->_('Имя')))->setWidth(200),
+            (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
+            (new Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
+            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow($user->avatar_type == 'upload'),
+            (new Field\Toggle('is_admin_sw',     $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
+            (new Field\Toggle('is_active_sw',    $this->_('Активен'))),
         ]);
 
         $form->addControls([
-            (new Form\Control\Submit($this->_('Сохранить'))),
-            (new Form\Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+            (new Control\Submit($this->_('Сохранить'))),
+            (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
         ]);
 
         return $form->toArray();
@@ -174,10 +159,35 @@ class View extends Common {
 
 
     /**
+     * Добавление пользователя
      * @param string $base_url
      * @return array
      */
     public function getFormNew(string $base_url): array {
+
+        $form = new Form('admin', 'users', 'user');
+        $form->setHandler('saveNew');
+        $form->setSuccessLoadUrl('#/admin/users');
+
+        $form->setRecord([
+            'login'        => '',
+            'email'        => '',
+            'pass'         => '',
+            'role_id'      => '',
+            'fname'        => '',
+            'lname'        => '',
+            'mname'        => '',
+            'avatar_type'  => 'none',
+            'avatar'       => '',
+            'is_admin_sw'  => 'N',
+            'is_active_sw' => 'Y',
+        ]);
+
+        $avatar_types = [
+            ['value' => 'generate', 'text' => 'Генерация аватара', 'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
+            ['value' => 'upload',   'text' => 'Загрузить',         'onchange' => "CoreUI.form.get('user').getField('avatar').show();" ],
+            ['value' => 'none',     'text' => 'Без аватара',       'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
+        ];
 
         $roles_rows = $this->modAdmin->tableRoles->fetchAll();
         $roles      = [
@@ -188,54 +198,23 @@ class View extends Common {
             $roles[] = [ 'value' => $role->id, 'text' => $role->title ];
         }
 
-
-
-        $form = new Form('user');
-        $form->setValidate(true);
-        $form->setWidthLabel(225);
-        $form->setSend("/core3/mod/admin/users/handler/save", 'post');
-        $form->setSuccessLoadUrl('#/admin/users');
-        $form->setValidResponseHeaders([ 'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ] ]);
-        $form->setValidResponseType([ 'json' ]);
-        $form->setOnSubmitSuccess("CoreUI.notice.info('Сохранено')");
-
-        $form->setRecord([
-            'login'        => '',
-            'email'        => '',
-            'pass'         => '',
-            'role_id'      => '',
-            'fname'        => '',
-            'lname'        => '',
-            'mname'        => '',
-            'avatar_type'  => '',
-            'avatar'       => '',
-            'is_admin_sw'  => 'N',
-            'is_active_sw' => 'Y',
-        ]);
-
-        $avatar_types = [
-            ['value' => 'generate', 'text' => 'Генерация аватара', 'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
-            ['value' => 'upload',   'text' => 'Загрузить',         'onchange' => "CoreUI.form.get('user').getField('avatar').show();" ],
-            ['value' => '',         'text' => 'Без аватара',       'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
-        ];
-
         $form->addFields([
-            (new Form\Field\Text('login',             $this->_('Логин')))->setWidth(200)->setRequired(true),
-            (new Form\Field\Email('email',            $this->_('Email')))->setWidth(200),
-            (new Form\Field\PasswordRepeat('pass',    $this->_('Пароль')))->setWidth(200)->setRequired(true),
-            (new Form\Field\Select('role_id',         $this->_('Роль')))->setWidth(200)->setRequired(true)->setOptions($roles),
-            (new Form\Field\Text('lname',             $this->_('Фамилия')))->setWidth(200),
-            (new Form\Field\Text('fname',             $this->_('Имя')))->setWidth(200),
-            (new Form\Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
-            (new Form\Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
-            (new Form\Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setUrl('/core3/mod/admin/users/handler/upload_avatar')->setShow(false),
-            (new Form\Field\Toggle('is_admin_sw',     $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
-            (new Form\Field\Toggle('is_active_sw',    $this->_('Активен'))),
+            (new Field\Text('login',             $this->_('Логин')))->setWidth(200)->setRequired(true),
+            (new Field\Email('email',            $this->_('Email')))->setWidth(200),
+            (new Field\PasswordRepeat('pass',    $this->_('Пароль')))->setWidth(200)->setRequired(true),
+            (new Field\Select('role_id',         $this->_('Роль')))->setWidth(200)->setRequired(true)->setOptions($roles),
+            (new Field\Text('lname',             $this->_('Фамилия')))->setWidth(200),
+            (new Field\Text('fname',             $this->_('Имя')))->setWidth(200),
+            (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
+            (new Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
+            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow(false),
+            (new Field\Toggle('is_admin_sw',     $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
+            (new Field\Toggle('is_active_sw',    $this->_('Активен'))),
         ]);
 
         $form->addControls([
-            (new Form\Control\Submit($this->_('Сохранить'))),
-            (new Form\Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+            (new Control\Submit($this->_('Сохранить'))),
+            (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
         ]);
 
         return $form->toArray();

@@ -1,19 +1,212 @@
 <?php
 namespace Core3\Classes;
 use Core3\Classes\Db\Table;
+use Core3\Classes\Http\Request;
 use Core3\Classes\Http\Response;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
+use Core3\Exceptions\HttpException;
+use Gumlet\ImageResize;
+use Gumlet\ImageResizeException;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 use Laminas\Db\Sql\Select;
+use Laminas\Db\TableGateway\TableGateway;
 
 
 /**
  *
  */
 class Handler extends Common {
+
+
+
+    /**
+     * Скачивание файла аватара
+     * @param Request $request
+     * @return Response
+     * @throws HttpException
+     * @throws Exception
+     */
+    public function getFileDownload(Request $request): Response {
+
+        $id         = $request->getQuery('id');
+        $table_name = $request->getQuery('t');
+
+        if ( ! $id || ! is_numeric($id)) {
+            throw new HttpException(400, 'empty_id', $this->_('Не указан или некорректно указан id файла'));
+        }
+        if ( ! $table_name || ! is_string($table_name)) {
+            throw new HttpException(400, 'empty_table', $this->_('Не указана или некорректно указана таблица'));
+        }
+
+        $title = new TableGateway($table_name, $this->db);
+        $file  = $title->select(['id' => $id])->current();
+
+        if ( ! $file) {
+            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
+        }
+
+        if ( ! $file->content) {
+            throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
+        }
+
+        $response = new Response();
+
+        if ($file->file_type) {
+            $response->setHeader('Content-Type', $file->file_type);
+        }
+
+        $filename_encode = rawurlencode($file->file_name);
+        $response->setHeader('Content-Disposition', "attachment; filename=\"{$file->file_name}\"; filename*=utf-8''{$filename_encode}\"");
+
+        if ($file->file_size) {
+            $response->setHeader('Content-Length', $file->file_size);
+        }
+
+        $response->setContent($file->content);
+
+        return $response;
+    }
+
+
+    /**
+     * Получение файла для предпросмотра
+     * @param Request $request
+     * @return Response
+     * @throws HttpException
+     * @throws ImageResizeException
+     * @throws Exception
+     */
+    public function getFilePreview(Request $request): Response {
+
+        $id         = $request->getQuery('id');
+        $table_name = $request->getQuery('t');
+
+        if ( ! $id || ! is_numeric($id)) {
+            throw new HttpException(400, 'empty_id', $this->_('Не указан или некорректно указан id файла'));
+        }
+        if ( ! $table_name || ! is_string($table_name)) {
+            throw new HttpException(400, 'empty_table', $this->_('Не указана или некорректно указана таблица'));
+        }
+
+        $title = new TableGateway($table_name, $this->db);
+        $file  = $title->select(['id' => $id])->current();
+
+        if ( ! $file) {
+            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
+        }
+
+        if ( ! isset($file->content) ||
+             ! isset($file->thumb) ||
+             ! isset($file->file_name) ||
+             ! isset($file->file_size) ||
+             ! isset($file->file_hash) ||
+             ! isset($file->file_type) ||
+             ! isset($file->field_name)
+        ) {
+            throw new HttpException(404, 'table_incorrect', $this->_('Указанная таблица не соответствует стандартам'));
+        }
+
+        if ( ! $file->content) {
+            throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
+        }
+
+        if ( ! $file->thumb && ( ! $file->file_type || ! preg_match('~^image/.*~', $file->file_type))) {
+            throw new HttpException(404, 'file_is_not_image', $this->_('Указанный файл не является картинкой'));
+        }
+
+        $response = new Response();
+
+        if ($file->file_type) {
+            $response->setHeader('Content-Type', $file->file_type);
+        }
+
+        if ($file->file_name) {
+            $filename_encode = rawurlencode($file->file_name);
+            $response->setHeader('Content-Disposition', "filename=\"{$file->file_name}\"; filename*=utf-8''{$filename_encode}\"");
+        }
+
+
+        if ($file->file_hash) {
+            $etagHeader = (isset($_SERVER['HTTP_IF_NONE_MATCH']) ? trim($_SERVER['HTTP_IF_NONE_MATCH']) : false);
+
+            $response->setHeader('Etag',          $file->file_hash);
+            $response->setHeader('Cache-Control', 'public');
+
+            //check if page has changed. If not, send 304 and exit
+            if ($etagHeader == $file->file_hash) {
+                $response->setHttpCode(304);
+                return $response;
+            }
+        }
+
+        if ( ! $file->thumb) {
+            $image = ImageResize::createFromString($file->content);
+            $image->resizeToBestFit(80, 80);
+
+            $file->thumb = $image->getImageAsString(IMAGETYPE_PNG);
+            $file->save();
+        }
+
+        $response->setHeader('Content-Length', strlen($file->thumb));
+        $response->setContent($file->thumb);
+
+        return $response;
+    }
+
+
+    /**
+     * Загрузка файла
+     * @param Request $request
+     * @return Response
+     * @throws AppException|Exception
+     */
+    public function uploadFile(Request $request): Response {
+
+        $this->checkHttpMethod($request, 'post');
+
+        $files = $request->getFiles();
+
+        if (empty($files['file'])) {
+            return $this->getResponseError([ $this->_("Файл не загружен") ]);
+        }
+
+        $file = $files['file'];
+
+        if ($file['error']) {
+            throw new AppException($this->_('Ошибка загрузки файла'));
+        }
+        if ( ! is_dir($this->config->system->tmp)) {
+            throw new AppException($this->_("Временная директория не найдена: %s", [$this->config->system->tmp]));
+        }
+        if ( ! is_writable($this->config->system->tmp)) {
+            throw new AppException($this->_("Нет доступа на запись в директорию: %s", [$this->config->system->tmp]));
+        }
+
+        $upload_dir = "{$this->config->system->tmp}/upload";
+
+        if ( ! is_dir($upload_dir)) {
+            mkdir($upload_dir);
+            chmod($upload_dir, 0774);
+        }
+
+        $name_explode = explode('.', $file['name']);
+        $ext          = $name_explode ? end($name_explode) : null;
+
+        $uniq = date('Y-m-d_'). abs(crc32(rand(0, 1000) . uniqid()));
+
+        $file_path = $ext
+            ? "{$upload_dir}/{$uniq}.{$ext}"
+            : "{$upload_dir}/{$uniq}";
+
+        move_uploaded_file($file['tmp_name'], $file_path);
+
+        return $this->getResponseSuccess([
+            'file_name' => basename($file_path)
+        ]);
+    }
 
 
     /**
@@ -28,6 +221,13 @@ class Handler extends Common {
             foreach ($data as $key => $item) {
                 if (is_string($item)) {
                     $data[$key] = $function($item);
+
+                    if ($data[$key] !== '0' &&
+                        $data[$key] !== 0 &&
+                        empty($data[$key])
+                    ) {
+                        $data[$key] = null;
+                    }
                 }
             }
         }
@@ -91,62 +291,45 @@ class Handler extends Common {
 
 
     /**
-     * @param Table    $table
-     * @param string   $row_id
-     * @param int|null $version
+     * Проверка http метода
+     * @param Request      $request
+     * @param array|string $allow_methods
      * @return void
      * @throws AppException
      */
-    protected function checkVersion(Table $table, string $row_id, int $version = null): void {
+    protected function checkHttpMethod(Request $request, array|string $allow_methods): void {
 
-        $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), $row_id);
+        if (is_string($allow_methods)) {
+            $allow_methods = [$allow_methods];
+        }
 
-        if ( ! $control || $control->version != $version) {
-            throw new AppException($this->_(
-                'Кто-то редактировал эту запись одновременно с вами, но успел сохранить данные раньше вас. ' .
-                'Ничего страшного, обновите страницу и проверьте, возможно этот кто-то сделал за вас работу :)'
-            ));
+        if ( ! in_array($request->getMethod(), $allow_methods)) {
+            throw new AppException($this->_("Некорректный метод запроса. Доступно: %s", implode(', ', $allow_methods)));
         }
     }
 
 
     /**
-     * Загрузка файла
-     * @param array $file
-     * @return string
+     * Проверка версии изменяемого объекта
+     * @param Table   $table
+     * @param Request $request
+     * @return void
      * @throws AppException
      */
-    public function uploadFile(array $file): string {
+    protected function checkVersion(Table $table, Request $request): void {
 
-        if ($file['error']) {
-            throw new AppException($this->_('Ошибка загрузки файла'));
+        $record_id = $request->getQuery('id');
+
+        if ($record_id) {
+            $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), $record_id);
+
+            if ( ! $control || $control->version != $request->getQuery('v')) {
+                throw new AppException($this->_(
+                    'Кто-то редактировал эту запись одновременно с вами, но успел сохранить данные раньше вас. ' .
+                    'Ничего страшного, обновите страницу и проверьте, возможно этот кто-то сделал за вас работу :)'
+                ));
+            }
         }
-        if ( ! is_dir($this->config->system->tmp)) {
-            throw new AppException($this->_("Временная директория не найдена: %s", [$this->config->system->tmp]));
-        }
-        if ( ! is_writable($this->config->system->tmp)) {
-            throw new AppException($this->_("Нет доступа на запись в директорию: %s", [$this->config->system->tmp]));
-        }
-
-        $upload_dir = "{$this->config->system->tmp}/upload";
-
-        if ( ! is_dir($upload_dir)) {
-            mkdir($upload_dir);
-            chmod($upload_dir, 0774);
-        }
-
-        $name_explode = explode('.', $file['name']);
-        $ext          = $name_explode ? end($name_explode) : null;
-
-        $uniq = date('Y-m-d_'). abs(crc32(rand(0, 1000) . uniqid()));
-
-        $file_path = $ext
-            ? "{$upload_dir}/{$uniq}.{$ext}"
-            : "{$upload_dir}/{$uniq}";
-
-        move_uploaded_file($file['tmp_name'], $file_path);
-
-        return $file_path;
     }
 
 
@@ -162,7 +345,9 @@ class Handler extends Common {
      */
     protected function saveData(Table $table, array $data, string $row_id = null): AbstractRowGateway {
 
-        $this->event($table->getTable() . '_pre_save', [
+        $table_name = $table->getTable();
+
+        $this->event("{$table_name}_pre_save", [
             'id'    => $row_id,
             'table' => $table,
             'data'  => $data,
@@ -189,7 +374,7 @@ class Handler extends Common {
             $type   = 'update';
         }
 
-        $this->event($table->getTable() . '_post_save', [
+        $this->event("{$table_name}_post_save", [
             'row'   => $row,
             'type'  => $type,
             'table' => $table,
@@ -217,7 +402,7 @@ class Handler extends Common {
      * @return void
      * @throws AppException
      */
-    public function saveFiles(Table $table, int $row_id, string $field_name, array $files): void {
+    protected function saveFiles(Table $table, int $row_id, string $field_name, array $files): void {
 
         $files_id = [];
 
@@ -263,7 +448,7 @@ class Handler extends Common {
      * @return int|null
      * @throws AppException
      */
-    public function saveFile(Table $table, int $row_id, string $field_name, array $file):? int {
+    protected function saveFile(Table $table, int $row_id, string $field_name, array $file):? int {
 
         if ( ! empty($file['upload']) &&
              ! empty($file['upload']['file_name']) &&

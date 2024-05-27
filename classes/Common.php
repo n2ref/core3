@@ -187,7 +187,6 @@ abstract class Common extends Acl {
      * @param string $src
      * @return string
      * @throws DbException
-     * @throws ExceptionInterface
      */
     protected function getJsModule(string $module, string $src): string {
 

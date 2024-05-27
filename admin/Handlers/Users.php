@@ -32,15 +32,8 @@ class Users extends Handler {
      */
 	public function save(Request $request): Response {
 
-        if ( ! in_array($request->getMethod(), ['post', 'put'])) {
-            return $this->getResponseError([ $this->_("Некорректный метод запроса. Ожидается POST либо PUT") ]);
-        }
-
-        $user_id = $request->getQuery('id');
-
-        if ($user_id) {
-            $this->checkVersion($this->modAdmin->tableUsers, $user_id, $request->getQuery('v'));
-        }
+        $this->checkHttpMethod($request, 'put');
+        $this->checkVersion($this->modAdmin->tableUsers, $request);
 
         $fields = [
             'email'        => 'email: Email',
@@ -54,18 +47,12 @@ class Users extends Handler {
             'avatar_type'  => 'string(none|generate|upload): Аватар',
         ];
 
-        $controls = $request->getFormContent() ?? [];
+        $record_id = $request->getQuery('id');
+        $controls  = $request->getFormContent() ?? [];
+        $controls  = $this->clearData($controls);
 
-        if ( ! $user_id) {
-            $fields['login'] = 'req,string(1-255),chars(alphanumeric|_|\\): Логин';
-
-            if (empty($this->config?->system?->ldap?->active)) {
-                $fields['pass'] = 'req,string(4-): Пароль';
-            }
-        } else {
-            if (isset($controls['login'])) {
-                unset($controls['login']);
-            }
+        if (isset($controls['login'])) {
+            unset($controls['login']);
         }
 
         $avatar = null;
@@ -75,21 +62,13 @@ class Users extends Handler {
             unset($controls['avatar']);
         }
 
-
-        $controls = $this->clearData($controls);
-
         if ($errors = $this->validateFields($fields, $controls, true)) {
             return $this->getResponseError($errors);
         }
 
-        if ( ! empty($controls['login']) && ! $this->modAdmin->tableUsers->isUniqueLogin($controls['login'], $user_id)) {
-            throw new AppException($this->_("Пользователь с таким логином уже существует."));
-        }
-
-        if (empty($controls['email'])) {
-            unset($controls['email']);
-
-        } elseif ( ! $this->modAdmin->tableUsers->isUniqueEmail($controls['email'], $user_id)) {
+        if ( ! empty($controls['email']) &&
+             ! $this->modAdmin->tableUsers->isUniqueEmail($controls['email'], $record_id)
+        ) {
             throw new AppException($this->_("Пользователь с таким email уже существует."));
         }
 
@@ -109,8 +88,8 @@ class Users extends Handler {
 
         $this->db->beginTransaction();
         try {
-            $user_old = $user_id ? $this->modAdmin->tableUsers->getRowById($user_id) : null;
-            $row      = $this->saveData($this->modAdmin->tableUsers, $controls, $user_id);
+            $row_old = $this->modAdmin->tableUsers->getRowById($record_id);
+            $row     = $this->saveData($this->modAdmin->tableUsers, $controls, $record_id);
 
             if ($controls['avatar_type'] != 'upload') {
                 $avatar = [];
@@ -122,12 +101,101 @@ class Users extends Handler {
                 $this->generateAvatar($row);
             }
 
-            if ($user_old && $user_old['is_active_sw'] != $controls['is_active_sw']) {
+            if ($row_old->is_active_sw != $row->is_active_sw) {
                 $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
                     'id'        => $row->id,
-                    'is_active' => $controls['is_active_sw'] == 'Y',
+                    'is_active' => $row->is_active_sw == 'Y',
                 ]);
             }
+
+            $this->db->commit();
+
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return $this->getResponseSuccess([
+            'id' => $row->id
+        ]);
+    }
+
+
+    /**
+     * Сохранение пользователя
+     * @param Request $request
+     * @return Response
+     * @throws AppException
+     * @throws HttpException
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+	public function saveNew(Request $request): Response {
+
+        $this->checkHttpMethod($request, ['post', 'put']);
+        $this->checkVersion($this->modAdmin->tableUsers, $request);
+
+        $fields = [
+            'login'        => 'req,string(1-255),chars(alphanumeric|_|\\): Логин',
+            'email'        => 'email: Email',
+            'role_id'      => 'req,int(1-): Роль',
+            'pass'         => 'req,string(4-): Пароль',
+            'fname'        => 'string(0-255): Имя',
+            'lname'        => 'string(0-255): Фамилия',
+            'mname'        => 'string(0-255): Отчество',
+            'is_admin_sw'  => 'string(Y|N): Администратор безопасности',
+            'is_active_sw' => 'string(Y|N): Активен',
+            'avatar_type'  => 'string(none|generate|upload): Аватар',
+        ];
+
+        $controls = $request->getFormContent() ?? [];
+        $controls = $this->clearData($controls);
+
+
+        $avatar = null;
+
+        if ( ! empty($controls['avatar'])) {
+            $avatar = $controls['avatar'];
+            unset($controls['avatar']);
+        }
+
+        if ($errors = $this->validateFields($fields, $controls, true)) {
+            return $this->getResponseError($errors);
+        }
+
+        if ( ! $this->modAdmin->tableUsers->isUniqueLogin($controls['login'])) {
+            throw new AppException($this->_("Пользователь с таким логином уже существует"));
+        }
+
+        if ( ! empty($controls['email']) &&
+             ! $this->modAdmin->tableUsers->isUniqueEmail($controls['email'])
+        ) {
+            throw new AppException($this->_("Пользователь с таким email уже существует"));
+        }
+
+        $controls['pass'] = Tools::passSalt(md5($controls['pass']));
+        $controls['name'] = trim(implode(' ', [
+            $controls['lname'] ?? '',
+            $controls['fname'] ?? '',
+            $controls['mname'] ?? ''
+        ]));
+
+
+        $this->db->beginTransaction();
+        try {
+            $row = $this->saveData($this->modAdmin->tableUsers, $controls);
+
+            if ($controls['avatar_type'] == 'upload') {
+                $this->saveFiles($this->modAdmin->tableUsersFiles, $row->id, 'avatar', $avatar);
+
+            } elseif ($controls['avatar_type'] == 'generate') {
+                $this->generateAvatar($row);
+            }
+
+            $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
+                'id'        => $row->id,
+                'is_active' => $controls['is_active_sw'] == 'Y',
+            ]);
 
             $this->db->commit();
 
@@ -149,13 +217,11 @@ class Users extends Handler {
      * @throws Exception
      * @throws ExceptionInterface
      * @throws \Core3\Exceptions\DbException
+     * @throws AppException
      */
     public function switchActive(Request $request): Response {
 
-        if ($request->getMethod() != 'patch') {
-            return $this->getResponseError([ $this->_("Некорректный метод запроса. Ожидается PATCH") ]);
-        }
-
+        $this->checkHttpMethod($request, 'patch');
         $controls = $request->getJsonContent();
 
         if ( ! in_array($controls['checked'], ['Y', 'N'])) {
@@ -181,157 +247,16 @@ class Users extends Handler {
 
 
     /**
-     * Скачивание файла аватара
-     * @param Request $request
-     * @return Response
-     * @throws HttpException
-     * @throws Exception
-     */
-    public function getAvatarDownload(Request $request): Response {
-
-        $id = $request->getQuery('id');
-
-        if ( ! $id) {
-            throw new HttpException(400, 'empty_id', $this->_('Не указан id файла'));
-        }
-
-        $file = $this->modAdmin->tableUsersFiles->getRowById($id);
-
-        if ( ! $file) {
-            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
-        }
-
-        if ( ! $file->content) {
-            throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
-        }
-
-        $response = new Response();
-
-        if ($file->file_type) {
-            $response->setHeader('Content-Type', $file->file_type);
-        }
-
-        $filename_encode = rawurlencode($file->file_name);
-        $response->setHeader('Content-Disposition', "attachment; filename=\"{$file->file_name}\"; filename*=utf-8''{$filename_encode}\"");
-
-        if ($file->file_size) {
-            $response->setHeader('Content-Length', $file->file_size);
-        }
-
-        $response->setContent($file->content);
-
-        return $response;
-    }
-
-
-    /**
-     * Получение файла аватара
-     * @param Request $request
-     * @return Response
-     * @throws HttpException
-     * @throws ImageResizeException
-     * @throws Exception
-     */
-    public function getAvatarPreview(Request $request): Response {
-
-        $id = $request->getQuery('id');
-
-        if ( ! $id) {
-            throw new HttpException(400, 'empty_id', $this->_('Не указан id файла'));
-        }
-
-        $file = $this->modAdmin->tableUsersFiles->getRowById($id);
-
-        if ( ! $file) {
-            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
-        }
-
-        if ( ! $file->content) {
-            throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
-        }
-
-        if ( ! $file->thumb && ( ! $file->file_type || ! preg_match('~image/.*~', $file->file_type))) {
-            throw new HttpException(404, 'file_is_not_image', $this->_('Указанный файл не является картинкой'));
-        }
-
-        $response = new Response();
-
-        if ($file->file_type) {
-            $response->setHeader('Content-Type', $file->file_type);
-        }
-
-        if ($file->file_name) {
-            $filename_encode = rawurlencode($file->file_name);
-            $response->setHeader('Content-Disposition', "filename=\"{$file->file_name}\"; filename*=utf-8''{$filename_encode}\"");
-        }
-
-
-        if ($file->file_hash) {
-            $etagHeader = (isset($_SERVER['HTTP_IF_NONE_MATCH']) ? trim($_SERVER['HTTP_IF_NONE_MATCH']) : false);
-
-            $response->setHeader('Etag',          $file->file_hash);
-            $response->setHeader('Cache-Control', 'public');
-
-            //check if page has changed. If not, send 304 and exit
-            if ($etagHeader == $file->file_hash) {
-                $response->setHttpCode(304);
-                return $response;
-            }
-        }
-
-        if ( ! $file->thumb) {
-            $image = ImageResize::createFromString($file->content);
-            $image->resizeToBestFit(80, 80);
-
-            $file->thumb = $image->getImageAsString(IMAGETYPE_PNG);
-            $file->save();
-        }
-
-        $response->setHeader('Content-Length', strlen($file->thumb));
-        $response->setContent($file->thumb);
-
-        return $response;
-    }
-
-
-    /**
-     * Загрузка аватара
-     * @param Request $request
-     * @return Response
-     * @throws AppException|Exception
-     */
-    public function uploadAvatar(Request $request): Response {
-
-        if ($request->getMethod() != 'post') {
-            return $this->getResponseError([ $this->_("Некорректный метод запроса. Ожидается POST") ]);
-        }
-
-        $files = $request->getFiles();
-
-        if (empty($files['file'])) {
-            return $this->getResponseError([ $this->_("Файл не загружен") ]);
-        }
-
-        $file_path = $this->uploadFile($files['file']);
-
-        return $this->getResponseSuccess([
-            'file_name' => basename($file_path)
-        ]);
-    }
-
-
-    /**
      * Удаление пользователей
      * @param Request $request
      * @return Response
      * @throws Exception
      * @throws ExceptionInterface
+     * @throws AppException
      */
     public function delete(Request $request): Response {
 
-        if ($request->getMethod() != 'delete') {
-            return $this->getResponseError([ $this->_("Некорректный метод запроса. Ожидается DELETE") ]);
-        }
+        $this->checkHttpMethod($request, 'delete');
 
         $controls = $request->getJsonContent();
 
