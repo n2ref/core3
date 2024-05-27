@@ -7441,6 +7441,7 @@
           question = questionN || "Деактивировать запись?";
         }
         var isAccept = false;
+        console.log(id);
         CoreUI.alert.create({
           type: 'warning',
           title: question,
