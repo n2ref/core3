@@ -132,7 +132,7 @@ gulp.task('build_js_min', function() {
 
 gulp.task('build_js_min_fast', function() {
     return rollup({
-        input: conf.js.main,
+        input: conf.js.core.main,
         output: {
             sourcemap: false,
             format: 'umd',
