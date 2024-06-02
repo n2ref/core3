@@ -1,12 +1,17 @@
 <?php
 namespace Core3\Mod\Admin\Classes\Users;
+use Core3\Exceptions\Exception;
 use Core3\Classes\Common;
 use Core3\Classes\Form;
-use Core3\Exceptions\Exception;
-use CoreUI\Table;
+use Core3\Classes\Table;
+use CoreUI\Table\Filter;
+use CoreUI\Table\Search;
+use CoreUI\Table\Column;
+use CoreUI\Table\Control as TableControl;
 use CoreUI\Form\Field;
 use CoreUI\Form\Control;
 use Laminas\Db\RowGateway\AbstractRowGateway;
+use Psr\Container\NotFoundExceptionInterface;
 
 
 /**
@@ -18,70 +23,45 @@ class View extends Common {
      * таблица с юзерами
      * @param string $base_url
      * @return array
+     * @throws Exception
      */
     public function getTable(string $base_url): array {
 
-        $delete_url = "/core3/mod/admin/users/handler/delete";
         $switch_url = "/core3/mod/admin/users/handler/switch_active?id=[id]";
-        $load_url   = "/core3/mod/admin/users/handler/table";
-
 
         $roles = $this->modAdmin->tableRoles->fetchPairs('id', 'title');
 
-
-        $table = new Table('core_users');
-        $table->setClass('table-hover table-striped');
-        $table->setRecordsRequest($load_url);
-        $table->setMaxHeight(800);
-        $table->setShowScrollShadow(true);
+        $table = new Table('admin', 'users', 'users');
+        $table->setKit(['default', 'search', 'columns', 'add' => "{$base_url}/0", 'delete']);
+        $table->setHandler('table');
         $table->setClickUrl("{$base_url}/[id]");
 
-        $table->addHeaderOut()
-            ->left([
-                (new Table\Control\Link('<i class=\"bi bi-plus\"></i> ' . $this->_('Добавить'), "{$base_url}/0"))->setAttr('class', 'btn btn-success'),
-                (new Table\Control\Button('<i class=\"bi bi-trash\"></i> ' . $this->_('Удалить')))
-                    ->setOnClick("Core.ui.table.get('core_users').deleteSelected('{$delete_url}', Core.menu.reload)")
-                    ->setAttr('class', 'btn btn-warning')
-            ]);
 
-        $table->addHeaderOut()
+        $table->setHeaderOut($table::LAST)
             ->left([
-                (new Table\Filter\Text('login'))->setAttributes(['placeholder' => $this->_('Логин / Имя / Email')])->setWidth(200),
-                (new Table\Filter\Select('role', $this->_('Роль')))->setWidth(200)->setOptions($roles),
-                (new Table\Control\FilterClear()),
-            ])
-            ->right([
-                (new Table\Control\Search()),
-                (new Table\Control\Columns())->setButton('<i class="bi bi-layout-three-columns"></i>', ['class' => 'btn btn-secondary']),
-            ]);
-
-        $table->addFooterOut()
-            ->left([
-                (new Table\Control\Pages()),
-                (new Table\Control\Total)
-            ])
-            ->right([
-                (new Table\Control\PageSize([ 25, 50, 100, 1000 ]))
+                (new TableControl\Divider()),
+                (new Filter\Text('login'))->setAttributes(['placeholder' => $this->_('Логин / Имя / Email')])->setWidth(200),
+                (new Filter\Select('role', $this->_('Роль')))->setWidth(200)->setOptions($roles),
+                (new TableControl\FilterClear()),
             ]);
 
         $table->addSearch([
-           (new Table\Search\DatetimeRange('date_created', $this->_('Дата регистрации'))),
-           (new Table\Search\Radio('is_admin_sw',          $this->_('Админ')))->setOptions(['Y' => $this->_('Да'), 'N' => $this->_('Нет')])
+           (new Search\DatetimeRange('date_created', $this->_('Дата регистрации'))),
+           (new Search\Radio('is_admin_sw',          $this->_('Админ')))->setOptions(['Y' => $this->_('Да'), 'N' => $this->_('Нет')])
         ]);
 
-
         $table->addColumns([
-            (new Table\Column\Select()),
-            (new Table\Column\Toggle('is_active_sw',    $this->_('Активность'),             45))->setOnChange("Core.ui.table.get('core_users').switch('{$switch_url}', checked, id)")->setShowLabel(false),
-            (new Table\Column\Html('avatar',            $this->_('Аватар'),                 40))->setSort(true)->setShowLabel(false),
-            (new Table\Column\Link('login',             $this->_('Логин')))->setMinWidth(100)->setSort(true),
-            (new Table\Column\Text('name',              $this->_('Имя')))->setNoWrap(true)->setMinWidth(150)->setSort(true),
-            (new Table\Column\Text('email',             $this->_('Email'),                  200))->setSort(true),
-            (new Table\Column\Text('role_title',        $this->_('Роль'),                   200))->setSort(true),
-            (new Table\Column\Datetime('date_activity', $this->_('Последняя активность'),   185))->setMinWidth(185)->setSort(true),
-            (new Table\Column\Datetime('date_created',  $this->_('Дата регистрации'),       155))->setMinWidth(155)->setSort(true),
-            (new Table\Column\Html('is_admin_sw',       $this->_('Админ'),                  80))->setMinWidth(80)->setSort(true),
-            (new Table\Column\Button('login_user',      $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
+            (new Column\Select()),
+            (new Column\Toggle('is_active_sw',    $this->_('Активность'),             45))->setOnChange("Core.ui.table.get('users').switch('{$switch_url}', checked, id)")->setShowLabel(false),
+            (new Column\Image('avatar',           $this->_('Аватар'),                 40))->setShowLabel(false)->setStyle('circle')->setBorder(true)->setImgSize(20, 20),
+            (new Column\Link('login',             $this->_('Логин')))->setMinWidth(100),
+            (new Column\Text('name',              $this->_('Имя')))->setNoWrap(true)->setMinWidth(150),
+            (new Column\Text('email',             $this->_('Email'),                  200)),
+            (new Column\Text('role_title',        $this->_('Роль'),                   200)),
+            (new Column\Datetime('date_activity', $this->_('Последняя активность'),   185))->setMinWidth(185),
+            (new Column\Datetime('date_created',  $this->_('Дата регистрации'),       155))->setMinWidth(155),
+            (new Column\Badge('is_admin_sw',      $this->_('Админ'),                  80))->setMinWidth(80),
+            (new Column\Button('login_user',      $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
         ]);
 
         return $table->toArray();
@@ -136,7 +116,7 @@ class View extends Common {
         }
 
         $form->addFields([
-            (new Field\Text('login',             $this->_('Логин')))->setWidth(200)->setReadonly(true),
+            (new Field\Text('login',             $this->_('Логин')))->setWidth(200)->setReadonly(true)->setNoSend(true),
             (new Field\Email('email',            $this->_('Email')))->setWidth(200),
             (new Field\PasswordRepeat('pass',    $this->_('Пароль')))->setWidth(200),
             (new Field\Select('role_id',         $this->_('Роль')))->setWidth(200)->setRequired(true)->setOptions($roles),
@@ -150,7 +130,7 @@ class View extends Common {
         ]);
 
         $form->addControls([
-            (new Control\Submit($this->_('Сохранить'))),
+            $form->getBtnSubmit(),
             (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
         ]);
 
@@ -213,7 +193,7 @@ class View extends Common {
         ]);
 
         $form->addControls([
-            (new Control\Submit($this->_('Сохранить'))),
+            $form->getBtnSubmit(),
             (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
         ]);
 

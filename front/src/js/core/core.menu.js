@@ -181,6 +181,15 @@ let coreMenu = {
                             responseObj._buffer !== ''
                         ) {
                             contents.push(responseObj._buffer);
+                            delete responseObj._buffer
+
+                            let clearResponseObj = [];
+
+                            $.each(responseObj, function (i, item) {
+                                clearResponseObj.push(item);
+                            });
+
+                            responseObj = clearResponseObj;
                         }
 
                         let renderContents = coreMenu._renderContent(responseObj);

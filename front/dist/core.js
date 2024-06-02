@@ -6134,6 +6134,12 @@
               var responseObj = JSON.parse(response);
               if (_typeof(responseObj) === 'object' && responseObj.hasOwnProperty('_buffer') && responseObj._buffer !== '') {
                 contents.push(responseObj._buffer);
+                delete responseObj._buffer;
+                var clearResponseObj = [];
+                $.each(responseObj, function (i, item) {
+                  clearResponseObj.push(item);
+                });
+                responseObj = clearResponseObj;
               }
               var renderContents = coreMenu._renderContent(responseObj);
               $.each(renderContents, function (i, contentItem) {
@@ -7441,7 +7447,6 @@
           question = questionN || "Деактивировать запись?";
         }
         var isAccept = false;
-        console.log(id);
         CoreUI.alert.create({
           type: 'warning',
           title: question,

@@ -30,7 +30,7 @@ var adminUsers = {
                                     CoreUI.alert.danger(response.error_message || Core._("Ошибка. Попробуйте обновить страницу и выполнить это действие еще раз."));
 
                                 } else {
-                                    Core.menu.load("#/");
+                                    location.href = '/';
                                 }
                             },
                             error: function (response) {

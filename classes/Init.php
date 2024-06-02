@@ -1,12 +1,13 @@
 <?php
 namespace Core3\Classes;
-use Core3\Classes\Http\Request;
 use Core3\Classes\Http\Response;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\HttpException;
 use Core3\Exceptions\Exception;
 use Core3\Mod\Admin;
+use Monolog\Handler\MissingExtensionException;
 use Laminas\Cache\Exception\ExceptionInterface;
+use Laminas\Permissions;
 
 
 /**
@@ -21,7 +22,7 @@ class Init extends Db {
 
 
     /**
-     *
+     * @throws MissingExtensionException
      */
     public function __construct() {
 
@@ -46,7 +47,6 @@ class Init extends Db {
      * @throws Exception
      * @throws ExceptionInterface
      * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
      * @throws \ReflectionException
      */
     public function dispatch(): string {
@@ -213,19 +213,23 @@ class Init extends Db {
 
     /**
      * @return string
-     * @throws \Core3\Exceptions\Exception
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @throws Exception
+     * @throws ExceptionInterface
      * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
-     * @throws \Exception
      */
     private function dispatchHttp(): string {
 
         try {
             if ($this->auth) {
-                $this->logRequest();
+                if ( ! $this->auth->isAdmin()) {
+                    $acl = $this->getRoleAcl($this->auth->getRoleId());
 
-                (new Acl())->setupAcl();
+                    if ($acl) {
+                        $this->auth->setAcl($acl);
+                    }
+                }
+
+                $this->logRequest();
             }
 
 
@@ -306,6 +310,114 @@ class Init extends Db {
 
 
     /**
+     * Получение настроенных привилегий
+     * @param int $role_id
+     * @return Permissions\Acl\Acl|null
+     * @throws ExceptionInterface
+     */
+    private function getRoleAcl(int $role_id):? Permissions\Acl\Acl {
+
+        $cache_key = 'core3_acl_' . $role_id;
+
+        if ($this->cache->test($cache_key)) {
+            $acl = $this->cache->load($cache_key);
+
+        } else {
+            $modules = $this->db->fetchAll("
+                SELECT m.name, 
+                       m.privileges
+                FROM core_modules AS m
+                WHERE m.is_active_sw = 'Y'
+                ORDER BY m.seq
+            ");
+
+            $sections = $this->db->fetchAll("
+                SELECT ms.name, 
+                       m.privileges,
+                       m.name AS module_name
+                FROM core_modules_sections AS ms
+                    JOIN core_modules AS m ON ms.module_id = m.id
+                WHERE ms.is_active_sw = 'Y' 
+                  AND m.is_active_sw = 'Y'
+                ORDER BY m.seq, ms.seq
+            ");
+
+            $role_privileges = $this->db->fetchOne("
+                SELECT privileges
+                FROM core_roles
+                WHERE id = ?
+            ", $role_id);
+
+
+            $acl = new Permissions\Acl\Acl();
+            $acl->addRole(new Permissions\Acl\Role\GenericRole($role_id));
+
+
+            $resources = [];
+
+            foreach ($modules as $module) {
+                $resources[$module['name']] = $module['privileges']
+                    ? json_decode($module['privileges'], true)
+                    : [];
+
+                $acl->addResource(new Permissions\Acl\Resource\GenericResource($module['name']));
+            }
+
+            foreach ($sections as $section) {
+                $resource             = "{$section['module_name']}_{$section['name']}";
+                $resources[$resource] = $section['privileges']
+                    ? json_decode($section['privileges'], true)
+                    : [];
+
+                $acl->addResource(new Permissions\Acl\Resource\GenericResource($resource), $section['module_name']);
+            }
+
+
+            $role_privileges    = $role_privileges ? json_decode($role_privileges, true) : [];
+            $privileges_default = [ 'read', 'edit', 'delete' ];
+
+            if ( ! empty($resources)) {
+                foreach ($resources as $resource => $privileges) {
+
+                    // Установка дефолтных привилегий
+                    foreach ($privileges_default as $privilege_default) {
+
+                        if ( ! empty($role_privileges[$resource]) &&
+                             in_array($privilege_default, $role_privileges[$resource])
+                        ) {
+                            $acl->allow($role_id, $resource, $privilege_default);
+                        } else {
+                            $acl->deny($role_id, $resource, $privilege_default);
+                        }
+                    }
+
+
+                    // Установка привилегий из модулей
+                    foreach ($privileges as $privilege) {
+
+                        if (empty($privilege['name'])) {
+                            continue;
+                        }
+
+                        if ( ! empty($role_privileges[$resource]) &&
+                             in_array($privilege['name'], $role_privileges[$resource])
+                        ) {
+                            $acl->allow($role_id, $resource, $privilege['name']);
+                        } else {
+                            $acl->deny($role_id, $resource, $privilege['name']);
+                        }
+                    }
+                }
+            }
+
+            $this->cache->save($cache_key, $acl, ["core3_acl", "core3_acl_" . $role_id]);
+        }
+
+        return $acl;
+    }
+
+
+    /**
      * Логирование активности пользователей
      * @throws \Exception|\Psr\Container\ContainerExceptionInterface
      */
@@ -345,7 +457,7 @@ class Init extends Db {
 
     /**
      * @return void
-     * @throws \Monolog\Handler\MissingExtensionException
+     * @throws MissingExtensionException
      */
     private function registerFatal(): void {
 

@@ -81,15 +81,9 @@ class Http extends Common {
             ? $_COOKIE['Core-Access-Token']
             : $access_token;
 
-        $auth = $access_token
+        return $access_token
             ? $this->getAuthByToken($access_token)
             : null;
-
-        if ($auth) {
-            $this->auth = $auth;
-        }
-
-        return $auth;
     }
 
 

@@ -89,13 +89,11 @@ class Actions extends Common {
      */
     public function logout(): array {
 
-        if (empty($this->auth)) {
-            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
+        if ($this->auth) {
+            $session               = $this->modAdmin->tableUsersSession->find($this->auth->getSessionId())->current();
+            $session->is_active_sw = 'N';
+            $session->save();
         }
-
-        $session = $this->modAdmin->tableUsersSession->find($this->auth->getSessionId())->current();
-        $session->is_active_sw  = 'N';
-        $session->save();
 
         return [];
     }
@@ -363,7 +361,7 @@ class Actions extends Common {
      */
     public function getCabinet(): array {
 
-        if (empty($this->auth)) {
+        if ( ! $this->auth) {
             throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
         }
 
@@ -428,7 +426,7 @@ class Actions extends Common {
      */
     public function getHome(): mixed {
 
-        if (empty($this->auth)) {
+        if ( ! $this->auth) {
             throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
         }
 
@@ -477,15 +475,15 @@ class Actions extends Common {
         $module_name  = $request->getPathParam('module');
         $section_name = $request->getPathParam('section');
 
-        if (empty($this->auth)) {
+        if ( ! $this->auth) {
             throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
         }
 
-        if ( ! $this->isAllowed($module_name)) {
+        if ( ! $this->auth->isAllowed($module_name)) {
             throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к модулю %s!", [$module_name]));
         }
 
-        if ( ! $this->isAllowed("{$module_name}_{$section_name}")) {
+        if ( ! $this->auth->isAllowed("{$module_name}_{$section_name}")) {
             throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к разделу %s!", [$section_name]));
         }
 
@@ -527,15 +525,15 @@ class Actions extends Common {
         $section_name = $request->getPathParam('section');
         $method_name  = $request->getPathParam('method');
 
-        if (empty($this->auth)) {
+        if ( ! $this->auth) {
             throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
         }
 
-        if ( ! $this->isAllowed($module_name)) {
+        if ( ! $this->auth->isAllowed($module_name)) {
             throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к модулю %s!", [$module_name]));
         }
 
-        if ( ! $this->isAllowed("{$module_name}_{$section_name}")) {
+        if ( ! $this->auth->isAllowed("{$module_name}_{$section_name}")) {
             throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к разделу %s!", [$section_name]));
         }
 
@@ -568,7 +566,7 @@ class Actions extends Common {
         $section_rows = $this->modAdmin->tableModulesSections->getRowsByActive();
 
         foreach ($module_rows as $module_row) {
-            if ( ! $this->isAllowed($module_row->name, self::PRIVILEGE_READ)) {
+            if ( ! $this->auth->isAllowed($module_row->name)) {
                 continue;
             }
 
@@ -577,7 +575,7 @@ class Actions extends Common {
             foreach ($section_rows as $section_row) {
                 if ( ! $section_row->title ||
                     $section_row->module_id != $module_row->id ||
-                    ! $this->isAllowed("{$module_row->name}_{$section_row->name}", self::PRIVILEGE_READ)
+                    ! $this->auth->isAllowed("{$module_row->name}_{$section_row->name}")
                 ) {
                     continue;
                 }
@@ -697,11 +695,6 @@ class Actions extends Common {
         if ( ! $file->thumb) {
             $image = ImageResize::createFromString($file->content);
             $image->resizeToBestFit(80, 80);
-
-            // $weight = $image->getDestWidth();
-            // $height = $image->getDestHeight();
-            // $size   = min($weight, $height);
-            // $image->crop($size, $size);
 
             $file->thumb = $image->getImageAsString(IMAGETYPE_PNG);
             $file->save();

@@ -2,7 +2,8 @@
 namespace Core3\Classes;
 use Core3\Exceptions\Exception;
 use Core3\Mod\Admin;
-use CoreUI\Form\Field\FileUpload;
+use CoreUI\Form\Control;
+use CoreUI\Form\Field;
 use Laminas\Db\Sql\Select;
 
 
@@ -13,6 +14,8 @@ class Form extends \CoreUI\Form {
 
     private string $module;
     private string $section;
+    private ?Auth  $auth;
+    private System $system;
 
     private array $send_props = [
         'record_id'      => null,
@@ -23,7 +26,6 @@ class Form extends \CoreUI\Form {
 
 
     /**
-     * Идентификатор формы
      * @param string      $module
      * @param string      $section
      * @param string|null $form_id
@@ -34,6 +36,9 @@ class Form extends \CoreUI\Form {
 
         $this->module  = $module;
         $this->section = $section;
+        $this->auth    = Registry::has('auth') ? Registry::get('auth') : null;
+        $this->system  = new System();
+
 
         $this->setValidate(true);
         $this->setWidthLabel(225);
@@ -41,6 +46,11 @@ class Form extends \CoreUI\Form {
             'Content-Type' => [ 'application/json', 'application/json; charset=utf-8' ]
         ]);
         $this->setValidResponseType([ 'json' ]);
+
+
+        if ( ! $this->auth->isAllowed("{$this->module}_{$this->section}", $this->auth::PRIVILEGE_EDIT)) {
+            $this->setReadonly(true);
+        }
     }
 
 
@@ -76,24 +86,6 @@ class Form extends \CoreUI\Form {
 
         $this->fillSend();
         return $this;
-    }
-
-
-    /**
-     * Заполнение адреса для отправки формы
-     * @return void
-     */
-    private function fillSend(): void {
-
-        $send = $this->send_props;
-
-        if ($send['handler']) {
-            if ($send['record_id'] && $send['record_version']) {
-                $this->setSend("/core3/mod/{$this->module}/{$this->section}/handler/{$send['handler']}?id={$send['record_id']}&v={$send['record_version']}", $send['http_method']);
-            } else {
-                $this->setSend("/core3/mod/{$this->module}/{$this->section}/handler/{$send['handler']}", $send['http_method']);
-            }
-        }
     }
 
 
@@ -143,6 +135,27 @@ class Form extends \CoreUI\Form {
 
 
     /**
+     * Получение кнопки для сохранения
+     * @param string|null $content
+     * @return Control\Submit|null
+     */
+    public function getBtnSubmit(string $content = null):? Control\Submit {
+
+        $button = null;
+
+        if ($this->auth->isAllowed("{$this->module}_{$this->section}", $this->auth::PRIVILEGE_EDIT)) {
+            $content = is_string($content)
+                ? $content
+                : $this->system->_('Сохранить');
+
+            $button = new Control\Submit($content);
+        }
+
+        return $button;
+    }
+
+
+    /**
      * Добавление полей
      * @param array       $fields
      * @param string|null $position
@@ -151,7 +164,7 @@ class Form extends \CoreUI\Form {
     public function addFields(array $fields, string $position = null): self {
 
         foreach ($fields as $field) {
-            if ($field instanceof FileUpload) {
+            if ($field instanceof Field\FileUpload) {
                 if (empty($field->getUrl())) {
                     $field->setUrl("/core3/mod/{$this->module}/{$this->section}/handler/uploadFile");
                 }
@@ -161,5 +174,25 @@ class Form extends \CoreUI\Form {
         parent::addFields($fields, $position);
 
         return $this;
+    }
+
+
+    /**
+     * Заполнение адреса для отправки формы
+     * @return void
+     */
+    private function fillSend(): void {
+
+        $send = $this->send_props;
+
+        if ($send['handler']) {
+            $base_url = "/core3/mod/{$this->module}/{$this->section}/handler/{$send['handler']}";
+
+            if ($send['record_id'] && $send['record_version']) {
+                $this->setSend("{$base_url}?id={$send['record_id']}&v={$send['record_version']}", $send['http_method']);
+            } else {
+                $this->setSend($base_url, $send['http_method']);
+            }
+        }
     }
 }

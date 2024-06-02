@@ -8,7 +8,7 @@ use Laminas\Cache\Storage;
  * @property-read Cache  $cache
  * @property-read Log    $log
  */
-abstract class System {
+class System {
 
     private   string       $version      = '3.0.0';
     protected static array $static_cache = [];

@@ -10,10 +10,11 @@ use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 /**
- * @property Admin\Controller $modAdmin
- * @property Worker\Client    $worker
+ * @property-read Admin\Controller $modAdmin
+ * @property-read Worker\Client    $worker
+ * @property-read Auth             $auth
  */
-abstract class Common extends Acl {
+abstract class Common extends Db {
 
     protected $module   = '';
     protected $section  = '';
@@ -23,8 +24,6 @@ abstract class Common extends Acl {
      *
      */
 	public function __construct() {
-
-        parent::__construct();
 
         $child_class_name = preg_match('~^Core3\\\Mod\\\([A-z0-9\_]+)\\\~', get_class($this), $match)
             ? $match[1]
@@ -65,6 +64,9 @@ abstract class Common extends Acl {
 
             } elseif ($param_name === 'worker') {
                 $result = new Worker\Client();
+
+            } elseif ($param_name === 'auth') {
+                $result = Registry::get('auth');
             }
 
             if ( ! empty($result)) {

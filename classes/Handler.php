@@ -242,7 +242,7 @@ class Handler extends Common {
      * @param bool  $strict
      * @return array
      */
-    protected function validateFields(array $params, array $data, bool $strict = false): array {
+    protected function validateFields(array $params, array $data, bool $strict = true): array {
 
         return Validator::validateFields($params, $data, $strict);
     }

@@ -7,10 +7,8 @@ use Core3\Classes\Tools;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\HttpException;
 use Core3\Exceptions\Exception;
-use CoreUI\Table;
+use Core3\Classes\Table;
 use CoreUI\Table\Adapters\Mysql\Search;
-use Gumlet\ImageResize;
-use Gumlet\ImageResizeException;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 
@@ -51,10 +49,6 @@ class Users extends Handler {
         $controls  = $request->getFormContent() ?? [];
         $controls  = $this->clearData($controls);
 
-        if (isset($controls['login'])) {
-            unset($controls['login']);
-        }
-
         $avatar = null;
 
         if ( ! empty($controls['avatar'])) {
@@ -62,7 +56,7 @@ class Users extends Handler {
             unset($controls['avatar']);
         }
 
-        if ($errors = $this->validateFields($fields, $controls, true)) {
+        if ($errors = $this->validateFields($fields, $controls)) {
             return $this->getResponseError($errors);
         }
 
@@ -159,7 +153,7 @@ class Users extends Handler {
             unset($controls['avatar']);
         }
 
-        if ($errors = $this->validateFields($fields, $controls, true)) {
+        if ($errors = $this->validateFields($fields, $controls)) {
             return $this->getResponseError($errors);
         }
 
@@ -284,14 +278,11 @@ class Users extends Handler {
      * Данные для таблицы
      * @param Request $request
      * @return Response
-     * @throws Table\Exception
+     * @throws \CoreUI\Table\Exception
      */
     public function table(Request $request): Response {
 
-        $table = new Table\Adapters\Mysql();
-        $table->setConnection($this->db->getDriver()->getConnection()->getResource());
-
-        $table->setPage($request->getQuery('page') ?? 1, $request->getQuery('count') ?? 25);
+        $table = new Table\Db($request);
 
         $sort = $request->getQuery('sort');
 
@@ -304,6 +295,7 @@ class Users extends Handler {
                 'role_title'    => 'r.title',
                 'date_activity' => '(SELECT us.date_last_activity FROM core_users_sessions AS us WHERE u.id = us.user_id ORDER BY date_last_activity DESC LIMIT 1)',
                 'date_created'  => 'u.date_created',
+                'is_active_sw'  => "u.is_active_sw = 'Y'",
                 'is_admin_sw'   => 'u.is_admin_sw',
             ]);
         }
@@ -344,8 +336,11 @@ class Users extends Handler {
         foreach ($records as $record) {
 
             $record->login       = ['content' => $record->login, 'url' => "#/admin/users/{$record->id}"];
-            $record->avatar      = "<img src=\"core3/user/{$record->id}/avatar\" style=\"width: 20px; height: 20px\" class=\"rounded-circle border border-secondary-subtle\"/>";
-            $record->is_admin_sw = $record->is_admin_sw == 'Y' ? '<span class="badge text-bg-danger">Да</span>' : 'Нет';
+            $record->avatar      = "core3/user/{$record->id}/avatar";
+            $record->is_admin_sw = $record->is_admin_sw == 'Y'
+                ? [ 'type' => 'danger', 'text' => $this->_('Да') ]
+                : [ 'type' => 'none',   'text' => $this->_('Нет') ];
+
             $record->login_user  = [
                 'content' => 'Войти',
                 'attr'    => ['class' => 'btn btn-sm btn-secondary'],
@@ -358,13 +353,30 @@ class Users extends Handler {
 
 
     /**
-     * Вход под пользователем
+     * Вход под другим пользователем
      * @param Request $request
      * @return Response
+     * @throws HttpException
      */
     public function loginUser(Request $request): Response {
 
+        $user_id = $request->getPost()['user_id'] ?? '';
 
+        if (empty($user_id)) {
+            throw new HttpException(400, 'user_id_not_found', $this->_('Не задан id пользователя'));
+        }
+
+        $user = $this->modAdmin->tableUsers->getRowById($user_id);
+
+        if (empty($user)) {
+            throw new HttpException(400, 'user_not_found', $this->_('Указанный пользователь не найден'));
+        }
+
+        $session_id = $this->auth->getSessionId();
+        $session    = $this->modAdmin->tableUsersSession->getRowById($session_id);
+
+        $session->user_id = $user->id;
+        $session->save();
 
         return $this->getResponseSuccess([
             'status' => 'success'

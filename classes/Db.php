@@ -6,9 +6,9 @@ use Laminas\Cache\Exception\ExceptionInterface;
 
 
 /**
- * @property Db\Adapter $db
+ * @property-read Db\Adapter $db
  */
-abstract class Db extends System {
+class Db extends System {
 
 
     /**
