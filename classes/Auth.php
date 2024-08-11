@@ -100,7 +100,7 @@ class Auth {
      */
     public function isAdmin(): bool {
 
-        return ! empty($this->user['is_admin_sw']) && $this->user['is_admin_sw'] == 'Y';
+        return ! empty($this->user['is_admin']) && $this->user['is_admin'] == '1';
     }
 
 

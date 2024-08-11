@@ -1,7 +1,7 @@
 <?php
 namespace Core3\Mod\Admin\Handlers;
 use Core3\Classes\Handler;
-use Core3\Classes\Http\Request;
+use Core3\Classes\Init\Request;
 use Core3\Classes\Tools;
 use Core3\Mod\Admin\Classes;
 use CoreUI\Table;

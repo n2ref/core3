@@ -1,8 +1,10 @@
 <?php
 namespace Core3\Mod\Admin;
 use \Core3\Classes\Common;
-use \Core3\Classes\Http\Request;
+use \Core3\Classes\Init\Request;
 use \Core3\Exceptions\AppException;
+use Core3\Exceptions\DbException;
+use \CoreUI\Panel\Control;
 
 require_once 'Classes/autoload.php';
 
@@ -40,9 +42,9 @@ class Controller extends Common {
 
         $panel_admin = new \CoreUI\Panel();
         $panel_admin->setTitle('Общие сведения');
-        $panel_admin->addControlButton('<i class="bi bi-arrow-clockwise"></i>')
-            ->setAttr('class', 'btn btn-outline-secondary')
-            ->setOnClick('Core.menu.reload()');
+        $panel_admin->addControls([
+            (new Control\Button('<i class="bi bi-arrow-clockwise"></i>'))->setOnClick('Core.menu.reload()')
+        ]);
         $panel_admin->setContent($view->getTableCommon($service_info));
         $content[] = $panel_admin->toArray();
 
@@ -50,18 +52,19 @@ class Controller extends Common {
 
 
         $layout = new \CoreUI\Layout();
-        $layout->justify($layout::JUSTIFY_AROUND);
-        $layout->direction($layout::DIRECTION_ROW);
-        $layout->addItems()->width(200)->content($view->getChartCpu($service_info));
-        $layout->addItems()->width(200)->content($view->getChartMem($service_info));
-        $layout->addItems()->width(200)->content($view->getChartSwap($service_info));
-        $layout->addItems()->width(200)->content($view->getChartDisks($service_info));
+        $layout->setJustify($layout::JUSTIFY_AROUND);
+        $layout->setDirection($layout::DIRECTION_ROW);
+        $layout->addItems()->setWidth(200)->setContent($view->getChartCpu($service_info));
+        $layout->addItems()->setWidth(200)->setContent($view->getChartMem($service_info));
+        $layout->addItems()->setWidth(200)->setContent($view->getChartSwap($service_info));
+        $layout->addItems()->setWidth(200)->setContent($view->getChartDisks($service_info));
 
         $panel_system = new \CoreUI\Panel();
         $panel_system->setTitle('Системная информация');
-        $panel_system->addControlButton('<i class="bi bi-list-ul"></i>')
-            ->setAttr('class', 'btn btn-outline-secondary')
-            ->setOnClick('adminIndex.showSystemProcessList()');
+        $panel_system->addControls([
+            (new Control\Button('<i class="bi bi-list-ul"></i>'))->setOnClick('adminIndex.showSystemProcessList()')
+        ]);
+
         $panel_system->setContent([
             $layout->toArray(),
             '<br><br>',
@@ -74,22 +77,18 @@ class Controller extends Common {
 
         $panel_php = new \CoreUI\Panel();
         $panel_php->setTitle('Php');
-        $panel_php->addControlButton('<i class="bi bi-info"></i>')
-            ->setAttr('class', 'btn btn-outline-secondary')
-            ->setOnClick('adminIndex.showPhpInfo()');
+        $panel_php->addControls([
+            (new Control\Button('<i class="bi bi-list-ul"></i>'))->setOnClick('adminIndex.showPhpInfo()')
+        ]);
         $panel_php->setContent($view->getPhp());
 
 
         $panel_db = new \CoreUI\Panel();
         $panel_db->setTitle('База данных');
-
-        $panel_db->addControlButton('<i class="bi bi-info"></i>')
-            ->setAttr('class', 'btn btn-outline-secondary')
-            ->setOnClick('adminIndex.showDbVariablesList()');
-
-        $panel_db->addControlButton('<i class="bi bi-plugin"></i>')
-            ->setAttr('class', 'btn btn-outline-secondary')
-            ->setOnClick('adminIndex.showDbProcessList()');
+        $panel_db->addControls([
+            (new Control\Button('<i class="bi bi-info"></i>'))->setOnClick('adminIndex.showDbVariablesList()'),
+            (new Control\Button('<i class="bi bi-plugin"></i>'))->setOnClick('adminIndex.showDbProcessList()')
+        ]);
 
         $panel_db->setContent($view->getDbInfo($service_info));
 
@@ -97,14 +96,14 @@ class Controller extends Common {
 
         $layout = new \CoreUI\Layout();
         $item = $layout->addItems();
-        $item->widthColumn(12);
-        $item->addSize('lg')->widthColumn(6);
-        $item->content($panel_php->toArray());
+        $item->setWidthColumn(12);
+        $item->addSize('lg')->setWidthColumn(6);
+        $item->setContent($panel_php->toArray());
 
         $item = $layout->addItems();
-        $item->widthColumn(12);
-        $item->addSize('lg')->widthColumn(6);
-        $item->content($panel_db->toArray());
+        $item->setWidthColumn(12);
+        $item->addSize('lg')->setWidthColumn(6);
+        $item->setContent($panel_db->toArray());
 
         $content[] = $layout->toArray();
 
@@ -124,13 +123,13 @@ class Controller extends Common {
 
 
         $layout = new \CoreUI\Layout();
-        $layout->addSize('sm')->justify($layout::JUSTIFY_START);
-        $layout->addSize('md')->justify($layout::JUSTIFY_CENTER);
+        $layout->addSize('sm')->setJustify($layout::JUSTIFY_START);
+        $layout->addSize('md')->setJustify($layout::JUSTIFY_CENTER);
         $layout->addItems()
-            ->width(1024)
-            ->maxWidth('100%')
-            ->minWidth(400)
-            ->content($content);
+            ->setWidth(1024)
+            ->setWidthMax('100%')
+            ->setWidthMin(400)
+            ->setContent($content);
 
         return $layout->toArray();
     }
@@ -145,42 +144,113 @@ class Controller extends Common {
     public function sectionModules(Request $request): array {
 
         $base_url = "#/admin/modules";
+        $load_url = "core3/mod/admin/modules/handler";
         $panel    = new \CoreUI\Panel('tab');
+        $view     = new Classes\Modules\View();
         $result   = [];
 
         try {
-            if ($request->getQuery('edit') !== null) {
+            if ($params = $request->match('^/admin/modules/{module_id}', ['[0-9]+'])) {
+
                 $breadcrumb = new \CoreUI\Breadcrumb();
                 $breadcrumb->addItem('Модули',        $base_url);
-                $breadcrumb->addItem('Установленные', "{$base_url}?tab=installed");
+                $breadcrumb->addItem('Установленные', "{$base_url}/installed");
                 $breadcrumb->addItem('Модуль');
+                $result[] = $breadcrumb->toArray();
 
-                if ($request->getQuery('edit')) {
-                    $module = $this->tableModules->getRowById($request->getQuery('edit'));
+                if ($params['module_id']) {
+                    $module = $this->tableModules->getRowById($params['module_id']);
 
                     if (empty($module)) {
                         throw new AppException($this->_('Указанный модуль не найден'));
                     }
 
-                    $panel->setTitle($module->title, $this->_('Редактирование модуля'), $base_url);
+                    $sections_count = $this->tableModulesSections->getCountByModuleId($module->id);
+
+                    $panel->setTitle($module->title, "{$module->name} / {$module->version}");
+                    $panel->setContentFit($panel::FIT);
+                    $panel->addControls([
+                        (new Control\Button('<i class="bi bi-arrow-clockwise"></i> ' . $this->_('Проверить обновления')))->setAttr('class', 'btn btn-outline-secondary'),
+                        (new Control\Button('<i class="bi bi-trash"></i> ' . $this->_('Удалить')))->setAttr('class', 'btn btn-outline-danger'),
+                    ]);
+                    $panel->addTab($this->_("Модуль"),  'module',   "{$base_url}/$module->id/module");
+                    $panel->addTab($this->_("Разделы"), 'sections', "{$base_url}/$module->id/sections")->setCount($sections_count);
+                    $panel->addTab($this->_("Версии"),  'versions', "{$base_url}/$module->id/versions")->setCount($sections_count);
+
+                    if ($module->isset_updates) {
+                        $panel->getTabById('versions')->setBadgeDot('danger');
+                    }
+
+                    $params = $request->match('^/admin/modules/{id}/{tab}', ['\d+', '\w+']);
+                    $tab    = $params['tab'] ?? 'module';
+                    $panel->setActiveTab($tab);
+
+                    switch ($tab) {
+                        case 'module':
+                            $panel->setContent($view->getFormModule($base_url, $module));
+                            break;
+
+                        case 'sections':
+                            $content = [];
+
+                            if ($section_params = $request->match('^/admin/modules/{module_id}/sections/{section_id}', ['[0-9]+', '[0-9]+'])) {
+                                if ($section_params['section_id']) {
+                                    $module_section = $this->tableModulesSections->getRowById($section_params['section_id']);
+
+                                    if (empty($module_section)) {
+                                        throw new AppException($this->_('Указанный раздел модуля не найден'));
+                                    }
+                                }
+
+                                $content[] = $view->getFormSection($base_url, $module_section ?? null);
+                            }
+
+                            $content[] = $view->getTableSections($base_url);
+
+                            $panel->setContent($content);
+                            break;
+
+                        case 'versions':
+                            $content = [];
+                            $content[] = $view->getFormVersions($base_url, $module_section ?? null);
+                            $content[] = $view->getTableSections($base_url);
+
+                            $panel->setContent($content);
+                            break;
+                    }
 
                 } else {
                     $panel->setTitle($this->_('Добавление модуля'));
-                }
+                    $panel->addTab($this->_("Ручная установка"), 'hand', "{$base_url}/install/hand");
+                    $panel->addTab($this->_("Из файла"),         'file', "{$base_url}/install/file");
+                    $panel->addTab($this->_("По ссылке"),        'link', "{$base_url}/install/link");
 
-                $result[] = $breadcrumb->toArray();
+
+                    $params = $request->match('^/admin/modules/install/{tab}$', ['\w+']);
+                    $tab    = $params['tab'] ?? 'hand';
+                    $panel->setActiveTab($tab);
+                    switch ($tab) {
+                        case 'hand': $panel->setContent($view->getFormModuleNew($base_url)); break;
+                        case 'file': $panel->setContent($view->getFormModuleNew($base_url)); break;
+                        case 'link': $panel->setContent($view->getFormModuleNew($base_url)); break;
+                    }
+                }
 
             } else {
                 $count_modules = $this->tableModules->getCount();
 
-                $load_url = "core/mod/admin/modules/handler/";
+                $panel->addTab($this->_("Установленные"), 'installed')->setCount($count_modules)
+                    ->setUrlContent("{$load_url}/getTableInstalled")
+                    ->setUrlWindow("{$base_url}/installed");
 
-                $panel->addTab($this->_("Установленные"), 'installed', "{$load_url}get_table_installed")->setUrlWindow("{$base_url}?tab=installed")->setCount($count_modules);
-                $panel->addTab($this->_("Доступные"),     'available', "{$load_url}get_table_available")->setUrlWindow("{$base_url}?tab=available");
+                $panel->addTab($this->_("Доступные"),     'available')
+                    ->setUrlContent("{$load_url}/getTableAvailable")
+                    ->setUrlWindow("{$base_url}/available");
 
-                $view = new Classes\Modules\View();
 
-                $tab = $request->getQuery('tab') ?? 'installed';
+                //$params = $request->getPathParams('^/admin/modules/{tab}$', ['\w+']);
+                $params = $request->match('^/admin/modules/{tab}$', ['\w+']);
+                $tab    = $params['tab'] ?? 'installed';
                 $panel->setActiveTab($tab);
                 switch ($tab) {
                     case 'installed': $panel->setContent($view->getTableInstalled($base_url)); break;
@@ -194,7 +264,7 @@ class Controller extends Common {
             );
 
         } catch (\Exception $e) {
-            $this->log->error('admin_users', $e);
+            $this->log->error('admin_module', $e);
             $panel->setContent(
                 \CoreUI\Info::danger(
                     $this->config?->system->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
@@ -214,6 +284,7 @@ class Controller extends Common {
      * @param Request $request
      * @return array
      * @throws AppException
+     * @throws DbException
      */
     public function sectionUsers(Request $request): array {
 

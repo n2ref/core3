@@ -1,6 +1,5 @@
 
 import coreuiPanel      from 'coreui-panel/src/js/main';
-import coreuiTabs       from 'coreui-tabs/src/js/main';
 import coreuiAlert      from 'coreui-alert/src/js/main';
 import coreuiModal      from 'coreui-modal/src/js/main';
 import coreuiInfo       from 'coreui-info/src/js/main';
@@ -11,10 +10,13 @@ import coreuiForm       from 'coreui-form/src/js/main';
 import coreuiChart      from 'coreui-chart/src/js/main';
 import coreuiBreadcrumb from 'coreui-breadcrumb/src/js/main';
 
+import FieldSelect2 from 'coreui-form-field-select2/src/js/field';
+
+coreuiForm.fields.select2 = FieldSelect2;
+
 
 export default {
     'panel': coreuiPanel,
-    'tabs': coreuiTabs,
     'alert': coreuiAlert,
     'modal': coreuiModal,
     'info': coreuiInfo,

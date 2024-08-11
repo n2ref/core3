@@ -21,7 +21,7 @@ class Users extends Common {
                    u.u_login,
                    u.email,
                    u.role_id,
-                   u.is_admin_sw,
+                   u.is_admin,
                    u.visible,
                    up.firstname,
                    up.lastname,
@@ -66,7 +66,7 @@ class Users extends Common {
         $authNamespace->LN     = $user['lastname'];
         $authNamespace->FN     = $user['firstname'];
         $authNamespace->MN     = $user['middlename'];
-        $authNamespace->ADMIN  = $user['is_admin_sw'] == 'Y';
+        $authNamespace->ADMIN  = $user['is_admin'] == 1;
         $authNamespace->ROLE   = $user['role'] ? $user['role'] : -1;
         $authNamespace->ROLEID = $user['role_id'] ? $user['role_id'] : 0;
         $authNamespace->LDAP   = false;

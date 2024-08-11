@@ -40,6 +40,7 @@ const conf = {
             fileMin: 'all.min.js',
             src: [
                 'node_modules/jquery/dist/jquery.min.js',
+                // 'node_modules/select2/dist/js/select2.js',
                 'node_modules/bootstrap/dist/js/bootstrap.bundle.min.js',
                 'dist/coreui.min.js',
                 'dist/core.min.js',
@@ -78,7 +79,7 @@ gulp.task('build_js', function() {
     return rollup({
         input: conf.js.core.main,
         output: {
-            sourcemap: false,
+            sourcemap: true,
             format: 'umd',
             name: "Core"
         },
@@ -104,7 +105,7 @@ gulp.task('build_js_min', function() {
     return rollup({
         input: conf.js.core.main,
         output: {
-            sourcemap: false,
+            sourcemap: true,
             format: 'umd',
             name: "Core"
         },
@@ -134,7 +135,7 @@ gulp.task('build_js_min_fast', function() {
     return rollup({
         input: conf.js.core.main,
         output: {
-            sourcemap: false,
+            sourcemap: true,
             format: 'umd',
             name: "Core"
         },
@@ -161,7 +162,7 @@ gulp.task('build_js_coreui', function() {
     return rollup({
         input: conf.js.coreui.main,
         output: {
-            sourcemap: false,
+            sourcemap: true,
             format: 'umd',
             name: "CoreUI"
         },

@@ -49,7 +49,7 @@ class Db extends System {
     /**
      * @return bool
      */
-    public function issetConnection(): bool {
+    protected function issetConnection(): bool {
 
         return isset($this->db);
     }
@@ -60,7 +60,7 @@ class Db extends System {
      * @return Adapter
      * @throws DbException
      */
-    public function initConnection(string $connection_name = 'base'): Adapter {
+    protected function initConnection(string $connection_name = 'base'): Adapter {
 
         $settings = $this->config?->system?->db?->{$connection_name}?->toArray();
 
@@ -76,7 +76,7 @@ class Db extends System {
      * @param array  $options
      * @return Adapter
      */
-    public function getConnection(string $database, string $username, string $password, array $options = []): Adapter {
+    protected function getConnection(string $database, string $username, string $password, array $options = []): Adapter {
 
         $option_params = $options['params'] ?? [];
 
@@ -103,7 +103,7 @@ class Db extends System {
      * @return bool
      * @throws ExceptionInterface
      */
-    final public function isModuleActive(string $module_name): bool {
+    final protected function isModuleActive(string $module_name): bool {
 
         if ($module_name == 'admin') {
             $is_active = true;
@@ -113,17 +113,17 @@ class Db extends System {
             $key  = "core2_mod_is_active{$host}_{$module_name}";
 
             if ( ! $this->cache->test($key)) {
-                $is_active_sw = $this->db->fetchOne("
-                    SELECT is_active_sw 
+                $is_active = $this->db->fetchOne("
+                    SELECT is_active 
                     FROM core_modules 
                     WHERE name = ? 
                 ", $module_name);
 
-                if ( ! empty($is_active_sw)) {
-                    $this->cache->save($key, $is_active_sw == 'Y', ['core3_mod']);
+                if ( ! empty($is_active)) {
+                    $this->cache->save($key, $is_active == '1', ['core3_mod']);
                 }
 
-                $is_active = $is_active_sw == 'Y';
+                $is_active = $is_active == '1';
 
             } else {
                 $is_active = (bool)$this->cache->load($key);
@@ -139,7 +139,7 @@ class Db extends System {
      * @return bool
      * @throws ExceptionInterface
      */
-    final public function isModuleInstalled(string $module_name): bool {
+    final protected function isModuleInstalled(string $module_name): bool {
 
 	    if ($module_name == 'admin') {
 	        return true;
@@ -175,7 +175,7 @@ class Db extends System {
      * @return string
      * @throws DbException
      */
-    final public function getModuleLocation(string $module_name): string {
+    final protected function getModuleLocation(string $module_name): string {
 
 		return DOC_ROOT  . '/' . $this->getModuleFolder($module_name);
 	}
@@ -187,7 +187,7 @@ class Db extends System {
      * @return string
      * @throws DbException
      */
-    final public function getModuleFolder(string $module_name): string {
+    final protected function getModuleFolder(string $module_name): string {
 
         $module_name = trim(strtolower($module_name));
 
@@ -199,29 +199,7 @@ class Db extends System {
             $folder = "core3/admin";
 
         } else {
-            $host = $this->config?->system?->db?->base?->params?->database;
-            $key  = "core3_mod_folder_{$host}_{$module_name}";
-
-            if ( ! $this->cache->test($key)) {
-                $module_version = $this->db->fetchOne("
-                    SELECT version 
-                    FROM core_modules 
-                    WHERE name = ?
-                ", $module_name);
-
-                if ($module_version) {
-                    $folder = "mod/{$module_name}/v{$module_version}";
-                } else {
-                    throw new DbException($this->_("Модуль %s не существует", [$module_name]), 404);
-                }
-
-                $this->cache->save($key, $folder, ['core3_mod']);
-
-            } else {
-                $folder = $this->cache->load($key);
-            }
-
-            return $folder;
+            $folder = "mod/{$module_name}";
         }
 
         return $folder;
@@ -232,31 +210,67 @@ class Db extends System {
      * Возврат версии модуля
      * @param string $module_name
      * @return string
+     * @throws ExceptionInterface
      */
-    final public function getModuleVersion(string $module_name): string {
+    final protected function getModuleInfo(string $module_name): array {
 
-        $host = $this->config?->system?->db?->base?->params?->database;
-        $key  = "core3_mod_version_{$host}_{$module_name}";
+        $db_name = $this->config?->system?->db?->base?->params?->database;
+        $key     = "core3_mod_{$db_name}_{$module_name}";
 
         if ( ! $this->cache->test($key)) {
             $module = $this->db->fetchRow("
-                SELECT version
+                SELECT *
                 FROM core_modules
                 WHERE name = ?
             ", $module_name);
 
-            if ( ! empty($module['version'])) {
-                $this->cache->save($key, $module['version'], ['core3_mod']);
+            if ( ! empty($module)) {
+                $this->cache->save($key, $module, ['core3_mod']);
             }
 
-            $version = $module['version'] ?? '';
+            $result = $module;
 
         } else {
-            $version = $this->cache->load($key);
+            $result = $this->cache->load($key);
         }
 
-        return $version;
+        return $result;
 	}
+
+
+    /**
+     * Получение данных о модуле из файла
+     * @param string $module_name
+     * @return array
+     * @throws DbException
+     * @throws ExceptionInterface
+     */
+    final protected function getModuleInfoFromFile(string $module_name): array {
+
+        $db_name = $this->config?->system?->db?->base?->params?->database;
+        $key     = "core3_mod_{$db_name}_{$module_name}_file";
+
+        if ( ! $this->cache->test($key)) {
+            $module_location = $this->getModuleLocation($module_name);
+            $module_file     = "{$module_location}/module.json";
+
+            if (file_exists($module_file)) {
+                $info_content = file_get_contents($module_file);
+                $info         = @json_decode($info_content, true);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    $info = [];
+                }
+            }
+
+            $result = $info ?? [];
+
+        } else {
+            $result = $this->cache->load($key);
+        }
+
+        return $result;
+    }
 
 
     /**

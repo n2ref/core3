@@ -29,7 +29,7 @@ class Modules extends Table {
             $result = $this->fetchAll(function (Select $select) {
                 $select
                     ->where([
-                        'is_active_sw' => 'Y',
+                        'is_active' => true,
                     ])
                     ->order('seq');
             });
@@ -62,15 +62,13 @@ class Modules extends Table {
      */
     public function getRowsByActiveVisible(): ResultSetInterface {
 
-        $result = $this->fetchAll(function (Select $select) {
+        return $this->fetchAll(function (Select $select) {
             $select
                 ->where([
-                    'is_active_sw'  => 'Y',
-                    'is_visible_sw' => 'Y',
+                    'is_active'  => true,
+                    'is_visible' => true,
                 ])
                 ->order('seq');
         });
-
-        return $result;
     }
 }

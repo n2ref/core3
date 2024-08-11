@@ -1,13 +1,15 @@
 <?php
 namespace Core3\Classes;
-use Core3\Classes\Http\Response;
+use Core3\Classes\Init\Http;
+use Core3\Classes\Init\Response;
 use Core3\Exceptions\AppException;
-use Core3\Exceptions\HttpException;
+use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
+use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin;
-use Monolog\Handler\MissingExtensionException;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Permissions;
+use Monolog\Handler\MissingExtensionException;
 
 
 /**
@@ -216,6 +218,7 @@ class Init extends Db {
      * @throws Exception
      * @throws ExceptionInterface
      * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Exception
      */
     private function dispatchHttp(): string {
 
@@ -293,13 +296,28 @@ class Init extends Db {
 
 
         } catch (HttpException $e) {
-            $response = Response::errorJson($e->getMessage(), $e->getErrorCode(), $e->getCode());
+            $response = Response::errorJson(
+                $e->getCode(),
+                $e->getErrorCode(),
+                $e->getMessage(),
+                $this->config?->system?->debug?->on ? $e->getTrace() : null
+            );
 
         } catch (AppException $e) {
-            $response = Response::errorJson($e->getMessage(), $e->getCode(), 400);
+            $response = Response::errorJson(
+                400,
+                $e->getCode(),
+                $e->getMessage(),
+                $this->config?->system?->debug?->on ? $e->getTrace() : null
+            );
 
         } catch (\Exception $e) {
-            $response = Response::errorJson($e->getMessage(), $e->getCode(), 500);
+            $response = Response::errorJson(
+                500,
+                $e->getCode(),
+                $e->getMessage(),
+                $this->config?->system?->debug?->on ? $e->getTrace() : null
+            );
         }
 
         $this->logResponse($response);
@@ -314,6 +332,7 @@ class Init extends Db {
      * @param int $role_id
      * @return Permissions\Acl\Acl|null
      * @throws ExceptionInterface
+     * @throws DbException
      */
     private function getRoleAcl(int $role_id):? Permissions\Acl\Acl {
 
@@ -324,21 +343,19 @@ class Init extends Db {
 
         } else {
             $modules = $this->db->fetchAll("
-                SELECT m.name, 
-                       m.privileges
+                SELECT m.name
                 FROM core_modules AS m
-                WHERE m.is_active_sw = 'Y'
+                WHERE m.is_active
                 ORDER BY m.seq
             ");
 
             $sections = $this->db->fetchAll("
-                SELECT ms.name, 
-                       m.privileges,
+                SELECT ms.name,
                        m.name AS module_name
                 FROM core_modules_sections AS ms
                     JOIN core_modules AS m ON ms.module_id = m.id
-                WHERE ms.is_active_sw = 'Y' 
-                  AND m.is_active_sw = 'Y'
+                WHERE ms.is_active
+                  AND m.is_active
                 ORDER BY m.seq, ms.seq
             ");
 
@@ -353,11 +370,16 @@ class Init extends Db {
             $acl->addRole(new Permissions\Acl\Role\GenericRole($role_id));
 
 
-            $resources = [];
+            $resources    = [];
+            $modules_info = [];
 
             foreach ($modules as $module) {
-                $resources[$module['name']] = $module['privileges']
-                    ? json_decode($module['privileges'], true)
+                $modules_info[$module['name']] = $this->getModuleInfoFromFile($module['name']);
+
+                $resources[$module['name']] = ! empty($modules_info[$module['name']]) &&
+                                              ! empty($modules_info[$module['name']]['privileges']) &&
+                                              is_array($modules_info[$module['name']]['privileges'])
+                    ? array_keys($modules_info[$module['name']]['privileges'])
                     : [];
 
                 $acl->addResource(new Permissions\Acl\Resource\GenericResource($module['name']));
@@ -365,8 +387,11 @@ class Init extends Db {
 
             foreach ($sections as $section) {
                 $resource             = "{$section['module_name']}_{$section['name']}";
-                $resources[$resource] = $section['privileges']
-                    ? json_decode($section['privileges'], true)
+                $resources[$resource] = ! empty($modules_info[$section['module_name']]['sections']) &&
+                                        ! empty($modules_info[$section['module_name']]['sections'][$section['name']]) &&
+                                        ! empty($modules_info[$section['module_name']]['sections'][$section['name']['privileges']]) &&
+                                        is_array($modules_info[$section['module_name']]['sections'][$section['name']['privileges']])
+                    ? array_keys($modules_info[$section['module_name']]['sections'][$section['name']['privileges']])
                     : [];
 
                 $acl->addResource(new Permissions\Acl\Resource\GenericResource($resource), $section['module_name']);
@@ -393,18 +418,18 @@ class Init extends Db {
 
 
                     // Установка привилегий из модулей
-                    foreach ($privileges as $privilege) {
+                    foreach ($privileges as $privilege_name) {
 
-                        if (empty($privilege['name'])) {
+                        if (empty($privilege_name)) {
                             continue;
                         }
 
                         if ( ! empty($role_privileges[$resource]) &&
-                             in_array($privilege['name'], $role_privileges[$resource])
+                             in_array($privilege_name, $role_privileges[$resource])
                         ) {
-                            $acl->allow($role_id, $resource, $privilege['name']);
+                            $acl->allow($role_id, $resource, $privilege_name);
                         } else {
-                            $acl->deny($role_id, $resource, $privilege['name']);
+                            $acl->deny($role_id, $resource, $privilege_name);
                         }
                     }
                 }

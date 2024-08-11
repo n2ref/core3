@@ -11,7 +11,6 @@ use CoreUI\Table\Control as TableControl;
 use CoreUI\Form\Field;
 use CoreUI\Form\Control;
 use Laminas\Db\RowGateway\AbstractRowGateway;
-use Psr\Container\NotFoundExceptionInterface;
 
 
 /**
@@ -26,8 +25,6 @@ class View extends Common {
      * @throws Exception
      */
     public function getTable(string $base_url): array {
-
-        $switch_url = "/core3/mod/admin/users/handler/switch_active?id=[id]";
 
         $roles = $this->modAdmin->tableRoles->fetchPairs('id', 'title');
 
@@ -47,21 +44,21 @@ class View extends Common {
 
         $table->addSearch([
            (new Search\DatetimeRange('date_created', $this->_('Дата регистрации'))),
-           (new Search\Radio('is_admin_sw',          $this->_('Админ')))->setOptions(['Y' => $this->_('Да'), 'N' => $this->_('Нет')])
+           (new Search\Radio('is_admin',             $this->_('Админ')))->setOptions(['1' => $this->_('Да'), '0' => $this->_('Нет')])
         ]);
 
         $table->addColumns([
             (new Column\Select()),
-            (new Column\Toggle('is_active_sw',    $this->_('Активность'),             45))->setOnChange("Core.ui.table.get('users').switch('{$switch_url}', checked, id)")->setShowLabel(false),
-            (new Column\Image('avatar',           $this->_('Аватар'),                 40))->setShowLabel(false)->setStyle('circle')->setBorder(true)->setImgSize(20, 20),
-            (new Column\Link('login',             $this->_('Логин')))->setMinWidth(100),
-            (new Column\Text('name',              $this->_('Имя')))->setNoWrap(true)->setMinWidth(150),
-            (new Column\Text('email',             $this->_('Email'),                  200)),
-            (new Column\Text('role_title',        $this->_('Роль'),                   200)),
-            (new Column\Datetime('date_activity', $this->_('Последняя активность'),   185))->setMinWidth(185),
-            (new Column\Datetime('date_created',  $this->_('Дата регистрации'),       155))->setMinWidth(155),
-            (new Column\Badge('is_admin_sw',      $this->_('Админ'),                  80))->setMinWidth(80),
-            (new Column\Button('login_user',      $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
+            $table->getColumnToggle('is_active',    $this->_('Активность'),             45, 'switchActive'),
+            (new Column\Image('avatar',             $this->_('Аватар'),                 40))->setShowLabel(false)->setStyle('circle')->setBorder(true)->setImgSize(20, 20),
+            (new Column\Link('login',               $this->_('Логин')))->setMinWidth(100),
+            (new Column\Text('name',                $this->_('Имя')))->setNoWrap(true)->setMinWidth(150),
+            (new Column\Text('email',               $this->_('Email'),                  200)),
+            (new Column\Text('role_title',          $this->_('Роль'),                   200)),
+            (new Column\Datetime('date_activity',   $this->_('Последняя активность'),   185))->setMinWidth(185),
+            (new Column\Datetime('date_created',    $this->_('Дата регистрации'),       155))->setMinWidth(155),
+            (new Column\Badge('is_admin',           $this->_('Админ'),                  80))->setMinWidth(80),
+            (new Column\Button('login_user',        $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
         ]);
 
         return $table->toArray();
@@ -81,6 +78,7 @@ class View extends Common {
         $form->setTable($this->modAdmin->tableUsers, $user->id);
         $form->setHandler('save', 'put');
         $form->setSuccessLoadUrl('#/admin/users');
+        $form->setOnSubmitSuccessDefault();
 
         $avatar = $user->avatar_type == 'upload'
             ? $form->getFiles($this->modAdmin->tableUsersFiles, 'avatar', $user->id)
@@ -96,8 +94,8 @@ class View extends Common {
             'mname'        => $user->mname,
             'avatar_type'  => $user->avatar_type,
             'avatar'       => $avatar,
-            'is_admin_sw'  => $user->is_admin_sw,
-            'is_active_sw' => $user->is_active_sw,
+            'is_admin'     => $user->is_admin,
+            'is_active'    => $user->is_active,
         ]);
 
         $avatar_types = [
@@ -125,8 +123,8 @@ class View extends Common {
             (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
             (new Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
             (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow($user->avatar_type == 'upload'),
-            (new Field\Toggle('is_admin_sw',     $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
-            (new Field\Toggle('is_active_sw',    $this->_('Активен'))),
+            (new Field\Toggle('is_admin',        $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
+            (new Field\Toggle('is_active',       $this->_('Активен'))),
         ]);
 
         $form->addControls([
@@ -148,6 +146,7 @@ class View extends Common {
         $form = new Form('admin', 'users', 'user');
         $form->setHandler('saveNew');
         $form->setSuccessLoadUrl('#/admin/users');
+        $form->setOnSubmitSuccessDefault();
 
         $form->setRecord([
             'login'        => '',
@@ -159,8 +158,8 @@ class View extends Common {
             'mname'        => '',
             'avatar_type'  => 'none',
             'avatar'       => '',
-            'is_admin_sw'  => 'N',
-            'is_active_sw' => 'Y',
+            'is_admin'     => '0',
+            'is_active'    => '1',
         ]);
 
         $avatar_types = [
@@ -188,8 +187,8 @@ class View extends Common {
             (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
             (new Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
             (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow(false),
-            (new Field\Toggle('is_admin_sw',     $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
-            (new Field\Toggle('is_active_sw',    $this->_('Активен'))),
+            (new Field\Toggle('is_admin',        $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
+            (new Field\Toggle('is_active',       $this->_('Активен'))),
         ]);
 
         $form->addControls([

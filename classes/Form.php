@@ -178,6 +178,16 @@ class Form extends \CoreUI\Form {
 
 
     /**
+     * Установка сообщения по умолчанию
+     * @return void
+     */
+    public function setOnSubmitSuccessDefault(): void {
+
+        $this->setOnSubmitSuccess("CoreUI.notice.default('" . $this->system->_('Сохранено') . "')");
+    }
+
+
+    /**
      * Заполнение адреса для отправки формы
      * @return void
      */

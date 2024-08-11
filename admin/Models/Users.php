@@ -55,7 +55,7 @@ class Users extends Common {
     public function getUsersAdmins(): array {
 
         $users = $this->modAdmin->tableUsers->fetchAll([
-            'is_admin_sw' => 'Y'
+            'is_admin' => '1'
         ]);
 
         return $users->toArray();
@@ -98,17 +98,17 @@ class Users extends Common {
      * @throws Exception
      * @throws ExceptionInterface
      */
-    public function switchActive(int $user_id, bool $is_active_sw): void {
+    public function switchActive(int $user_id, bool $is_active): void {
 
         $user = $this->modAdmin->tableUsers->getRowById($user_id);
 
-        if ($user && ($user->is_active_sw == 'Y') != $is_active_sw) {
-            $user->is_active_sw = $is_active_sw ? 'Y' : 'N';
+        if ($user && ($user->is_active == '1') != $is_active) {
+            $user->is_active = $is_active ? '1' : '0';
             $user->save();
 
             $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
                 'id'        => $user_id,
-                'is_active' => $is_active_sw,
+                'is_active' => $is_active,
             ]);
         }
     }

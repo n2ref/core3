@@ -1,14 +1,169 @@
 <?php
 namespace Core3\Mod\Admin\Handlers;
 use Core3\Classes\Handler;
-use Core3\Classes\Http\Request;
+use Core3\Classes\Init\Request;
+use Core3\Classes\Init\Response;
+use Core3\Classes\Tools;
+use Core3\Exceptions\AppException;
+use Core3\Exceptions\Exception;
+use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin\Classes\Modules\View;
+use Core3\Classes\Table;
+use CoreUI\Table\Adapters\Mysql\Search;
+use Laminas\Cache\Exception\ExceptionInterface;
 
 
 /**
  *
  */
 class Modules extends Handler {
+
+    /**
+     * Сохранение пользователя
+     * @param Request $request
+     * @return Response
+     * @throws AppException
+     * @throws HttpException
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function save(Request $request): Response {
+
+        $this->checkHttpMethod($request, 'put');
+        $this->checkVersion($this->modAdmin->tableModules, $request);
+
+        $fields = [
+            'title'            => 'req,string(1-): Название',
+            'name'             => 'req,string(1-): Идентификатор',
+            'is_active'        => 'int(0-1): Администратор безопасности',
+            'is_visible'       => 'int(0-1): Активен',
+            'is_visible_index' => 'int(0-1): Активен',
+            'avatar_type'      => 'string(none|generate|upload): Аватар',
+        ];
+
+        $record_id = $request->getQuery('id');
+        $controls  = $request->getFormContent() ?? [];
+        $controls  = $this->clearData($controls);
+
+
+        if ($errors = $this->validateFields($fields, $controls)) {
+            return $this->getResponseError($errors);
+        }
+
+
+        $this->db->beginTransaction();
+        try {
+            $row_old = $this->modAdmin->tableUsers->getRowById($record_id);
+            $row     = $this->saveData($this->modAdmin->tableUsers, $controls, $record_id);
+
+
+            if ($row_old->is_active != $row->is_active) {
+                $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
+                    'id'        => $row->id,
+                    'is_active' => $row->is_active == 1,
+                ]);
+            }
+
+            $this->db->commit();
+
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return $this->getResponseSuccess([
+            'id' => $row->id
+        ]);
+    }
+
+
+    /**
+     * Сохранение пользователя
+     * @param Request $request
+     * @return Response
+     * @throws AppException
+     * @throws HttpException
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function saveNew(Request $request): Response {
+
+        $this->checkHttpMethod($request, ['post', 'put']);
+        $this->checkVersion($this->modAdmin->tableUsers, $request);
+
+        $fields = [
+            'login'        => 'req,string(1-255),chars(alphanumeric|_|\\): Логин',
+            'email'        => 'email: Email',
+            'role_id'      => 'req,int(1-): Роль',
+            'pass'         => 'req,string(4-): Пароль',
+            'fname'        => 'string(0-255): Имя',
+            'lname'        => 'string(0-255): Фамилия',
+            'mname'        => 'string(0-255): Отчество',
+            'is_admin'     => 'string(1|0): Администратор безопасности',
+            'is_active'    => 'string(1|0): Активен',
+            'avatar_type'  => 'string(none|generate|upload): Аватар',
+        ];
+
+        $controls = $request->getFormContent() ?? [];
+        $controls = $this->clearData($controls);
+
+
+        $avatar = null;
+
+        if ( ! empty($controls['avatar'])) {
+            $avatar = $controls['avatar'];
+            unset($controls['avatar']);
+        }
+
+        if ($errors = $this->validateFields($fields, $controls)) {
+            return $this->getResponseError($errors);
+        }
+
+        if ( ! $this->modAdmin->tableUsers->isUniqueLogin($controls['login'])) {
+            throw new AppException($this->_("Пользователь с таким логином уже существует"));
+        }
+
+        if ( ! empty($controls['email']) &&
+             ! $this->modAdmin->tableUsers->isUniqueEmail($controls['email'])
+        ) {
+            throw new AppException($this->_("Пользователь с таким email уже существует"));
+        }
+
+        $controls['pass'] = Tools::passSalt(md5($controls['pass']));
+        $controls['name'] = trim(implode(' ', [
+            $controls['lname'] ?? '',
+            $controls['fname'] ?? '',
+            $controls['mname'] ?? ''
+        ]));
+
+
+        $this->db->beginTransaction();
+        try {
+            $row = $this->saveData($this->modAdmin->tableUsers, $controls);
+
+            if ($controls['avatar_type'] == 'upload') {
+                $this->saveFiles($this->modAdmin->tableUsersFiles, $row->id, 'avatar', $avatar);
+
+            } elseif ($controls['avatar_type'] == 'generate') {
+                $this->generateAvatar($row);
+            }
+
+            $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
+                'id'        => $row->id,
+                'is_active' => $controls['is_active'] == '1',
+            ]);
+
+            $this->db->commit();
+
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return $this->getResponseSuccess([
+            'id' => $row->id
+        ]);
+    }
 
 
     /**
@@ -38,6 +193,84 @@ class Modules extends Handler {
 
 
     /**
+     * Данные для таблицы
+     * @param Request $request
+     * @return Response
+     * @throws \CoreUI\Table\Exception
+     */
+    public function tableInstall(Request $request): Response {
+
+        $table = new Table\Db($request);
+
+//        $sort = $request->getQuery('sort');
+//
+//        if ($sort && is_array($sort)) {
+//            $table->setSort($sort, [
+//                'avatar'        => 'u.avatar',
+//                'login'         => 'u.login',
+//                'name'          => "CONCAT_WS(' ', u.lname, u.fname, u.mname)",
+//                'email'         => 'u.email',
+//                'role_title'    => 'r.title',
+//                'date_activity' => '(SELECT us.date_last_activity FROM core_users_sessions AS us WHERE u.id = us.user_id ORDER BY date_last_activity DESC LIMIT 1)',
+//                'date_created'  => 'u.date_created',
+//                'is_active_sw'  => "u.is_active_sw = 'Y'",
+//                'is_admin_sw'   => 'u.is_admin_sw',
+//            ]);
+//        }
+
+
+//        $search = $request->getQuery('search');
+//
+//        if ($search && is_array($search)) {
+//            $table->setSearch($search, [
+//                'login'        => (new Search\Like())->setField('u.login'),
+//                'role'         => (new Search\Equal())->setField('u.role_id'),
+//                'date_created' => (new Search\Between())->setField('u.date_created'),
+//                'is_admin_sw'  => (new Search\Equal())->setField('u.is_admin_sw'),
+//            ]);
+//        }
+
+        $table->setQuery("
+            SELECT u.id,
+                   u.login,
+                   u.email,
+                   CONCAT_WS(' ', u.lname, u.fname, u.mname) AS name,
+                   u.is_active,
+                   u.is_admin,
+                   u.date_created,
+                   r.title AS role_title,
+                   
+                   (SELECT us.date_last_activity
+                    FROM core_users_sessions AS us 
+                    WHERE u.id = us.user_id
+                    ORDER BY date_last_activity DESC
+                    LIMIT 1) AS date_activity
+            FROM core_users AS u
+                LEFT JOIN core_roles AS r ON u.role_id = r.id
+        ");
+
+        $records = $table->fetchRecords();
+
+        foreach ($records as $record) {
+
+            $record->login    = ['content' => $record->login, 'url' => "#/admin/users/{$record->id}"];
+            $record->avatar   = "core3/user/{$record->id}/avatar";
+            $record->is_admin = $record->is_admin == 1
+                ? [ 'type' => 'danger', 'text' => $this->_('Да') ]
+                : [ 'type' => 'none',   'text' => $this->_('Нет') ];
+
+            $record->login_user  = [
+                'content' => 'Войти',
+                'attr'    => ['class' => 'btn btn-sm btn-secondary'],
+                'onClick' => "adminUsers.loginUser('{$record->id}');",
+            ];
+        }
+
+        return $this->getResponseSuccess($table->getResult());
+    }
+
+
+    /**
      * @param $data
      * @return string
      * @throws \Laminas\Cache\Exception\ExceptionInterface
@@ -62,14 +295,14 @@ class Modules extends Handler {
 
             $module = $this->db->fetchRow("
                 SELECT name,
-                       is_active_sw
+                       is_active
                 FROM core_modules 
                 WHERE id = ?
             ", $record_id);
 
-            if ($module['is_active_sw'] != $data['is_active_sw']) {
+            if ($module['is_active'] != $data['is_active']) {
                 // Обработка включения модуля
-                if ($data['is_active_sw'] == "Y") {
+                if ($data['is_active'] == 1) {
                     if (isset($data['dependencies'])) {
                         $inactive_dependencies = [];
                         foreach ($data['dependencies'] as $dep_module) {
@@ -78,7 +311,7 @@ class Modules extends Handler {
                                        title
                                 FROM core_modules 
                                 WHERE name = ?
-                                  AND is_active_sw = 'Y'
+                                  AND is_active = 1
                             ", $dep_module);
 
                             if (empty($active_dep_module)) {
@@ -98,7 +331,7 @@ class Modules extends Handler {
                                title,
                                dependencies 
                         FROM core_modules 
-                        WHERE is_active_sw = 'Y'
+                        WHERE is_active = 1
                     ");
                     $active_dependencies = array();
 

@@ -1,8 +1,8 @@
 <?php
 namespace Core3\Classes;
 use Core3\Classes\Db\Table;
-use Core3\Classes\Http\Request;
-use Core3\Classes\Http\Response;
+use Core3\Classes\Init\Request;
+use Core3\Classes\Init\Response;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
@@ -263,7 +263,7 @@ class Handler extends Common {
             $errors_result[] = count($errors) > 1 ? "- {$error}" : $error;
         }
 
-        return Response::errorJson(implode("<br>", $errors_result), $error_code, $http_code);
+        return Response::errorJson($http_code, $error_code, implode("<br>", $errors_result));
     }
 
 

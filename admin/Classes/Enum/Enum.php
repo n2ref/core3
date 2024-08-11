@@ -41,7 +41,7 @@ class Enum extends \Common {
         $custom = '<div id="xxx"></div>
 			<div><span id="new_attr" class="newFieldEnum btn btn-link btn-sm" onclick="en.newEnumField()">' . $this->translate->tr("Новое поле") . '</span></div>';
         $edit->addControl($this->translate->tr("Дополнительные поля:"), "CUSTOM", $custom);
-        $edit->addButtonSwitch('is_active_sw', 1);
+        $edit->addButtonSwitch('is_active', 1);
 
         $edit->back = $this->app;
         $edit->addButton($this->translate->tr("Вернуться к списку справочников"), "load('$this->app')");

@@ -3,6 +3,7 @@ namespace Core3\Mod\Admin\Tables;
 use Core3\Classes\Db\Table;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\Sql\Select;
+use Laminas\Db\Sql\Expression;
 
 
 /**
@@ -18,15 +19,13 @@ class ModulesSections extends Table {
      */
     public function getRowsByActive(): ResultSetInterface {
 
-        $result = $this->fetchAll(function (Select $select) {
+        return $this->fetchAll(function (Select $select) {
             $select
                 ->where([
-                    'is_active_sw' => 'Y',
+                    'is_active' => true,
                 ])
                 ->order('seq');
         });
-
-        return $result;
     }
 
 
@@ -42,5 +41,22 @@ class ModulesSections extends Table {
         });
 
         return $result;
+    }
+
+
+    /**
+     * Получение количества записей с $module_id
+     * @param int $module_id
+     * @return int
+     */
+    public function getCountByModuleId(int $module_id): int {
+
+        $result = $this->select(function (Select $select) use ($module_id) {
+            $select
+                ->columns(['count' => new Expression('COUNT(1)')])
+                ->where(["module_id" => $module_id]);
+        });
+
+        return (int)($result->getDataSource()->current()['count'] ?? 0);
     }
 }

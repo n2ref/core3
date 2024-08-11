@@ -460,7 +460,7 @@ let coreMenu = {
                 module.index = 'index';
 
 
-                if ( ! module.isset_index_page && module.sections.length > 0) {
+                if ( ! module.is_visible_index && module.sections.length > 0) {
                     $.each(module.sections, function (key, section) {
                         module.index = section.name;
                         return false;

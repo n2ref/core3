@@ -1,7 +1,9 @@
 <?php
 namespace Core3\Classes;
 use Core3\Exceptions\Exception;
+use CoreUI\Table\Column\Toggle;
 use CoreUI\Table\Control;
+use CoreUI\Table\Column;
 use CoreUI\Table\Abstract;
 
 
@@ -124,7 +126,7 @@ class Table extends \CoreUI\Table {
             return null;
         }
 
-        return (new Control\Link('<i class=\"bi bi-plus\"></i> ' . $this->system->_('Добавить'), $url))
+        return (new Control\Link('<i class="bi bi-plus"></i> ' . $this->system->_('Добавить'), $url))
             ->setAttr('class', 'btn btn-success');
     }
 
@@ -143,9 +145,30 @@ class Table extends \CoreUI\Table {
         $url      = "core3/mod/{$this->module}/{$this->section}/handler/{$handler}";
         $table_id = $this->getId();
 
-        return (new Control\Button('<i class=\"bi bi-trash\"></i> ' . $this->system->_('Удалить')))
+        return (new Control\Button('<i class="bi bi-trash"></i> ' . $this->system->_('Удалить')))
             ->setOnClick("Core.ui.table.get('{$table_id}').deleteSelected('{$url}', Core.menu.reload)")
             ->setAttr('class', 'btn btn-warning');
+    }
+
+
+    /**
+     * @param string $field
+     * @param string $label
+     * @param int    $width
+     * @param string $handler
+     * @return Toggle
+     */
+    public function getColumnToggle(string $field, string $label, int $width, string $handler): Column\Toggle {
+
+        $switch_url = "/core3/mod/{$this->module}/{$this->section}/handler/{$handler}?id=[id]";
+        $table_id   = $this->getId();
+
+        $column = new Column\Toggle($field, $label, $width);
+        $column->setOnChange("Core.ui.table.get('{$table_id}').switch('{$switch_url}', checked, id)")
+            ->setValueY(1)
+            ->setShowLabel(false);
+
+        return $column;
     }
 
 

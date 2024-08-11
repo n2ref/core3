@@ -14,7 +14,7 @@ use Psr\Container\NotFoundExceptionInterface;
  * @property-read Worker\Client    $worker
  * @property-read Auth             $auth
  */
-abstract class Common extends Db {
+class Common extends Db {
 
     protected $module   = '';
     protected $section  = '';

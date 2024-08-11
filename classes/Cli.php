@@ -2,7 +2,7 @@
 namespace Core3\Classes;
 
 
-use Core3\Classes\Worker;
+use core3\classes\Abstract\Worker;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
 use Laminas\Cache\Exception\ExceptionInterface;
@@ -84,8 +84,8 @@ class Cli extends Db {
             SELECT m.name,
                    m.title,
                    m.version,
-                   m.is_visible_sw,
-                   m.is_active_sw
+                   m.is_visible,
+                   m.is_active
             FROM core_modules AS m
             ORDER BY m.seq
         ");
@@ -98,7 +98,7 @@ class Cli extends Db {
                     'Title'      => $module['title'],
                     'Version'    => $module['version'],
                     'Is visible' => $module['is_visible_sw'],
-                    'Is active'  => $module['is_active_sw'],
+                    'Is active'  => $module['is_active'],
                 ];
             }
         }
@@ -177,7 +177,7 @@ class Cli extends Db {
             SELECT m.name,
                    m.title
             FROM core_modules AS m
-            WHERE m.is_active_sw = 'Y'
+            WHERE m.is_active = 1
             ORDER BY m.seq
         ");
 

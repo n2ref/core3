@@ -254,7 +254,7 @@ class View extends Common {
             ]);
 
         $table->addColumns([
-            (new Table\Column\Text('name',  'Name'))->setAttr('style', 'word-break: break-all'),
+            (new Table\Column\Text('name',  'Name', '50%'))->setAttr('style', 'word-break: break-all'),
             (new Table\Column\Text('value', 'Value'))->setNoWrap(true)->setNoWrapToggle(true)->setMinWidth(150)->setAttr('style', 'word-break: break-all'),
         ]);
 

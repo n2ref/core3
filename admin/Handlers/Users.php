@@ -1,8 +1,8 @@
 <?php
 namespace Core3\Mod\Admin\Handlers;
 use Core3\Classes\Handler;
-use Core3\Classes\Http\Request;
-use Core3\Classes\Http\Response;
+use Core3\Classes\Init\Request;
+use Core3\Classes\Init\Response;
 use Core3\Classes\Tools;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\HttpException;
@@ -40,8 +40,8 @@ class Users extends Handler {
             'fname'        => 'string(0-255): Имя',
             'lname'        => 'string(0-255): Фамилия',
             'mname'        => 'string(0-255): Отчество',
-            'is_admin_sw'  => 'string(Y|N): Администратор безопасности',
-            'is_active_sw' => 'string(Y|N): Активен',
+            'is_admin'     => 'string(1|0): Администратор безопасности',
+            'is_active'    => 'string(1|0): Активен',
             'avatar_type'  => 'string(none|generate|upload): Аватар',
         ];
 
@@ -95,10 +95,10 @@ class Users extends Handler {
                 $this->generateAvatar($row);
             }
 
-            if ($row_old->is_active_sw != $row->is_active_sw) {
+            if ($row_old->is_active != $row->is_active) {
                 $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
                     'id'        => $row->id,
-                    'is_active' => $row->is_active_sw == 'Y',
+                    'is_active' => $row->is_active == '1',
                 ]);
             }
 
@@ -137,8 +137,8 @@ class Users extends Handler {
             'fname'        => 'string(0-255): Имя',
             'lname'        => 'string(0-255): Фамилия',
             'mname'        => 'string(0-255): Отчество',
-            'is_admin_sw'  => 'string(Y|N): Администратор безопасности',
-            'is_active_sw' => 'string(Y|N): Активен',
+            'is_admin'     => 'string(1|0): Администратор безопасности',
+            'is_active'    => 'string(1|0): Активен',
             'avatar_type'  => 'string(none|generate|upload): Аватар',
         ];
 
@@ -188,7 +188,7 @@ class Users extends Handler {
 
             $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
                 'id'        => $row->id,
-                'is_active' => $controls['is_active_sw'] == 'Y',
+                'is_active' => $controls['is_active'] == '1',
             ]);
 
             $this->db->commit();
@@ -295,8 +295,8 @@ class Users extends Handler {
                 'role_title'    => 'r.title',
                 'date_activity' => '(SELECT us.date_last_activity FROM core_users_sessions AS us WHERE u.id = us.user_id ORDER BY date_last_activity DESC LIMIT 1)',
                 'date_created'  => 'u.date_created',
-                'is_active_sw'  => "u.is_active_sw = 'Y'",
-                'is_admin_sw'   => 'u.is_admin_sw',
+                'is_active'     => "u.is_active = '1'",
+                'is_admin'      => 'u.is_admin',
             ]);
         }
 
@@ -308,7 +308,7 @@ class Users extends Handler {
                 'login'        => (new Search\Like())->setField('u.login'),
                 'role'         => (new Search\Equal())->setField('u.role_id'),
                 'date_created' => (new Search\Between())->setField('u.date_created'),
-                'is_admin_sw'  => (new Search\Equal())->setField('u.is_admin_sw'),
+                'is_admin'     => (new Search\Equal())->setField('u.is_admin'),
             ]);
         }
 
@@ -317,8 +317,8 @@ class Users extends Handler {
                    u.login,
                    u.email,
                    CONCAT_WS(' ', u.lname, u.fname, u.mname) AS name,
-                   u.is_active_sw,
-                   u.is_admin_sw,
+                   u.is_active,
+                   u.is_admin,
                    u.date_created,
                    r.title AS role_title,
                    
@@ -335,9 +335,9 @@ class Users extends Handler {
 
         foreach ($records as $record) {
 
-            $record->login       = ['content' => $record->login, 'url' => "#/admin/users/{$record->id}"];
-            $record->avatar      = "core3/user/{$record->id}/avatar";
-            $record->is_admin_sw = $record->is_admin_sw == 'Y'
+            $record->login    = ['content' => $record->login, 'url' => "#/admin/users/{$record->id}"];
+            $record->avatar   = "core3/user/{$record->id}/avatar";
+            $record->is_admin = $record->is_admin
                 ? [ 'type' => 'danger', 'text' => $this->_('Да') ]
                 : [ 'type' => 'none',   'text' => $this->_('Нет') ];
 
