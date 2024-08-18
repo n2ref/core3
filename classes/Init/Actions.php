@@ -9,6 +9,7 @@ use Gumlet\ImageResize;
 use Gumlet\ImageResizeException;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\Sql\Expression;
+use MaxMind\Db\Reader;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
@@ -27,6 +28,7 @@ class Actions extends Common {
      * @throws HttpException
      * @throws NotFoundExceptionInterface
      * @throws Exception
+     * @throws \Exception
      */
     public function login(Request $request): array {
 
@@ -56,14 +58,26 @@ class Actions extends Common {
             throw new HttpException(400, 'pass_incorrect', $this->_('Неверный пароль') . Tools::passSalt($params['password']));
         }
 
-
-        $this->modAdmin->tableUsersSession->insert([
+        $session   = [
             'user_id'            => $user->id,
             'fingerprint'        => $params['fp'],
             'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
             'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
             'date_last_activity' => new Expression('NOW()'),
-        ]);
+        ];
+
+        $ip_info = $this->getIpInfo($session['client_ip']);
+
+        if ($ip_info) {
+            if ( ! empty($ip_info['country_name'])) { $session['country_name'] = $ip_info['country_name']; }
+            if ( ! empty($ip_info['country_code'])) { $session['country_code'] = $ip_info['country_code']; }
+            if ( ! empty($ip_info['region_name']))  { $session['region']       = $ip_info['region_name']; }
+            if ( ! empty($ip_info['city_name']))    { $session['city']         = $ip_info['city_name']; }
+            if ( ! empty($ip_info['lat']))          { $session['lat']          = $ip_info['lat']; }
+            if ( ! empty($ip_info['lng']))          { $session['lng']          = $ip_info['lng']; }
+        }
+
+        $this->modAdmin->tableUsersSession->insert($session);
         $session_id = $this->modAdmin->tableUsersSession->getLastInsertValue();
 
         $refresh_token = $this->getRefreshToken($user->login, $session_id);
@@ -756,5 +770,57 @@ class Actions extends Common {
 
         // Выполнение обработчика
         return new $handler_class_name();
+    }
+
+
+    /**
+     * @param string $ip
+     * @return array
+     * @throws \Exception
+     */
+    private function getIpInfo(string $ip): array {
+
+        $result    = [];
+        $file_ipdb = $this->config?->system?->ipdb?->file ?: 'ip.mmdb';
+
+        if (file_exists($file_ipdb)) {
+            $reader  = new Reader($file_ipdb);
+            $ip_info = $reader->get($ip);
+
+            if ($ip_info && is_array($ip_info)) {
+                $lang = $this->config?->system?->lang ?: 'en';
+
+                /**
+                 * @param array  $names
+                 * @param string $lang
+                 * @return string|null
+                 */
+                function getBestName(array $names, string $lang):? string {
+
+                    if ( ! empty($names[$lang])) {
+                        $result = $names[$lang];
+
+                    } elseif ( ! empty($names['en'])) {
+                        $result = $names['en'];
+
+                    } else {
+                        $result = $names ? current($names) : null;
+                    }
+
+                    return is_string($result) ? $result : null;
+                }
+
+                $result = [
+                    'country_name' => ! empty($ip_info['country']) && ! empty($ip_info['country']['names']) ? getBestName($ip_info['country']['names'], $lang) : null,
+                    'country_code' => ! empty($ip_info['country']) && ! empty($ip_info['country']['iso_code']) ? $ip_info['country']['iso_code'] : null,
+                    'region_name'  => ! empty($ip_info['subdivisions']) && ! empty($ip_info['subdivisions'][0]) && ! empty($ip_info['subdivisions'][0]['names']) ? getBestName($ip_info['subdivisions'][0]['names'], $lang) : null,
+                    'city_name'    => ! empty($ip_info['city']) && ! empty($ip_info['city']['names']) ? getBestName($ip_info['city']['names'], $lang) : null,
+                    'lat'          => ! empty($ip_info['location']) && ! empty($ip_info['location']['latitude'])  ? $ip_info['location']['latitude'] : null,
+                    'lng'          => ! empty($ip_info['location']) && ! empty($ip_info['location']['longitude']) ? $ip_info['location']['longitude'] : null,
+                ];
+            }
+        }
+
+        return $result;
     }
 }
