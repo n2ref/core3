@@ -37,7 +37,7 @@ $pagination-active-bg:     #e6e6e6;
 
 $pagination-hover-bg:      #dee2e6;
 
-
+$form-switch-width: 2.3em;
 
 $link-color: #1C6599;
 $link-decoration: none;
@@ -79,4 +79,8 @@ $link-hover-decoration: underline;
   );
 
   --bs-btn-color: #495057;
+}
+
+.form-switch .form-check-input {
+  height: 1.2em;
 }
