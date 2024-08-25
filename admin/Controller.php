@@ -78,7 +78,7 @@ class Controller extends Common {
         $panel_php = new \CoreUI\Panel();
         $panel_php->setTitle('Php');
         $panel_php->addControls([
-            (new Control\Button('<i class="bi bi-list-ul"></i>'))->setOnClick('adminIndex.showPhpInfo()')
+            (new Control\Button('<i class="bi bi-info"></i>'))->setOnClick('adminIndex.showPhpInfo()')
         ]);
         $panel_php->setContent($view->getPhp());
 

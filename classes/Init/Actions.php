@@ -58,7 +58,7 @@ class Actions extends Common {
             throw new HttpException(400, 'pass_incorrect', $this->_('Неверный пароль') . Tools::passSalt($params['password']));
         }
 
-        $session   = [
+        $session = [
             'user_id'            => $user->id,
             'fingerprint'        => $params['fp'],
             'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
