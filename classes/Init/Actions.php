@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes\Init;
+use Core3\Classes\Common;
 use Core3\Classes\Tools;
 use Core3\Classes\Validator;
 use Core3\Exceptions\DbException;
@@ -338,14 +339,13 @@ class Actions extends Common {
     /**
      * Получение файла аватара
      * @param Request $request
+     * @param int     $user_id
      * @return Response
+     * @throws Exception
      * @throws HttpException
      * @throws ImageResizeException
-     * @throws Exception
      */
-    public function getUserAvatar(Request $request): Response {
-
-        $user_id = $request->getPathParam('id');
+    public function getUserAvatar(Request $request, int $user_id): Response {
 
         if ( ! $user_id) {
             throw new HttpException(400, 'empty_user_id', $this->_('Не указан id пользователя'));
@@ -478,16 +478,13 @@ class Actions extends Common {
     /**
      * Данные о разделе модуля
      * @param Request $request
+     * @param string  $module_name
+     * @param string  $section_name
      * @return mixed
-     * @throws ContainerExceptionInterface
      * @throws ExceptionInterface
      * @throws HttpException
-     * @throws NotFoundExceptionInterface
      */
-    public function getModSection(Request $request): mixed {
-
-        $module_name  = $request->getPathParam('module');
-        $section_name = $request->getPathParam('section');
+    public function getModSection(Request $request, string $module_name, string $section_name): mixed {
 
         if ( ! $this->auth) {
             throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
@@ -522,22 +519,19 @@ class Actions extends Common {
 
     /**
      * Вызов метода для обработки данных
-     * @param string $module_name
-     * @param string $section_name
-     * @param string $method_name
+     * @param Request $request
+     * @param string  $module_name
+     * @param string  $section_name
+     * @param string  $method_name
      * @return array
+     * @throws ContainerExceptionInterface
      * @throws DbException
-     * @throws HttpException
      * @throws Exception
      * @throws ExceptionInterface
-     * @throws ContainerExceptionInterface
+     * @throws HttpException
      * @throws NotFoundExceptionInterface
      */
-    public function getModHandler(Request $request): mixed {
-
-        $module_name  = $request->getPathParam('module');
-        $section_name = $request->getPathParam('section');
-        $method_name  = $request->getPathParam('method');
+    public function getModHandler(Request $request, string $module_name, string $section_name, string $method_name): mixed {
 
         if ( ! $this->auth) {
             throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
@@ -610,6 +604,56 @@ class Actions extends Common {
         }
 
         return $modules;
+    }
+    /**
+     * @param string $user_login
+     * @param int    $session_id
+     * @return Token
+     * @throws HttpException
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+    private function getRefreshToken(string $user_login, int $session_id): Token {
+
+        $refresh_token_exp = $this->config?->system?->auth?->refresh_token?->expiration ?: 7776000; // 90 дней
+
+        if ( ! is_numeric($refresh_token_exp)) {
+            throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.refresh_token.expiration'), 'error_refresh_token', 500);
+        }
+
+        $sign      = $this->config?->system?->auth?->token_sign ?: 'gyctmn34ycrr0471yc4r';
+        $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
+
+        $token = new Token((string)$sign, (string)$algorithm);
+        $token->set($user_login, $session_id, $refresh_token_exp);
+
+        return $token;
+    }
+
+
+    /**
+     * @param string $user_login
+     * @param int    $session_id
+     * @return Token
+     * @throws HttpException
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+    private function getAccessToken(string $user_login, int $session_id): Token {
+
+        $access_token_exp  = $this->config?->system?->auth?->access_token?->expiration  ?: 1800; // 30 минут
+
+        if ( ! is_numeric($access_token_exp)) {
+            throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.access_token.expiration'), 'error_access_token', 500);
+        }
+
+        $sign      = $this->config?->system?->auth?->token_sign ?: 'gyctmn34ycrr0471yc4r';
+        $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
+
+        $token = new Token($sign, $algorithm);
+        $token->set($user_login, $session_id, $access_token_exp);
+
+        return $token;
     }
 
 

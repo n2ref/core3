@@ -16,38 +16,33 @@ class Http extends Common {
     /**
      * @return mixed
      * @throws HttpException
+     * @throws \Exception
      */
     public function dispatch(): mixed {
 
         $router = new Router();
-        $router->addPath('/core3/auth/login')->post('login');
-        $router->addPath('/core3/auth/logout')->put('logout');
-        $router->addPath('/core3/auth/refresh')->post('refreshToken');
-        $router->addPath('/core3/registration/email')->post('registrationEmail');
-        $router->addPath('/core3/registration/email/check')->post('registrationEmailCheck');
-        $router->addPath('/core3/restore')->post('restorePass');
-        $router->addPath('/core3/restore/check')->post('restorePassCheck');
-        $router->addPath('/core3/conf')->get('getConf');
-        $router->addPath('/core3/cabinet')->get('getCabinet');
-        $router->addPath('/core3/home')->get('getHome');
-        $router->addPath('/core3/user/{id}/avatar', ['[0-9_]+'])->get('getUserAvatar');
-        $router->addPath('/core3/mod/{module}/{section}/handler/{method}', ['[a-z0-9_]+', '[a-z0-9_]+', '[a-zA-Z0-9_/]+'])->any('getModHandler');
-        $router->addPath('/core3/mod/{module}/{section}{mod_query}', ['[a-z0-9_]+', '[a-z0-9_]+', '(?:/[a-zA-Z0-9_/]+|)'])->any('getModSection');
+        $router->post('^/auth/login',                                                                    [Init\Actions::class, 'login']);
+        $router->put('^/auth/logout',                                                                    [Init\Actions::class, 'logout']);
+        $router->post('^/auth/refresh',                                                                  [Init\Actions::class, 'refreshToken']);
+        $router->post('^/registration/email',                                                            [Init\Actions::class, 'registrationEmail']);
+        $router->post('^/registration/email/check',                                                      [Init\Actions::class, 'registrationEmailCheck']);
+        $router->post('^/restore',                                                                       [Init\Actions::class, 'restorePass']);
+        $router->post('^/restore/check',                                                                 [Init\Actions::class, 'restorePassCheck']);
+        $router->get('^/conf',                                                                           [Init\Actions::class, 'getConf']);
+        $router->get('^/cabinet',                                                                        [Init\Actions::class, 'getCabinet']);
+        $router->get('^/home',                                                                           [Init\Actions::class, 'getHome']);
+        $router->get('^/user/{id:[0-9_]+}/avatar',                                                       [Init\Actions::class, 'getUserAvatar']);
+        $router->any('^/mod/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}/handler/{method:[a-zA-Z0-9_/]+}',   [Init\Actions::class, 'getModHandler']);
+        $router->get('^/mod/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}{mod_query:(?:/[a-zA-Z0-9_/\-]+|)}', [Init\Actions::class, 'getModSection']);
 
-        // TODO добавить возможность работы в папке
-        $route = $router->getRoute($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+        $uri   = mb_substr($_SERVER['REQUEST_URI'], mb_strlen(DOC_PATH . CORE_FOLDER));
+        $route = $router->getRoute($_SERVER['REQUEST_METHOD'], $uri);
 
         if (empty($route)) {
             throw new HttpException(404, 'not_found', '404 Not found');
         }
 
-        $actions = new Init\Actions();
-
-        if ( ! is_callable([$actions, $route['action']]) && ! method_exists($route['action'], '__call')) {
-            throw new HttpException(500, 'incorrect_action', "Incorrect action");
-        }
-
-        $request = new Request($route['params']);
+        $request = new Request();
 
         // Обнуление
         $_GET     = [];
@@ -56,11 +51,15 @@ class Http extends Common {
         $_FILES   = [];
         $_COOKIE  = [];
 
+        $params = [ $request ];
 
-        return call_user_func_array(
-            [$actions, $route['action']],
-            [ $request ]
-        );
+        if ($route_params = $route->getParams()) {
+            foreach ($route_params as $param) {
+                $params[] = $param;
+            }
+        }
+
+        return $route->run($params);
     }
 
 

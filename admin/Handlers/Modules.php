@@ -29,16 +29,15 @@ class Modules extends Handler {
      */
     public function save(Request $request): Response {
 
-        $this->checkHttpMethod($request, 'put');
+        $this->checkHttpMethod($request, ['post', 'put']);
         $this->checkVersion($this->modAdmin->tableModules, $request);
 
         $fields = [
-            'title'            => 'req,string(1-): Название',
-            'name'             => 'req,string(1-): Идентификатор',
-            'is_active'        => 'int(0-1): Администратор безопасности',
-            'is_visible'       => 'int(0-1): Активен',
-            'is_visible_index' => 'int(0-1): Активен',
-            'avatar_type'      => 'string(none|generate|upload): Аватар',
+            'title'       => 'req,string(1-): Название',
+            'icon'        => 'string(0-255): Иконка',
+            'description' => 'string(0-65000): Описание',
+            'group_name'  => 'string(0-255): Название группы',
+            'is_active'   => 'int(0-1): Активен',
         ];
 
         $record_id = $request->getQuery('id');

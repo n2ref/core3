@@ -2,6 +2,7 @@
 namespace Core3\Mod\Admin;
 use \Core3\Classes\Common;
 use \Core3\Classes\Init\Request;
+use Core3\Classes\Init\Router;
 use \Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
 use \CoreUI\Panel\Control;
@@ -150,7 +151,7 @@ class Controller extends Common {
         $result   = [];
 
         try {
-            if ($params = $request->match('^/admin/modules/{module_id}', ['[0-9]+'])) {
+            if ($params = $request->getPathParams('^/admin/modules/{module_id:\d+}')) {
 
                 $breadcrumb = new \CoreUI\Breadcrumb();
                 $breadcrumb->addItem('Модули',        $base_url);
@@ -181,7 +182,7 @@ class Controller extends Common {
                         $panel->getTabById('versions')->setBadgeDot('danger');
                     }
 
-                    $params = $request->match('^/admin/modules/{id}/{tab}', ['\d+', '\w+']);
+                    $params = $request->getPathParams('^/admin/modules/{module_id:\d+}/{tab}');
                     $tab    = $params['tab'] ?? 'module';
                     $panel->setActiveTab($tab);
 
@@ -193,7 +194,7 @@ class Controller extends Common {
                         case 'sections':
                             $content = [];
 
-                            if ($section_params = $request->match('^/admin/modules/{module_id}/sections/{section_id}', ['[0-9]+', '[0-9]+'])) {
+                            if ($section_params = $request->getPathParams('^/admin/modules/{module_id:\d+}/sections/{section_id:\d+}')) {
                                 if ($section_params['section_id']) {
                                     $module_section = $this->tableModulesSections->getRowById($section_params['section_id']);
 
@@ -226,7 +227,7 @@ class Controller extends Common {
                     $panel->addTab($this->_("По ссылке"),        'link', "{$base_url}/install/link");
 
 
-                    $params = $request->match('^/admin/modules/install/{tab}$', ['\w+']);
+                    $params = $request->getPathParams('^/admin/modules/install/{tab}$');
                     $tab    = $params['tab'] ?? 'hand';
                     $panel->setActiveTab($tab);
                     switch ($tab) {
@@ -248,8 +249,7 @@ class Controller extends Common {
                     ->setUrlWindow("{$base_url}/available");
 
 
-                //$params = $request->getPathParams('^/admin/modules/{tab}$', ['\w+']);
-                $params = $request->match('^/admin/modules/{tab}$', ['\w+']);
+                $params = $request->getPathParams('^/admin/modules/{tab}$');
                 $tab    = $params['tab'] ?? 'installed';
                 $panel->setActiveTab($tab);
                 switch ($tab) {
@@ -283,7 +283,6 @@ class Controller extends Common {
      * Справочник пользователей системы
      * @param Request $request
      * @return array
-     * @throws AppException
      * @throws DbException
      */
     public function sectionUsers(Request $request): array {
@@ -298,8 +297,19 @@ class Controller extends Common {
         $content[] = $this->getJsModule('admin', 'assets/users/js/admin.users.js');
 
         try {
-            if ($request->test('^/admin/users/.+$')) {
-                $params = $request->match('^/admin/users/{user_id}$', ['[0-9]+']);
+
+//            if ($request->isPath('^/admin/users/\d+$')) {
+//                $content[] = $request->rote('^/admin/users/{user_id:\d+}$', function (int $user_id) use ($content) {
+//
+//                });
+//
+//            } else {
+//                $content[] = $view->getTable($base_url);
+//            }
+
+
+            if ($request->isPath('^/admin/users/.+$')) {
+                $params = $request->getPathParams('^/admin/users/{user_id:\d+}$');
 
                 if ( ! isset($params['user_id'])) {
                     throw new AppException($this->_('Указан некорректный адрес. Вернитесь обратно и попробуйте снова'));

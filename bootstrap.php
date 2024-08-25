@@ -9,8 +9,9 @@ header('Content-Type: text/html; charset=utf-8');
 error_reporting(E_ALL);
 ini_set('display_errors', true);
 
-define('DOC_ROOT', realpath(__DIR__ . '/..'));
-define("DOC_PATH", substr(DOC_ROOT, strlen($_SERVER['DOCUMENT_ROOT'])) ? : '/');
+define('DOC_ROOT',    realpath(__DIR__ . '/..'));
+define("DOC_PATH",    substr(DOC_ROOT, strlen($_SERVER['DOCUMENT_ROOT'])) ? : '/');
+define("CORE_FOLDER", basename(__DIR__));
 
 
 $conf_file = DOC_ROOT . "/conf.ini";
