@@ -112,7 +112,12 @@ class Db extends System {
             $host = $this->config?->system?->db?->base?->params?->database;
             $key  = "core2_mod_is_active{$host}_{$module_name}";
 
-            if ( ! $this->cache->test($key)) {
+            if ($this->cache->test($key)) {
+                $result = $this->cache->load($key);
+                $is_active = is_null($result) ? null : (bool)$result;
+            }
+
+            if ( ! isset($is_active)) {
                 $is_active = $this->db->fetchOne("
                     SELECT is_active 
                     FROM core_modules 
@@ -124,9 +129,6 @@ class Db extends System {
                 }
 
                 $is_active = $is_active == '1';
-
-            } else {
-                $is_active = (bool)$this->cache->load($key);
             }
         }
 
@@ -149,7 +151,12 @@ class Db extends System {
             $host        = $this->config?->system?->db?->base?->params?->database;
             $key         = "core3_mod_installed_{$host}_{$module_name}";
 
-            if ( ! $this->cache->test($key)) {
+            if ($this->cache->test($key)) {
+                $result     = $this->cache->load($key);
+                $is_install = is_null($result) ? null : (bool)$result;
+            }
+
+            if ( ! isset($is_install)) {
                 $is_install = (bool)$this->db->fetchOne("
                     SELECT 1
                     FROM core_modules 
@@ -159,9 +166,6 @@ class Db extends System {
                 if ($is_install) {
                     $this->cache->save($key, $is_install, ['core3_mod']);
                 }
-
-            } else {
-                $is_install = (bool)$this->cache->load($key);
             }
 
             return $is_install;
@@ -209,7 +213,7 @@ class Db extends System {
     /**
      * Возврат версии модуля
      * @param string $module_name
-     * @return string
+     * @return array
      * @throws ExceptionInterface
      */
     final protected function getModuleInfo(string $module_name): array {
@@ -217,7 +221,12 @@ class Db extends System {
         $db_name = $this->config?->system?->db?->base?->params?->database;
         $key     = "core3_mod_{$db_name}_{$module_name}";
 
-        if ( ! $this->cache->test($key)) {
+        if ($this->cache->test($key)) {
+            $result     = $this->cache->load($key);
+            $module = is_null($result) ? null : (bool)$result;
+        }
+
+        if ( ! isset($module)) {
             $module = $this->db->fetchRow("
                 SELECT *
                 FROM core_modules
@@ -229,9 +238,6 @@ class Db extends System {
             }
 
             $result = $module;
-
-        } else {
-            $result = $this->cache->load($key);
         }
 
         return $result;
@@ -250,7 +256,12 @@ class Db extends System {
         $db_name = $this->config?->system?->db?->base?->params?->database;
         $key     = "core3_mod_{$db_name}_{$module_name}_file";
 
-        if ( ! $this->cache->test($key)) {
+        if ($this->cache->test($key)) {
+            $result   = $this->cache->load($key);
+            $mod_info = is_null($result) ? null : (bool)$result;
+        }
+
+        if ( ! isset($mod_info)) {
             $module_location = $this->getModuleLocation($module_name);
             $module_file     = "{$module_location}/module.json";
 
@@ -263,13 +274,10 @@ class Db extends System {
                 }
             }
 
-            $result = $info ?? [];
-
-        } else {
-            $result = $this->cache->load($key);
+            $mod_info = $info ?? [];
         }
 
-        return $result;
+        return $mod_info;
     }
 
 

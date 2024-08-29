@@ -358,8 +358,9 @@ class Init extends Common {
 
         if ($this->cache->test($cache_key)) {
             $acl = $this->cache->load($cache_key);
+        }
 
-        } else {
+        if (empty($acl)) {
             $modules = $this->db->fetchAll("
                 SELECT m.name
                 FROM core_modules AS m
