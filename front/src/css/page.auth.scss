@@ -31,12 +31,15 @@
     max-width: 350px;
     margin: 0 auto 25px auto;
     background-color: #fff;
-    box-shadow: 0 2px 5px 0 rgba(0,0,0,0.16), 0 2px 10px 0 rgba(0,0,0,0.12);
+    //box-shadow: 0 2px 5px 0 rgba(0,0,0,0.16), 0 2px 10px 0 rgba(0,0,0,0.12);
+    box-shadow: 0 0 20px 5px rgb(0 0 0 / 40%);
+    border-radius: 10px;
 }
 .page-auth .container .mdc-card .mdc-card__content {
     text-align: center;
     padding: 40px 10px 40px 10px;
     word-break: break-word;
+    border-radius: 10px;
 }
 .page-auth .container .mdc-card form {
     padding: 0 10px;
