@@ -408,6 +408,7 @@ class Init extends Common {
                 $resource             = "{$section['module_name']}_{$section['name']}";
                 $resources[$resource] = ! empty($modules_info[$section['module_name']]['sections']) &&
                                         ! empty($modules_info[$section['module_name']]['sections'][$section['name']]) &&
+                                        is_array($modules_info[$section['module_name']]['sections'][$section['name']]) &&
                                         ! empty($modules_info[$section['module_name']]['sections'][$section['name']['privileges']]) &&
                                         is_array($modules_info[$section['module_name']]['sections'][$section['name']['privileges']])
                     ? array_keys($modules_info[$section['module_name']]['sections'][$section['name']['privileges']])
