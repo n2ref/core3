@@ -79,9 +79,9 @@ class Parallel extends Db {
                             unset($tasks_pid[$response['pid']]);
                         };
                     }
-                }
 
-                $process_count--;
+                    $process_count -= count($responses);
+                }
             }
 
 
