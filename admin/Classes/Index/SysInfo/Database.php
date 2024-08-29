@@ -78,6 +78,7 @@ class Database extends Db {
 
     /**
      * @return string
+     * @throws \Monolog\Handler\MissingExtensionException
      */
 	protected function databaseVersion(): string {
 
@@ -108,7 +109,7 @@ class Database extends Db {
 			}
 
 		} catch (\Exception $e) {
-            // ignore
+            $this->log->error('Error fetch database version', $e);
 		}
 
 		return 'N/A';
@@ -131,9 +132,9 @@ class Database extends Db {
 			case 'mysql':
 			case 'Pdo_Mysql':
                 $mysqlEngine = ['MyISAM', 'InnoDB', 'Aria'];
-                $db_name     = $this->config->system->db?->base->params->database;
+                $db_name     = $this->config->system->db?->base?->params?->database ?: '';
 
-				$result        = $this->db->query("SHOW TABLE STATUS FROM `{$db_name}`")->execute();
+				$result        = $db_name ? $this->db->query("SHOW TABLE STATUS FROM `{$db_name}`")->execute() : [];
 				$database_size = 0;
 
 
@@ -146,7 +147,7 @@ class Database extends Db {
 
 			case 'sqlite':
 			case 'sqlite3':
-                $host = $this->config->system->db?->base->params->host;
+                $host = $this->config->system->db?->base?->params?->host;
 
 				if (file_exists($host)) {
 					$database_size = filesize($host);

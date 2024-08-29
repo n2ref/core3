@@ -65,8 +65,7 @@ class Request {
     public function getUri(): string {
 
         $uri = mb_substr($this->uri, mb_strlen(DOC_PATH . CORE_FOLDER));
-        $uri = preg_replace('~^/mod~u', '', $uri);
-        return $uri;
+        return preg_replace('~^/mod~u', '', $uri);
     }
 
 

@@ -522,6 +522,7 @@ class Init extends Common {
     /**
      * @return mixed
      * @throws HttpException
+     * @throws \Exception
      */
     private function getHandlerResponse(): mixed {
 
