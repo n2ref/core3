@@ -23,8 +23,7 @@ class Cache {
      */
     public function __construct(Storage\Adapter\AbstractAdapter $adapter) {
 
-        $this->adapter = $adapter;
-
+        $this->adapter   = $adapter;
         $this->namespace = $this->adapter->getOptions()->getNamespace();
     }
 
