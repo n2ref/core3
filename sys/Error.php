@@ -1,5 +1,8 @@
 <?php
-namespace Core3\Classes;
+namespace Core3\Sys;
+use Core3\Classes\Log;
+use Core3\Classes\Registry;
+use Core3\Classes\Tools;
 
 
 /**

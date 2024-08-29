@@ -2,6 +2,7 @@
 namespace Core3\Classes;
 use Core3\Exceptions\Exception;
 use Core3\Mod\Admin;
+use Core3\Sys\Auth;
 use CoreUI\Form\Control;
 use CoreUI\Form\Field;
 use Laminas\Db\Sql\Select;

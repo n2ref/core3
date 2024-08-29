@@ -1,5 +1,5 @@
 <?php
-namespace Core3\Classes\Init;
+namespace Core3\Classes;
 use Core3\Exceptions\Exception;
 
 

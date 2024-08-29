@@ -1,7 +1,7 @@
 <?php
 namespace Core3\Classes\Table;
-use Core3\Classes\Init\Request;
 use Core3\Classes;
+use Core3\Classes\Request;
 use CoreUI\Table;
 use CoreUI\Table\Exception;
 

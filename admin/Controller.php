@@ -1,11 +1,10 @@
 <?php
 namespace Core3\Mod\Admin;
-use \Core3\Classes\Common;
-use \Core3\Classes\Init\Request;
-use Core3\Classes\Init\Router;
-use \Core3\Exceptions\AppException;
+use Core3\Classes\Common;
+use Core3\Classes\Request;
+use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
-use \CoreUI\Panel\Control;
+use CoreUI\Panel\Control;
 
 require_once 'Classes/autoload.php';
 
@@ -19,7 +18,6 @@ require_once 'Classes/autoload.php';
  * @property Tables\UsersFiles      $tableUsersFiles
  * @property Tables\UsersSession    $tableUsersSession
  * @property Tables\Controls        $tableControls
- * @property Model\Users            $modelUsers
  */
 class Controller extends Common {
 

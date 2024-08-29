@@ -4,6 +4,7 @@ use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
 use Core3\Mod\Admin;
+use Core3\Sys\Auth;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\TableGateway\AbstractTableGateway;
 use Psr\Container\ContainerExceptionInterface;
@@ -16,9 +17,9 @@ use Psr\Container\NotFoundExceptionInterface;
  */
 class Common extends Db {
 
-    protected $module   = '';
-    protected $section  = '';
-    protected $recource = '';
+    protected string $module   = '';
+    protected mixed  $section  = '';
+    protected string $resource = '';
 
     /**
      *
@@ -31,7 +32,7 @@ class Common extends Db {
 
         $this->module   = strtolower($child_class_name);
         $this->section  = Registry::has('section') ? Registry::get('section') : null;
-        $this->recource = $this->module && $this->section ? "{$this->module}_{$this->section}" : $this->module;
+        $this->resource = $this->module && $this->section ? "{$this->module}_{$this->section}" : $this->module;
     }
 
 

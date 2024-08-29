@@ -7,13 +7,13 @@ namespace Core3\Classes;
  */
 class Thread extends System {
 
-    protected $php_path     = '';
-    protected $host         = '';
-    protected $tmp          = '';
-    protected $file_execute = '';
-    protected $module_name  = '';
-    protected $method       = '';
-    protected $params       = [];
+    protected string $php_path     = '';
+    protected string $host         = '';
+    protected string $tmp          = '';
+    protected string $file_execute = '';
+    protected string $module_name  = '';
+    protected string $method       = '';
+    protected array  $params       = [];
 
 
     /**
@@ -22,22 +22,26 @@ class Thread extends System {
      */
     public function __construct(array $options = null) {
 
-        if ( ! empty($options['php'])) {
+        if ( ! empty($options['php']) && is_string($options['php'])) {
             $php_path = $options['php'];
         } else {
-            $php_path = $this->config->php && $this->config->php->path ? $this->config->php->path : '';
+            $php_path = $this->config?->php && $this->config?->php?->path && is_string($this->config->php->path)
+                ? $this->config->php->path
+                : '';
         }
 
-        if ( ! empty($options['tmp'])) {
+        if ( ! empty($options['tmp']) && is_string($options['tmp'])) {
             $tmp = $options['tmp'];
         } else {
-            $tmp = $this->config->tmp ? $this->config->tmp : '';
+            $tmp = $this->config?->tmp && is_string($this->config?->tmp) ? $this->config->tmp : '';
         }
 
-        if ( ! empty($options['host'])) {
+        if ( ! empty($options['host']) && is_string($options['host'])) {
             $host = $options['host'];
         } else {
-            $host = $this->config->system ? $this->config->system->host : '';
+            $host = $this->config?->system && is_string($this->config?->system)
+                ? $this->config?->system?->host
+                : '';
         }
 
         if ( ! function_exists('exec')) {
@@ -46,7 +50,11 @@ class Thread extends System {
 
         $this->host         = $host;
         $this->tmp          = $tmp;
-        $this->file_execute = realpath(__DIR__ . '/../index.php');
+        $this->file_execute = realpath(__DIR__ . '/../index.php') ?: '';
+
+        if (empty($this->file_execute)) {
+            throw new \Exception('File index.php not found');
+        }
 
         if ($php_path) {
             $this->php_path = $php_path;

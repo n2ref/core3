@@ -13,7 +13,7 @@ spl_autoload_register(function ($class) {
     $count_namespace = count(explode("\\", __NAMESPACE__));
 
 
-    if (empty($class_explode[1]) || ! in_array($class_explode[1], ['Classes', 'Interfaces', 'Exceptions'])) {
+    if (empty($class_explode[1]) || ! in_array($class_explode[1], ['Sys', 'Classes', 'Interfaces', 'Exceptions'])) {
         return false;
     }
 

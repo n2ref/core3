@@ -1,5 +1,5 @@
 <?php
-namespace Core3\Classes;
+namespace Core3\Sys;
 use Laminas\Permissions;
 
 

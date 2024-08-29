@@ -1,10 +1,11 @@
 <?php
 namespace Core3\Classes;
 use Core3\Exceptions\Exception;
+use Core3\Sys\Auth;
+use CoreUI\Table\Abstract;
+use CoreUI\Table\Column;
 use CoreUI\Table\Column\Toggle;
 use CoreUI\Table\Control;
-use CoreUI\Table\Column;
-use CoreUI\Table\Abstract;
 
 
 /**

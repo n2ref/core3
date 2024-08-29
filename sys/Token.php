@@ -1,5 +1,5 @@
 <?php
-namespace Core3\Classes\Init;
+namespace Core3\Sys;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 

@@ -100,7 +100,7 @@ class Log {
                 'error_message' => $context->getMessage(),
                 'file'          => $context->getFile(),
                 'file_line'     => $context->getLine(),
-                'trace'         => $context->getTrace(),
+                'trace'         => $context->getTraceAsString(),
             ];
         }
 

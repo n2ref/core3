@@ -1,6 +1,8 @@
 <?php
-namespace Core3\Classes\Init;
+namespace Core3\Sys;
 use Core3\Classes\Common;
+use Core3\Classes\Request;
+use Core3\Classes\Response;
 use Core3\Classes\Tools;
 use Core3\Classes\Validator;
 use Core3\Exceptions\DbException;
@@ -18,7 +20,7 @@ use Psr\Container\NotFoundExceptionInterface;
 /**
  *
  */
-class Actions extends Common {
+class Handler extends Common {
 
 
     /**

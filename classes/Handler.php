@@ -1,8 +1,6 @@
 <?php
 namespace Core3\Classes;
 use Core3\Classes\Db\Table;
-use Core3\Classes\Init\Request;
-use Core3\Classes\Init\Response;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;

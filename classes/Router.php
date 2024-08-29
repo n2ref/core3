@@ -1,5 +1,5 @@
 <?php
-namespace Core3\Classes\Init;
+namespace Core3\Classes;
 use Core3\Classes\Init\Router\Path;
 
 

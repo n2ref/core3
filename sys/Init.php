@@ -1,7 +1,11 @@
 <?php
-namespace Core3\Classes;
-use Core3\Classes\Init\Http;
-use Core3\Classes\Init\Response;
+namespace Core3\Sys;
+use Core3\Classes\Cli;
+use Core3\Classes\Common;
+use Core3\Classes\Registry;
+use Core3\Classes\Request;
+use Core3\Classes\Response;
+use Core3\Classes\Router;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
@@ -15,7 +19,7 @@ use Monolog\Handler\MissingExtensionException;
 /**
  * @property Admin\Controller $modAdmin
  */
-class Init extends Db {
+class Init extends Common {
 
     /**
      * @var Auth|null
@@ -27,6 +31,8 @@ class Init extends Db {
      * @throws MissingExtensionException
      */
     public function __construct() {
+
+        parent::__construct();
 
         if (PHP_SAPI != 'cli') {
             if (empty($_SERVER['HTTPS']) && $this->config?->system?->https) {
@@ -45,6 +51,40 @@ class Init extends Db {
 
 
     /**
+     * Авторизация пользователя
+     * @return bool
+     */
+    public function auth(): bool {
+
+        if (PHP_SAPI === 'cli') {
+            return false;
+        }
+
+        // проверяем, есть ли в запросе токен
+        $access_token = ! empty($_SERVER['HTTP_ACCESS_TOKEN'])
+            ? $_SERVER['HTTP_ACCESS_TOKEN']
+            : '';
+
+        // проверяем, есть ли в запросе токен
+        $access_token = empty($access_token) && ! empty($_COOKIE['Core-Access-Token'])
+            ? $_COOKIE['Core-Access-Token']
+            : $access_token;
+
+        $this->auth = $access_token
+            ? $this->getAuthByToken($access_token)
+            : null;
+
+        if ($this->auth) {
+            Registry::set('auth', $this->auth);
+            return true;
+        }
+
+        return false;
+    }
+
+
+    /**
+     * Обработка запроса
      * @return string
      * @throws Exception
      * @throws ExceptionInterface
@@ -53,33 +93,9 @@ class Init extends Db {
      */
     public function dispatch(): string {
 
-        if (PHP_SAPI === 'cli') {
-            return $this->dispatchCli();
-        }
-
-        return $this->dispatchHttp();
-    }
-
-
-    /**
-     * @return bool
-     * @throws HttpException
-     * @throws \Exception
-     */
-    public function auth(): bool {
-
-        if (PHP_SAPI === 'cli') {
-            return false;
-        }
-
-        $this->auth = (new Http())->getAuth();
-
-        if ($this->auth) {
-            Registry::set('auth', $this->auth);
-            return true;
-        }
-
-        return false;
+        return PHP_SAPI === 'cli'
+            ? $this->dispatchCli()
+            : $this->dispatchHttp();
     }
 
 
@@ -128,7 +144,7 @@ class Init extends Db {
 
 
     /**
-     * Cli
+     * Обработка запроса Cli
      * @return string
      * @throws \ReflectionException
      * @throws \Exception
@@ -214,6 +230,7 @@ class Init extends Db {
 
 
     /**
+     * Обработка запроса Http
      * @return string
      * @throws Exception
      * @throws ExceptionInterface
@@ -246,9 +263,10 @@ class Init extends Db {
 
             } else {
                 ob_start();
-                $result = (new Http())->dispatch();
+                $result = $this->getHandlerResponse();
                 $buffer = ob_get_clean();
             }
+
 
             if (is_array($result)) {
                 if (isset($buffer) && is_string($buffer) && $buffer != '' && ! array_key_exists('_buffer', $result)) {
@@ -498,5 +516,112 @@ class Init extends Db {
                 $this->log->error('Fatal error', debug_backtrace());
             }
         });
+    }
+
+
+    /**
+     * @return mixed
+     * @throws HttpException
+     */
+    private function getHandlerResponse(): mixed {
+
+        $router = new Router();
+        $router->post('^/auth/login',                                                                    [Handler::class, 'login']);
+        $router->put('^/auth/logout',                                                                    [Handler::class, 'logout']);
+        $router->post('^/auth/refresh',                                                                  [Handler::class, 'refreshToken']);
+        $router->post('^/registration/email',                                                            [Handler::class, 'registrationEmail']);
+        $router->post('^/registration/email/check',                                                      [Handler::class, 'registrationEmailCheck']);
+        $router->post('^/restore',                                                                       [Handler::class, 'restorePass']);
+        $router->post('^/restore/check',                                                                 [Handler::class, 'restorePassCheck']);
+        $router->get('^/conf',                                                                           [Handler::class, 'getConf']);
+        $router->get('^/cabinet',                                                                        [Handler::class, 'getCabinet']);
+        $router->get('^/home',                                                                           [Handler::class, 'getHome']);
+        $router->get('^/user/{id:[0-9_]+}/avatar',                                                       [Handler::class, 'getUserAvatar']);
+        $router->any('^/mod/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}/handler/{method:[a-zA-Z0-9_/]+}',   [Handler::class, 'getModHandler']);
+        $router->get('^/mod/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}{mod_query:(?:/[a-zA-Z0-9_/\-]+|)}', [Handler::class, 'getModSection']);
+
+        $uri   = mb_substr($_SERVER['REQUEST_URI'], mb_strlen(DOC_PATH . CORE_FOLDER));
+        $route = $router->getRoute($_SERVER['REQUEST_METHOD'], $uri);
+
+        if (empty($route)) {
+            throw new HttpException(404, 'not_found', '404 Not found');
+        }
+
+        $request = new Request();
+
+        // Обнуление
+        $_GET     = [];
+        $_POST    = [];
+        $_REQUEST = [];
+        $_FILES   = [];
+        $_COOKIE  = [];
+
+        $params = [ $request ];
+
+        if ($route_params = $route->getParams()) {
+            foreach ($route_params as $param) {
+                $params[] = $param;
+            }
+        }
+
+        return $route->run($params);
+    }
+
+
+    /**
+     * Авторизация по токену
+     * @param string $access_token
+     * @return Auth|null
+     */
+    private function getAuthByToken(string $access_token): ?Auth {
+
+        try {
+            $sign      = $this->config?->system?->auth?->token_sign ?: 'gyctmn34ycrr0471yc4r';
+            $algorithm = $this->config?->system?->auth?->algorithm ?: 'HS256';
+            $decoded   = Token::decode($access_token, $sign, $algorithm);
+
+            $session_id = $decoded['sid'] ?? 0;
+            $token_iss  = $decoded['iss'] ?? 0;
+            $token_exp  = $decoded['exp'] ?? 0;
+
+
+            if (empty($token_exp) ||
+                empty($session_id) ||
+                ! is_numeric($session_id) ||
+                $token_exp < time() ||
+                $token_iss != $_SERVER['SERVER_NAME']
+            ) {
+                return null;
+            }
+
+
+
+            $session = $this->modAdmin->tableUsersSession->getRowById($session_id);
+
+            if (empty($session) ||
+                $session->is_active == '0' ||
+                $session->date_expired < date('Y-m-d H:i:s')
+            ) {
+                return null;
+            }
+
+
+            $user = $this->modAdmin->tableUsers->getRowById($session->user_id);
+
+            if (empty($user) && $user->is_active == '0') {
+                return null;
+            }
+
+            $session->count_requests     = (int)$session->count_requests + 1;
+            $session->date_last_activity = date('Y-m-d H:i:s');
+            $session->save();
+
+            return new Auth($user->toArray(), $session->toArray());
+
+        } catch (\Exception $e) {
+            $this->log->error('Error auth by token', $e);
+        }
+
+        return null;
     }
 }
