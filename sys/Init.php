@@ -173,7 +173,7 @@ class Init extends Common {
             try {
                 $params = $options['param'] ?? (isset($options['p']) ? $options['p'] : false);
                 $params = $params === false ? [] : (is_array($params) ? $params : array($params));
-                $cli->cliComposer($params);
+                $cli->updateComposer($params);
 
             } catch (Exception $e) {
                 $result = $e->getMessage() . PHP_EOL;
@@ -182,10 +182,6 @@ class Init extends Common {
         // Getting information about available system methods
         } elseif (isset($options['l']) || isset($options['cli-methods'])) {
             $result = $cli->getCliMethods();
-
-        // Getting information about available system methods
-        } elseif (isset($options['a']) || isset($options['openapi'])) {
-            $result = $cli->getGenerateOpenapi();
 
         // Module run method
         } elseif ((isset($options['m']) || isset($options['module'])) &&
@@ -197,7 +193,7 @@ class Init extends Common {
             $params = $options['param'] ?? (isset($options['p']) ? $options['p'] : false);
             $params = $params === false ? [] : (is_array($params) ? $params : array($params));
 
-            $result = $cli->runCliMethod($module, $method, $params);
+            $result = $cli->startCliMethod($module, $method, $params);
 
         // Start daemon worker manager
         } elseif (isset($options['worker-start'])) {

@@ -32,7 +32,6 @@ if (PHP_SAPI === 'cli') {
         'modules',
         'composer',
         'host',
-        'openapi',
         'version',
         'help',
     ]);

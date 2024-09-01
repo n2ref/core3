@@ -277,20 +277,12 @@ class Common extends Db {
      * @param array|null $options
      * @return bool
      * @throws \Exception
+     * @throws ExceptionInterface
      */
     protected function startCli(string $module_name, string $method_name, array $params = [], array $options = null): bool {
 
-        // Заменить на класс cli
-
-        $thread = new Thread($options);
-        $thread->setModule($module_name);
-        $thread->setMethod($method_name);
-
-        if ( ! empty($params)) {
-            $thread->setParams($params);
-        }
-
-        return $thread->start();
+        $cli = new Cli();
+        return $cli->startCliMethod($module_name, $method_name, $params);
     }
 
 

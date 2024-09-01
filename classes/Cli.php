@@ -1,8 +1,6 @@
 <?php
 namespace Core3\Classes;
-
-
-use core3\classes\Abstract\Worker;
+use Core3\Classes\Worker;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
 use Laminas\Cache\Exception\ExceptionInterface;
@@ -10,7 +8,7 @@ use Laminas\Cache\Exception\ExceptionInterface;
 /**
  *
  */
-class Cli extends Db {
+class Cli extends Common {
 
     /**
      * Опции указанные в командной строке
@@ -28,7 +26,6 @@ class Cli extends Db {
             'modules',
             'composer',
             'host',
-            'openapi',
             'version',
             'help',
         ]);
@@ -58,7 +55,6 @@ class Cli extends Db {
             " -d                             Daemonize worker",
             "       --worker-stop            Stop worker",
             " -c    --composer               Control composer",
-            " -a    --openapi                Generate openapi-core3.json file",
             " -h    --help                   Help info",
             " -v    --version                Version info",
             '',
@@ -110,34 +106,34 @@ class Cli extends Db {
 
     /**
      * @param array $params
-     * @throws \Exception
+     * @throws Exception
      */
-    public function cliComposer(array $params): void {
+    public function updateComposer(array $params): void {
 
         $temp_dir = sys_get_temp_dir();
         if ( ! is_writable($temp_dir)) {
-            throw new \Exception(sprintf("Error. Folder %s not writable.", $temp_dir));
+            throw new Exception(sprintf("Error. Folder %s not writable.", $temp_dir));
         }
         if ( ! is_writable(__DIR__ . '/..')) {
-            throw new \Exception(sprintf("Error. Folder %s not writable.", realpath(__DIR__ . '/..')));
+            throw new Exception(sprintf("Error. Folder %s not writable.", realpath(__DIR__ . '/..')));
         }
 
         $composer_setup_file = $temp_dir . '/' . uniqid() . '-composer-setup.php';
         echo 'Download composer installer...' . PHP_EOL;
 
         if ( ! copy('https://getcomposer.org/installer', $composer_setup_file)) {
-            throw new \Exception('Fail download composer installer.');
+            throw new Exception('Fail download composer installer.');
         }
 
         $composer_signature = trim(file_get_contents('https://composer.github.io/installer.sig'));
         if ( ! $composer_signature) {
             unlink($composer_setup_file);
-            throw new \Exception('Fail download composer signature.');
+            throw new Exception('Fail download composer signature.');
         }
 
         if (hash_file('SHA384', $composer_setup_file) !== $composer_signature) {
             unlink($composer_setup_file);
-            throw new \Exception('Error. Composer installer corrupt.');
+            throw new Exception('Error. Composer installer corrupt.');
         }
 
         echo 'Composer Installer verified.' . PHP_EOL;
@@ -168,7 +164,7 @@ class Cli extends Db {
     /**
      * Getting information about available system methods
      * @return string
-     * @throws \ReflectionException
+     * @throws \ReflectionException|DbException
      */
     public function getCliMethods(): string {
 
@@ -184,7 +180,7 @@ class Cli extends Db {
         if ( ! empty($modules)) {
             foreach ($modules as $module) {
                 $location        = $this->getModuleLocation($module['name']);
-                $controller_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module['name']) . '\\Cli';
+                $controller_name = '\\Core3\\Mod\\' . ucfirst($module['name']) . '\\Cli';
                 $controller_path = "{$location}/Cli.php";
 
                 if ( ! file_exists($controller_path)) {
@@ -239,8 +235,7 @@ class Cli extends Db {
      * Запуск менеджера задач
      * @param bool $is_daemonize
      * @return void
-     * @throws Exception
-     * @throws \Exception
+     * @throws Exception|ExceptionInterface
      */
     public function startWorkerManager(bool $is_daemonize = false): void {
 
@@ -299,47 +294,50 @@ class Cli extends Db {
      * @return string
      * @throws DbException
      * @throws ExceptionInterface
+     * @throws Exception
      */
-    public function runCliMethod(string $module, string $method, array $params): string {
+    public function startCliMethod(string $module, string $method, array $params = []): string {
 
         $module = strtolower($module);
         $method = strtolower($method);
 
-        $this->setContext($module, $method);
-
-        $params = isset($options['param']) ? $options['param'] : (isset($options['p']) ? $options['p'] : false);
-        $params = $params === false ? [] : (is_array($params) ? $params : array($params));
-
 
         if ( ! $this->isModuleInstalled($module)) {
-            throw new \Exception(sprintf("Модуль %s не найден", $module));
+            throw new Exception(sprintf($this->_("Модуль %s не найден"), $module));
         }
 
         if ( ! $this->isModuleActive($module)) {
-            throw new \Exception(sprintf("Модуль %s не активен", $module));
+            throw new Exception(sprintf($this->_("Модуль %s не активен"), $module));
         }
 
         $location        = $this->getModuleLocation($module);
-        $controller_name = __NAMESPACE__ . '\\Mod\\' . ucfirst($module) . '\\Cli';
+        $controller_name = '\\Core3\\Mod\\' . ucfirst($module) . '\\Cli';
         $controller_path = "{$location}/Cli.php";
 
         if ( ! file_exists($controller_path)) {
-            throw new \Exception(sprintf("Файл %s не найден", $controller_path));
+            throw new Exception(sprintf($this->_("Файл %s не найден"), $controller_path));
         }
+
+        $autoload_file = "{$location}/vendor/autoload.php";
+
+        if (file_exists($autoload_file)) {
+            require_once $autoload_file;
+        }
+
         require_once $controller_path;
 
         if ( ! class_exists($controller_name)) {
-            throw new \Exception(sprintf("Класс %s не найден", $controller_name));
+            throw new Exception(sprintf($this->_("Класс %s не найден"), $controller_name));
         }
 
         $mod_methods = get_class_methods($controller_name);
         $cli_method  = ucfirst($method);
         if ( ! array_search($cli_method, $mod_methods)) {
-            throw new \Exception(sprintf("В классе %s не найден метод %s", $controller_name, $cli_method));
+            throw new Exception(sprintf($this->_("В классе %s не найден метод %s"), $controller_name, $cli_method));
         }
 
         $controller = new $controller_name();
-        $result     = call_user_func_array(array($controller, $cli_method), $params);
+        $result     = call_user_func_array([$controller, $cli_method], $params);
 
         if (is_scalar($result)) {
             return $result . PHP_EOL;
