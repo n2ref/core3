@@ -1,6 +1,5 @@
 <?php
 namespace Core3\Mod\Admin\Tables;
-
 use Core3\Classes\Db\Table;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\Sql\Expression;

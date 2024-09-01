@@ -365,10 +365,14 @@ class Validator extends System {
                             break;
 
                         case 'bool':
-                            if (isset($data[$param])) {
-                                if ( ! self::isBool($data[$param])) {
-                                    $errors[] = self::_('Некорректный тип поля "%s". Ожидается логическое значение', [$rule_title]);
-                                }
+                            if (isset($data[$param]) && ! self::isBool($data[$param])) {
+                                $errors[] = self::_('Некорректный тип поля "%s". Ожидается логическое значение', [$rule_title]);
+                            }
+                            break;
+
+                        case 'switch':
+                            if (isset($data[$param]) && ! in_array($data[$param], ['0', '1'])) {
+                                $errors[] = self::_('Некорректный тип поля "%s". Ожидается одно из значений: 0, 1', [$rule_title]);
                             }
                             break;
 

@@ -4,7 +4,6 @@ use Core3\Classes\Common;
 use Core3\Classes\Form;
 use Core3\Classes\Table;
 use CoreUI\Table\Filter;
-use CoreUI\Table\Search;
 use CoreUI\Table\Column;
 use CoreUI\Table\Control as TableControl;
 use CoreUI\Form\Field;
@@ -187,18 +186,19 @@ class View extends Common {
     public function getFormModule(string $base_url, AbstractRowGateway $module): array {
 
         $form = new Form('admin', 'modules', 'module');
-        $form->setHandler('save');
+        $form->setTable($this->modAdmin->tableModules, $module->id);
+        $form->setHandler('save', 'put');
         $form->setSuccessLoadUrl('#/admin/modules');
         $form->setOnSubmitSuccessDefault();
         $form->setWidthLabel(160);
 
 
         $form->setRecord([
-            'title'            => $module->title,
-            'icon'             => $module->icon,
-            'description'      => $module->description,
-            'group_name'       => $module->group_name,
-            'is_active'        => (string)$module->is_active,
+            'title'       => $module->title,
+            'icon'        => $module->icon,
+            'description' => $module->description,
+            'group_name'  => $module->group_name,
+            'is_active'   => (string)$module->is_active,
         ]);
 
         $form->addFields([

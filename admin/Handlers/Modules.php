@@ -36,7 +36,7 @@ class Modules extends Handler {
             'icon'        => 'string(0-255): Иконка',
             'description' => 'string(0-65000): Описание',
             'group_name'  => 'string(0-255): Название группы',
-            'is_active'   => 'int(0-1): Активен',
+            'is_active'   => 'switch: Активен',
         ];
 
         $record_id = $request->getQuery('id');
@@ -51,12 +51,12 @@ class Modules extends Handler {
 
         $this->db->beginTransaction();
         try {
-            $row_old = $this->modAdmin->tableUsers->getRowById($record_id);
-            $row     = $this->saveData($this->modAdmin->tableUsers, $controls, $record_id);
+            $row_old = $this->modAdmin->tableModules->getRowById($record_id);
+            $row     = $this->saveData($this->modAdmin->tableModules, $controls, $record_id);
 
 
             if ($row_old->is_active != $row->is_active) {
-                $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
+                $this->event($this->modAdmin->tableModules->getTable() . '_active', [
                     'id'        => $row->id,
                     'is_active' => $row->is_active == 1,
                 ]);
@@ -161,19 +161,6 @@ class Modules extends Handler {
         return $this->getResponseSuccess([
             'id' => $row->id
         ]);
-    }
-
-
-    /**
-     * @param Request $request
-     * @return array
-     * @throws \Exception
-     */
-    public function getTableInstalled(Request $request): array {
-
-        $base_url = "#/admin/modules";
-        $view     = new View();
-        return $view->getTableInstalled($base_url);
     }
 
 

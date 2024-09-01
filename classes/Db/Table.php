@@ -2,19 +2,26 @@
 namespace Core3\Classes\Db;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\RowGateway\AbstractRowGateway;
-use Laminas\Db\RowGateway\RowGateway;
 use Laminas\Db\Sql\Select;
 use Laminas\Db\TableGateway\AbstractTableGateway;
 use Laminas\Db\TableGateway\Feature;
+use Laminas\EventManager\Event;
+use Laminas\EventManager\EventManager;
 
 
 /**
- *
+ * @method preInsert(Row $event)
+ * @method postInsert(Row $event)
+ * @method preUpdate(Row $event)
+ * @method postUpdate(Row $event)
+ * @method preDelete(Row $event)
+ * @method postDelete(Row $event)
  */
-class Table extends AbstractTableGateway {
+abstract class Table extends AbstractTableGateway {
 
-    protected string       $primary_key  = 'id';
-    protected static array $static_cache = [];
+    protected string        $primary_key   = 'id';
+    protected static array  $static_cache  = [];
+    protected ?EventManager $event_manager = null;
 
 
     /**
@@ -23,14 +30,25 @@ class Table extends AbstractTableGateway {
     public function __construct() {
 
         $global_adapter_feature = new Feature\GlobalAdapterFeature();
+        $this->event_manager    = new EventManager();
+
 
         $this->featureSet = new Feature\FeatureSet();
         $this->featureSet->addFeature($global_adapter_feature);
         $this->featureSet->addFeature(
             new Feature\RowGatewayFeature(
-                new RowGateway($this->primary_key, $this->table, $global_adapter_feature->getStaticAdapter())
+                new Row($this->primary_key, $this->table, $global_adapter_feature->getStaticAdapter(), $this->event_manager)
             )
         );
+
+
+        if (method_exists($this, 'preInsert'))  { $this->event_manager->attach('preInsert',  function (Event $event) { $target = $event->getTarget(); $this->preInsert($target); }); }
+        if (method_exists($this, 'postInsert')) { $this->event_manager->attach('postInsert', function (Event $event) { $target = $event->getTarget(); $this->postInsert($target); }); }
+        if (method_exists($this, 'preUpdate'))  { $this->event_manager->attach('preUpdate',  function (Event $event) { $target = $event->getTarget(); $this->preUpdate($target); }); }
+        if (method_exists($this, 'postUpdate')) { $this->event_manager->attach('postUpdate', function (Event $event) { $target = $event->getTarget(); $this->postUpdate($target); }); }
+        if (method_exists($this, 'preDelete'))  { $this->event_manager->attach('preDelete',  function (Event $event) { $target = $event->getTarget(); $this->preDelete($target); }); }
+        if (method_exists($this, 'postDelete')) { $this->event_manager->attach('postDelete', function (Event $event) { $target = $event->getTarget(); $this->postDelete($target); }); }
+
 
         $this->initialize();
 
@@ -57,7 +75,7 @@ class Table extends AbstractTableGateway {
 
 
     /**
-     * @param array|string|null $where
+     * @param array|string|\Closure|null $where
      * @return AbstractRowGateway|null
      */
     public function fetchRow(array|string|\Closure $where = null):? AbstractRowGateway {
