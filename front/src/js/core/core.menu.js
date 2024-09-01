@@ -571,6 +571,7 @@ let coreMenu = {
 
         CoreUI.table.setSettings({ lang: conf.lang });
         CoreUI.form.setSettings({ lang: conf.lang });
+        CoreUI.notice.setSettings({ position: 'bottom-right', bottom: 25 });
     },
 
 
