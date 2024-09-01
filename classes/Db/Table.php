@@ -58,6 +58,7 @@ abstract class Table extends AbstractTableGateway {
 
 
     /**
+     * Получение всех строк
      * @param array|string|\Closure|null $where
      * @return ResultSetInterface
      */
@@ -75,6 +76,7 @@ abstract class Table extends AbstractTableGateway {
 
 
     /**
+     * Получение строки
      * @param array|string|\Closure|null $where
      * @return AbstractRowGateway|null
      */
@@ -93,19 +95,7 @@ abstract class Table extends AbstractTableGateway {
 
 
     /**
-     * @param string            $column
-     * @param array|string|null $where
-     * @return array
-     */
-    public function fetchCol(string $column, array|string $where = null): array {
-
-        $results = $this->select($where);
-
-        return array_column($results->toArray(), $column);
-    }
-
-
-    /**
+     * Получение колонки
      * @param string            $column_key
      * @param string            $column_value
      * @param array|string|null $where
@@ -125,6 +115,21 @@ abstract class Table extends AbstractTableGateway {
 
 
     /**
+     * Получение списка пары полей ключ-значение
+     * @param string            $column
+     * @param array|string|null $where
+     * @return array
+     */
+    public function fetchCol(string $column, array|string $where = null): array {
+
+        $results = $this->select($where);
+
+        return array_column($results->toArray(), $column);
+    }
+
+
+    /**
+     * Получение строки по id
      * @param int $id
      * @return AbstractRowGateway|null
      */
@@ -143,6 +148,7 @@ abstract class Table extends AbstractTableGateway {
 
 
     /**
+     * Получение списка строк по одному или нескольким id
      * @param array|int $id
      * @return ResultSetInterface
      */
@@ -153,6 +159,7 @@ abstract class Table extends AbstractTableGateway {
 
 
     /**
+     * Наличие ключа в статическим кэше
      * @param string $name
      * @return bool
      */
@@ -163,6 +170,7 @@ abstract class Table extends AbstractTableGateway {
 
 
     /**
+     * Получение значения по ключу из статического кэша
      * @param string $name
      * @return mixed
      */
@@ -173,6 +181,7 @@ abstract class Table extends AbstractTableGateway {
 
 
     /**
+     * Установка значения по ключу в статический кэш
      * @param string $name
      * @param mixed  $value
      * @return void
