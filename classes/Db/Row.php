@@ -53,21 +53,22 @@ class Row extends \Laminas\Db\RowGateway\RowGateway {
 
         $isset_row = $this->rowExistsInDatabase();
 
-        if ($isset_row) {
-            $this->event_manager->trigger(EventFeatureEventsInterface::EVENT_PRE_UPDATE, $this);
-        } else {
-            $this->event_manager->trigger(EventFeatureEventsInterface::EVENT_PRE_INSERT, $this);
-        }
+
+        $pre_event = $isset_row
+            ? EventFeatureEventsInterface::EVENT_PRE_UPDATE
+            : EventFeatureEventsInterface::EVENT_PRE_INSERT;
+
+        $this->event_manager->trigger($pre_event, $this);
 
 
         $affected_rows = parent::save();
 
 
-        if ($isset_row) {
-            $this->event_manager->trigger(EventFeatureEventsInterface::EVENT_POST_UPDATE, $this);
-        } else {
-            $this->event_manager->trigger(EventFeatureEventsInterface::EVENT_POST_INSERT, $this);
-        }
+        $post_event = $isset_row
+            ? EventFeatureEventsInterface::EVENT_POST_UPDATE
+            : EventFeatureEventsInterface::EVENT_POST_INSERT;
+
+        $this->event_manager->trigger($post_event, $this);
 
         return $affected_rows;
     }

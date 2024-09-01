@@ -131,9 +131,9 @@ abstract class Table extends AbstractTableGateway {
     /**
      * Получение строки по id
      * @param int $id
-     * @return AbstractRowGateway|null
+     * @return Row|null
      */
-    public function getRowById(int $id):? AbstractRowGateway {
+    public function getRowById(int $id):? Row {
 
         $primary_key = $this->primary_key;
 

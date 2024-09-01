@@ -1,6 +1,7 @@
 <?php
 namespace Core3\Mod\Admin\Classes\Modules;
 use Core3\Classes\Common;
+use Core3\Classes\Db\Row;
 use Core3\Classes\Form;
 use Core3\Classes\Table;
 use CoreUI\Table\Filter;
@@ -132,10 +133,113 @@ class View extends Common {
      * Форма добавление модуля
      * @throws \Exception
      */
-    public function getFormModuleNew(string $base_url): array {
+    public function getFormInstallHand(string $base_url): array {
 
         $form = new Form('admin', 'modules', 'module');
-        $form->setHandler('saveNew');
+        $form->setHandler('saveHand');
+        $form->setSuccessLoadUrl('#/admin/modules');
+        $form->setOnSubmitSuccessDefault();
+
+        $form->setRecord([
+            'title'            => '',
+            'icon'             => '',
+            'name'             => '',
+            'version'          => '1.0.0',
+            'group_name'       => '',
+            'description'      => '',
+            'is_active'        => true,
+            'is_visible'       => true,
+            'is_visible_index' => true,
+        ]);
+
+
+        $form->addFields([
+            (new Field\Text('title',              $this->_('Название')))->setWidth(350)->setRequired(true),
+            (new Field\Text('icon',               $this->_('Иконка')))->setWidth(350)
+                ->setDescriptionHelp($this->_('Укажите значение класса из доступных видов иконок: bootstrap, fontawesome, material')),
+            (new Field\Text('name',               $this->_('Идентификатор')))->setWidth(150)->setRequired(true)
+                ->setValidPattern('[\\da-z]')->setInvalidText('Маленькие латинские буквы или цифры')
+                ->setDescriptionHelp($this->_('Уникальное имя модуля, должно быть таким же как и папка в которой он находится')),
+            (new Field\Text('version',            $this->_('Версия')))->setWidth(150)->setRequired(true)
+                ->setValidPattern('[\\d]+\\.[\\d]\\.[\\d]+(-[a-z0-9]+|)')->setInvalidText('Требуемый формат версии 0.0.0'),
+            (new Field\Textarea('description',    $this->_('Описание')))->setWidth(350)->setHeight(50),
+            (new Field\Text('group_name',      $this->_('Название группы')))->setWidth(350)
+                ->setDescriptionHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
+            (new Field\Toggle('is_active',        $this->_('Активен'))),
+            (new Field\Toggle('is_visible',       $this->_('Видимый')))->setDescriptionHelp($this->_('Будет скрыт из меню, если не активно')),
+            (new Field\Toggle('is_visible_index', $this->_('Имеет главную страницу'))),
+        ]);
+
+
+        $form->addControls([
+            $form->getBtnSubmit(),
+            (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+        ]);
+
+        return $form->toArray();
+    }
+
+
+    /**
+     * Форма добавление модуля
+     * @throws \Exception
+     */
+    public function getFormInstallFile(string $base_url): array {
+
+        $form = new Form('admin', 'modules', 'module');
+        $form->setHandler('saveHand');
+        $form->setSuccessLoadUrl('#/admin/modules');
+        $form->setOnSubmitSuccessDefault();
+
+        $form->setRecord([
+            'title'            => '',
+            'icon'             => '',
+            'name'             => '',
+            'version'          => '1.0.0',
+            'group_name'       => '',
+            'description'      => '',
+            'is_active'        => true,
+            'is_visible'       => true,
+            'is_visible_index' => true,
+        ]);
+
+
+        $form->addFields([
+            (new Field\Text('title',              $this->_('Название')))->setWidth(350)->setRequired(true),
+            (new Field\Text('icon',               $this->_('Иконка')))->setWidth(350)
+                ->setDescriptionHelp($this->_('Укажите значение класса из доступных видов иконок: bootstrap, fontawesome, material')),
+            (new Field\Text('name',               $this->_('Идентификатор')))->setWidth(150)->setRequired(true)
+                ->setValidPattern('[\\da-z]')->setInvalidText('Маленькие латинские буквы или цифры')
+                ->setDescriptionHelp($this->_('Уникальное имя модуля, должно быть таким же как и папка в которой он находится')),
+            (new Field\Text('version',            $this->_('Версия')))->setWidth(150)->setRequired(true)
+                ->setValidPattern('[\\d]+\\.[\\d]\\.[\\d]+(-[a-z0-9]+|)')->setInvalidText('Требуемый формат версии 0.0.0'),
+            (new Field\Textarea('description',    $this->_('Описание')))->setWidth(350)->setHeight(50),
+            (new Field\Text('group_name',      $this->_('Название группы')))->setWidth(350)
+                ->setDescriptionHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
+            (new Field\Toggle('is_active',        $this->_('Активен'))),
+            (new Field\Toggle('is_visible',       $this->_('Видимый')))->setDescriptionHelp($this->_('Будет скрыт из меню, если не активно')),
+            (new Field\Toggle('is_visible_index', $this->_('Имеет главную страницу'))),
+        ]);
+
+
+        $form->addControls([
+            $form->getBtnSubmit(),
+            (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+        ]);
+
+        return $form->toArray();
+    }
+
+
+
+    /**
+     * Форма добавление модуля
+     * @throws \Exception
+     */
+    public function getFormInstallLink(string $base_url): array {
+
+        $form = new Form('admin', 'modules', 'module');
+        $form->setHandler('saveHand');
         $form->setSuccessLoadUrl('#/admin/modules');
         $form->setOnSubmitSuccessDefault();
 
@@ -181,9 +285,11 @@ class View extends Common {
 
     /**
      * Форма редактирования модуля
-     * @throws \Exception
+     * @param string $base_url
+     * @param Row    $module
+     * @return array
      */
-    public function getFormModule(string $base_url, AbstractRowGateway $module): array {
+    public function getFormModule(string $base_url, Row $module): array {
 
         $form = new Form('admin', 'modules', 'module');
         $form->setTable($this->modAdmin->tableModules, $module->id);
@@ -223,9 +329,11 @@ class View extends Common {
 
     /**
      * Форма редактирования модуля
-     * @throws \Exception
+     * @param string $base_url
+     * @param Row    $module
+     * @return array
      */
-    public function getFormSection(string $base_url, AbstractRowGateway $module): array {
+    public function getFormSection(string $base_url, Row $module): array {
 
         $form = new Form('admin', 'modules', 'module');
         $form->setHandler('save');

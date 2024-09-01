@@ -17,150 +17,170 @@ use Laminas\Cache\Exception\ExceptionInterface;
  */
 class Modules extends Handler {
 
+
     /**
-     * Сохранение пользователя
      * @param Request $request
-     * @return Response
-     * @throws AppException
-     * @throws HttpException
-     * @throws Exception
-     * @throws ExceptionInterface
+     * @return array
+     * @throws \Exception
      */
-    public function save(Request $request): Response {
+    public function getTableInstalled(Request $request): array {
 
-        $this->checkHttpMethod($request, ['post', 'put']);
-        $this->checkVersion($this->modAdmin->tableModules, $request);
-
-        $fields = [
-            'title'       => 'req,string(1-): Название',
-            'icon'        => 'string(0-255): Иконка',
-            'description' => 'string(0-65000): Описание',
-            'group_name'  => 'string(0-255): Название группы',
-            'is_active'   => 'switch: Активен',
-        ];
-
-        $record_id = $request->getQuery('id');
-        $controls  = $request->getFormContent() ?? [];
-        $controls  = $this->clearData($controls);
-
-
-        if ($errors = $this->validateFields($fields, $controls)) {
-            return $this->getResponseError($errors);
-        }
-
-
-        $this->db->beginTransaction();
-        try {
-            $row_old = $this->modAdmin->tableModules->getRowById($record_id);
-            $row     = $this->saveData($this->modAdmin->tableModules, $controls, $record_id);
-
-
-            if ($row_old->is_active != $row->is_active) {
-                $this->event($this->modAdmin->tableModules->getTable() . '_active', [
-                    'id'        => $row->id,
-                    'is_active' => $row->is_active == 1,
-                ]);
-            }
-
-            $this->db->commit();
-
-        } catch (\Exception $e) {
-            $this->db->rollback();
-            throw $e;
-        }
-
-        return $this->getResponseSuccess([
-            'id' => $row->id
-        ]);
+        $base_url = "#/admin/modules";
+        $view     = new View();
+        return $view->getTableInstalled($base_url);
     }
 
 
     /**
-     * Сохранение пользователя
      * @param Request $request
-     * @return Response
-     * @throws AppException
-     * @throws HttpException
-     * @throws Exception
-     * @throws ExceptionInterface
+     * @return array
+     * @throws \Exception
      */
-    public function saveNew(Request $request): Response {
+    public function getFormModule(Request $request): array {
 
-        $this->checkHttpMethod($request, ['post', 'put']);
-        $this->checkVersion($this->modAdmin->tableUsers, $request);
+        $base_url  = "#/admin/modules";
+        $module_id = $request->getQuery('id');
 
-        $fields = [
-            'login'        => 'req,string(1-255),chars(alphanumeric|_|\\): Логин',
-            'email'        => 'email: Email',
-            'role_id'      => 'req,int(1-): Роль',
-            'pass'         => 'req,string(4-): Пароль',
-            'fname'        => 'string(0-255): Имя',
-            'lname'        => 'string(0-255): Фамилия',
-            'mname'        => 'string(0-255): Отчество',
-            'is_admin'     => 'string(1|0): Администратор безопасности',
-            'is_active'    => 'string(1|0): Активен',
-            'avatar_type'  => 'string(none|generate|upload): Аватар',
-        ];
-
-        $controls = $request->getFormContent() ?? [];
-        $controls = $this->clearData($controls);
-
-
-        $avatar = null;
-
-        if ( ! empty($controls['avatar'])) {
-            $avatar = $controls['avatar'];
-            unset($controls['avatar']);
+        if (empty($module_id)) {
+            throw new AppException($this->_('Не передан id модуля'));
         }
 
-        if ($errors = $this->validateFields($fields, $controls)) {
-            return $this->getResponseError($errors);
+        if ( ! filter_var($module_id, FILTER_VALIDATE_INT)) {
+            throw new AppException($this->_('Указан некорректный id модуля'));
         }
 
-        if ( ! $this->modAdmin->tableUsers->isUniqueLogin($controls['login'])) {
-            throw new AppException($this->_("Пользователь с таким логином уже существует"));
+        $module = $this->modAdmin->tableModules->getRowById($module_id);
+
+        if (empty($module)) {
+            throw new AppException($this->_('Указанный модуль не найден'));
         }
 
-        if ( ! empty($controls['email']) &&
-             ! $this->modAdmin->tableUsers->isUniqueEmail($controls['email'])
-        ) {
-            throw new AppException($this->_("Пользователь с таким email уже существует"));
+        return (new View())->getFormModule($base_url, $module);
+    }
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getTabSections(Request $request): array {
+
+        $base_url   = "#/admin/modules";
+        $module_id  = $request->getQuery('id');
+        $section_id = $request->getQuery('section_id');
+
+        if (empty($module_id)) {
+            throw new AppException($this->_('Не передан id модуля'));
         }
 
-        $controls['pass'] = Tools::passSalt(md5($controls['pass']));
-        $controls['name'] = trim(implode(' ', [
-            $controls['lname'] ?? '',
-            $controls['fname'] ?? '',
-            $controls['mname'] ?? ''
-        ]));
+        if ( ! filter_var($module_id, FILTER_VALIDATE_INT)) {
+            throw new AppException($this->_('Указан некорректный id модуля'));
+        }
+
+        $module = $this->modAdmin->tableModules->getRowById($module_id);
+
+        if (empty($module)) {
+            throw new AppException($this->_('Указанный модуль не найден'));
+        }
+
+        $content = [];
+        $view    = new View();
 
 
-        $this->db->beginTransaction();
-        try {
-            $row = $this->saveData($this->modAdmin->tableUsers, $controls);
+        if ($section_id >= 0) {
+            if ($section_id) {
+                $module_section = $this->modAdmin->tableModulesSections->getRowById($section_id);
 
-            if ($controls['avatar_type'] == 'upload') {
-                $this->saveFiles($this->modAdmin->tableUsersFiles, $row->id, 'avatar', $avatar);
-
-            } elseif ($controls['avatar_type'] == 'generate') {
-                $this->generateAvatar($row);
+                if (empty($module_section)) {
+                    throw new AppException($this->_('Указанный раздел модуля не найден'));
+                }
             }
 
-            $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
-                'id'        => $row->id,
-                'is_active' => $controls['is_active'] == '1',
-            ]);
-
-            $this->db->commit();
-
-        } catch (\Exception $e) {
-            $this->db->rollback();
-            throw $e;
+            $content[] = $view->getFormSection($base_url, $module_section ?? null);
         }
 
-        return $this->getResponseSuccess([
-            'id' => $row->id
-        ]);
+        $content[] = $view->getTableSections($base_url);
+
+
+        return $content;
+    }
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getTabVersion(Request $request): array {
+
+        $base_url   = "#/admin/modules";
+        $module_id  = $request->getQuery('id');
+        $version_id = $request->getQuery('version_id');
+
+        if (empty($module_id)) {
+            throw new AppException($this->_('Не передан id модуля'));
+        }
+
+        if ( ! filter_var($module_id, FILTER_VALIDATE_INT)) {
+            throw new AppException($this->_('Указан некорректный id модуля'));
+        }
+
+        $module = $this->modAdmin->tableModules->getRowById($module_id);
+
+        if (empty($module)) {
+            throw new AppException($this->_('Указанный модуль не найден'));
+        }
+
+        $content = [];
+        $view    = new View();
+
+
+        $content = [];
+        $content[] = $view->getFormVersions($base_url, $module_section ?? null);
+        $content[] = $view->getTableVersions($base_url);
+
+
+        return $content;
+    }
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getFormInstallHand(Request $request): array {
+
+        $base_url = "#/admin/modules";
+        $view     = new View();
+        return $view->getFormInstallHand($base_url);
+    }
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getFormInstallFile(Request $request): array {
+
+        $base_url = "#/admin/modules";
+        $view     = new View();
+        return $view->getFormInstallFile($base_url);
+    }
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getFormInstallLink(Request $request): array {
+
+        $base_url = "#/admin/modules";
+        $view     = new View();
+        return $view->getFormInstallLink($base_url);
     }
 
 
@@ -252,6 +272,118 @@ class Modules extends Handler {
         }
 
         return $this->getResponseSuccess($table->getResult());
+    }
+
+
+    /**
+     * Сохранение модуля
+     * @param Request $request
+     * @return Response
+     * @throws AppException
+     * @throws HttpException
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function save(Request $request): Response {
+
+        $this->checkHttpMethod($request, ['post', 'put']);
+        $this->checkVersion($this->modAdmin->tableModules, $request);
+
+        $fields = [
+            'title'       => 'req,string(1-): Название',
+            'icon'        => 'string(0-255): Иконка',
+            'description' => 'string(0-65000): Описание',
+            'group_name'  => 'string(0-255): Название группы',
+            'is_active'   => 'switch: Активен',
+        ];
+
+        $record_id = $request->getQuery('id');
+        $controls  = $request->getFormContent() ?? [];
+        $controls  = $this->clearData($controls);
+
+        if (empty($record_id)) {
+            throw new AppException($this->_("Не указан id для сохранения изменений"));
+        }
+
+
+        if ($errors = $this->validateFields($fields, $controls)) {
+            return $this->getResponseError($errors);
+        }
+
+
+        $this->db->beginTransaction();
+        try {
+            $row_old = $this->modAdmin->tableModules->getRowById($record_id);
+            $row     = $this->saveData($this->modAdmin->tableModules, $controls, $record_id);
+
+
+            if ($row_old->is_active != $row->is_active) {
+                $this->event($this->modAdmin->tableModules->getTable() . '_active', [
+                    'id'        => $row->id,
+                    'is_active' => $row->is_active == 1,
+                ]);
+            }
+
+            $this->db->commit();
+
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return $this->getResponseSuccess([
+            'id' => $row->id
+        ]);
+    }
+
+
+    /**
+     * Ручное добавление модуля
+     * @param Request $request
+     * @return Response
+     * @throws AppException
+     * @throws HttpException
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function saveHand(Request $request): Response {
+
+        $this->checkHttpMethod($request, 'post');
+        $this->checkVersion($this->modAdmin->tableModules, $request);
+
+        $fields = [
+            'name'             => 'req,string(1-255),chars(alphanumeric|_): Идентификатор',
+            'title'            => 'req,string(1-255): Название',
+            'icon'             => 'string(0-255): Иконка',
+            'version'          => 'req,string(1-100): Версия',
+            'description'      => 'string(0-65000): Описание',
+            'group_name'       => 'string(0-255): Название группы',
+            'is_active'        => 'string(0|1): Активен',
+            'is_visible'       => 'string(0|1): Видимый',
+            'is_visible_index' => 'string(0|1): Имеет главную страницу',
+        ];
+
+
+        $controls = $request->getFormContent() ?? [];
+        $controls = $this->clearData($controls);
+
+        if ($errors = $this->validateFields($fields, $controls)) {
+            return $this->getResponseError($errors);
+        }
+
+
+        if ( ! $this->modAdmin->tableModules->isUniqueName($controls['name'])) {
+            throw new AppException($this->_("Модуль с таким идентификатором уже существует"));
+        }
+
+        $controls['seq'] = 1 + $this->modAdmin->tableModules->getMaxSeq();
+
+
+        $row = $this->saveData($this->modAdmin->tableModules, $controls);
+
+        return $this->getResponseSuccess([
+            'id' => $row->id
+        ]);
     }
 
 

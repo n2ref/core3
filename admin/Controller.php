@@ -145,7 +145,6 @@ class Controller extends Common {
         $base_url = "#/admin/modules";
         $load_url = "core3/mod/admin/modules/handler";
         $panel    = new \CoreUI\Panel('tab');
-        $view     = new Classes\Modules\View();
         $result   = [];
 
         try {
@@ -156,6 +155,7 @@ class Controller extends Common {
                 $breadcrumb->addItem('Установленные', "{$base_url}/installed");
                 $breadcrumb->addItem('Модуль');
                 $result[] = $breadcrumb->toArray();
+
 
                 if ($params['module_id']) {
                     $module = $this->tableModules->getRowById($params['module_id']);
@@ -172,9 +172,10 @@ class Controller extends Common {
                         (new Control\Button('<i class="bi bi-arrow-clockwise"></i> ' . $this->_('Проверить обновления')))->setAttr('class', 'btn btn-outline-secondary'),
                         (new Control\Button('<i class="bi bi-trash"></i> ' . $this->_('Удалить')))->setAttr('class', 'btn btn-outline-danger'),
                     ]);
-                    $panel->addTab($this->_("Модуль"),  'module',   "{$base_url}/$module->id/module");
-                    $panel->addTab($this->_("Разделы"), 'sections', "{$base_url}/$module->id/sections")->setCount($sections_count);
-                    $panel->addTab($this->_("Версии"),  'versions', "{$base_url}/$module->id/versions")->setCount($sections_count);
+
+                    $panel->addTab($this->_("Модуль"),  'module')->setUrlWindow("{$base_url}/{$module->id}/module")->setUrlContent("{$load_url}/getFormModule?id={$module->id}");
+                    $panel->addTab($this->_("Разделы"), 'sections')->setUrlWindow("{$base_url}/{$module->id}/sections")->setUrlContent("{$load_url}/getTabSections?id={$module->id}")->setCount($sections_count);
+                    $panel->addTab($this->_("Версии"),  'versions')->setUrlWindow("{$base_url}/{$module->id}/versions")->setUrlContent("{$load_url}/getTabVersion?id={$module->id}")->setCount($sections_count);
 
                     if ($module->isset_updates) {
                         $panel->getTabById('versions')->setBadgeDot('danger');
@@ -183,86 +184,42 @@ class Controller extends Common {
                     $params = $request->getPathParams('^/admin/modules/{module_id:\d+}/{tab}');
                     $tab    = $params['tab'] ?? 'module';
                     $panel->setActiveTab($tab);
+                    $panel->setUrlContent($panel->getTabById($tab)->getUrlContent());
 
-                    switch ($tab) {
-                        case 'module':
-                            $panel->setContent($view->getFormModule($base_url, $module));
-                            break;
-
-                        case 'sections':
-                            $content = [];
-
-                            if ($section_params = $request->getPathParams('^/admin/modules/{module_id:\d+}/sections/{section_id:\d+}')) {
-                                if ($section_params['section_id']) {
-                                    $module_section = $this->tableModulesSections->getRowById($section_params['section_id']);
-
-                                    if (empty($module_section)) {
-                                        throw new AppException($this->_('Указанный раздел модуля не найден'));
-                                    }
-                                }
-
-                                $content[] = $view->getFormSection($base_url, $module_section ?? null);
-                            }
-
-                            $content[] = $view->getTableSections($base_url);
-
-                            $panel->setContent($content);
-                            break;
-
-                        case 'versions':
-                            $content = [];
-                            $content[] = $view->getFormVersions($base_url, $module_section ?? null);
-                            $content[] = $view->getTableSections($base_url);
-
-                            $panel->setContent($content);
-                            break;
-                    }
 
                 } else {
                     $panel->setTitle($this->_('Добавление модуля'));
-                    $panel->addTab($this->_("Ручная установка"), 'hand', "{$base_url}/install/hand");
-                    $panel->addTab($this->_("Из файла"),         'file', "{$base_url}/install/file");
-                    $panel->addTab($this->_("По ссылке"),        'link', "{$base_url}/install/link");
+                    $panel->addTab($this->_("Ручная установка"), 'hand')->setUrlWindow("{$base_url}/0/hand")->setUrlContent("{$load_url}/getFormInstallHand");
+                    $panel->addTab($this->_("Из файла"),         'file')->setUrlWindow("{$base_url}/0/file")->setUrlContent("{$load_url}/getFormInstallFile");
+                    $panel->addTab($this->_("По ссылке"),        'link')->setUrlWindow("{$base_url}/0/link")->setUrlContent("{$load_url}/getFormInstallLink");
 
 
-                    $params = $request->getPathParams('^/admin/modules/install/{tab}$');
+                    $params = $request->getPathParams('^/admin/modules/0/{tab}$');
                     $tab    = $params['tab'] ?? 'hand';
                     $panel->setActiveTab($tab);
-                    switch ($tab) {
-                        case 'hand': $panel->setContent($view->getFormModuleNew($base_url)); break;
-                        case 'file': $panel->setContent($view->getFormModuleNew($base_url)); break;
-                        case 'link': $panel->setContent($view->getFormModuleNew($base_url)); break;
-                    }
+                    $panel->setUrlContent($panel->getTabById($tab)->getUrlContent());
                 }
 
             } else {
                 $count_modules = $this->tableModules->getCount();
 
-                $panel->addTab($this->_("Установленные"), 'installed')->setCount($count_modules)
-                    ->setUrlContent("{$load_url}/getTableInstalled")
-                    ->setUrlWindow("{$base_url}/installed");
-
-                $panel->addTab($this->_("Доступные"),     'available')
-                    ->setUrlContent("{$load_url}/getTableAvailable")
-                    ->setUrlWindow("{$base_url}/available");
-
+                $panel->addTab($this->_("Установленные"), 'installed')->setUrlWindow("{$base_url}/installed")->setUrlContent("{$load_url}/getTableInstalled")->setCount($count_modules);
+                $panel->addTab($this->_("Доступные"),     'available')->setUrlWindow("{$base_url}/available")->setUrlContent("{$load_url}/getTableAvailable");
 
                 $params = $request->getPathParams('^/admin/modules/{tab}$');
                 $tab    = $params['tab'] ?? 'installed';
                 $panel->setActiveTab($tab);
-                switch ($tab) {
-                    case 'installed': $panel->setContent($view->getTableInstalled($base_url)); break;
-                    case 'available': $panel->setContent($view->getTableAvailable($base_url)); break;
-                }
+                $panel->setUrlContent($panel->getTabById($tab)->getUrlContent());
             }
 
         } catch (AppException $e) {
+            $this->log->info($e->getMessage());
             $panel->setContent(
                 \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'))
             );
 
         } catch (\Exception $e) {
-            $this->log->error('admin_module', $e);
+            $this->log->error($this->resource, $e);
             $panel->setContent(
                 \CoreUI\Info::danger(
                     $this->config?->system->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
@@ -295,17 +252,6 @@ class Controller extends Common {
         $content[] = $this->getJsModule('admin', 'assets/users/js/admin.users.js');
 
         try {
-
-//            if ($request->isPath('^/admin/users/\d+$')) {
-//                $content[] = $request->rote('^/admin/users/{user_id:\d+}$', function (int $user_id) use ($content) {
-//
-//                });
-//
-//            } else {
-//                $content[] = $view->getTable($base_url);
-//            }
-
-
             if ($request->isPath('^/admin/users/.+$')) {
                 $params = $request->getPathParams('^/admin/users/{user_id:\d+}$');
 
@@ -329,7 +275,7 @@ class Controller extends Common {
                         throw new AppException('Указанный пользователь не найден');
                     }
 
-                    $name = trim("{$user->lname} {$user->fname} {$user->mname}");
+                    $name   = trim("{$user->lname} {$user->fname} {$user->mname}");
                     $avatar = "<img src=\"core3/user/{$user->id}/avatar\" style=\"width: 32px;height: 32px\" class=\"rounded-circle border border-secondary-subtle\"> ";
                     $panel->setTitle($avatar . ($name ?: $user->login), $this->_('Редактирование пользователя'));
 

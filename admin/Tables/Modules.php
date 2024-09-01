@@ -70,4 +70,38 @@ class Modules extends Table {
                 ->order('seq');
         });
     }
+
+
+    /**
+     * Получение текущего максимального порядкового номера у модуля
+     * @return int
+     */
+    public function getMaxSeq(): int {
+
+        $result = $this->select(function (Select $select) {
+            $select->columns([
+                'id'  => 'id',
+                'seq' => new Expression('MAX(seq)'),
+            ]);
+        });
+
+        return (int)($result->current()->seq ?? 0);
+    }
+
+
+    /**
+     * Проверка повторения названия
+     * @param string $name
+     * @return bool
+     */
+    public function isUniqueName(string $name): bool {
+
+        $results = $this->select(function (Select $select) use ($name) {
+            $select
+                ->where([ 'name' => $name ])
+                ->limit(1);
+        });
+
+        return $results->count() == 0;
+    }
 }
