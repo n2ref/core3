@@ -167,7 +167,7 @@
                 }
             }
         },
-        "/core3/mod/{name}/{section}": {
+        "/{name}/{section}": {
             "get": {
                 "tags": [
                     "Кабинет"

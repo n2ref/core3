@@ -8,7 +8,7 @@ let coreMain = {
     activePage: null,
 
     options: {
-        basePath: 'core3',
+        basePath: 'sys',
     },
 
     /**
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 coreMenu._drawerToggle();
             }
 
-            coreMenu.load('/mod' + location.hash.substring(1));
+            coreMenu.load(location.hash.substring(1));
         }
     });
 

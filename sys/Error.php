@@ -3,6 +3,7 @@ namespace Core3\Sys;
 use Core3\Classes\Log;
 use Core3\Classes\Registry;
 use Core3\Classes\Tools;
+use Monolog\Handler\MissingExtensionException;
 
 
 /**
@@ -14,6 +15,7 @@ class Error {
     /**
      * @param \Exception $e
      * @return void
+     * @throws MissingExtensionException
      */
     public static function catchException(\Exception $e): void {
 

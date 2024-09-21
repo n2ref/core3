@@ -14,6 +14,7 @@ class Users extends Common {
 
 
     /**
+     * Получение пользователя по id
      * @param int $user_id
      * @return array|null
      */
@@ -26,6 +27,7 @@ class Users extends Common {
 
 
     /**
+     * Получение пользователя по login
      * @param string $login
      * @return array|null
      */
@@ -38,6 +40,7 @@ class Users extends Common {
 
 
     /**
+     * Получение пользователя по email
      * @param string $email
      * @return array|null
      */
@@ -50,6 +53,7 @@ class Users extends Common {
 
 
     /**
+     * Получение списка админов
      * @return array
      */
     public function getUsersAdmins(): array {
@@ -76,23 +80,22 @@ class Users extends Common {
 
         if ($user) {
             $this->event($this->modAdmin->tableUsers->getTable() . '_pre_delete', [
-                'id'   => $user_id,
                 'user' => $user,
             ]);
 
             $user->delete();
 
             $this->event($this->modAdmin->tableUsers->getTable() . '_post_delete', [
-                'id' => $user_id,
+                'user' => $user,
             ]);
         }
     }
 
 
     /**
-     * Отключение пользователя
+     * Переключение активности пользователя
      * @param int  $user_id
-     * @param bool $is_active_sw
+     * @param bool $is_active
      * @return void
      * @throws DbException
      * @throws Exception
@@ -106,9 +109,8 @@ class Users extends Common {
             $user->is_active = $is_active ? '1' : '0';
             $user->save();
 
-            $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
-                'id'        => $user_id,
-                'is_active' => $is_active,
+            $this->event($this->modAdmin->tableUsers->getTable() . '_switch_active', [
+                'user' => $user,
             ]);
         }
     }

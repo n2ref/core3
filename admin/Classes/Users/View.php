@@ -18,6 +18,7 @@ use Laminas\Db\RowGateway\AbstractRowGateway;
  */
 class View extends Common {
 
+
     /**
      * таблица с юзерами
      * @param string $base_url
@@ -30,13 +31,15 @@ class View extends Common {
 
         $table = new Table('admin', 'users', 'users');
         $table->setKit(['default', 'search', 'columns', 'add' => "{$base_url}/0", 'delete']);
-        $table->setHandler('table');
+        //$table->setHandler('table');
+
+        $table->setRecordsRequest("{$this->module}/{$this->section}/table");
+
         $table->setClickUrl("{$base_url}/[id]");
 
 
         $table->setHeaderOut($table::LAST)
             ->left([
-                (new TableControl\Divider()),
                 (new Filter\Text('login'))->setAttributes(['placeholder' => $this->_('Логин / Имя / Email')])->setWidth(200),
                 (new Filter\Select('role', $this->_('Роль')))->setWidth(200)->setOptions($roles),
                 (new TableControl\FilterClear()),
@@ -76,7 +79,7 @@ class View extends Common {
 
         $form = new Form('admin', 'users', 'user');
         $form->setTable($this->modAdmin->tableUsers, $user->id);
-        $form->setHandler('save', 'put');
+        $form->setHandler("/admin/users/{$user->id}", 'put');
         $form->setSuccessLoadUrl('#/admin/users');
         $form->setOnSubmitSuccessDefault();
 

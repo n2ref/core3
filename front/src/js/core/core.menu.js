@@ -103,8 +103,8 @@ let coreMenu = {
                     coreMenu.preloader.hide();
 
                     let uri = location.hash.substring(1) !== '' && location.hash.substring(1) !== '/'
-                        ? '/mod' + location.hash.substring(1)
-                        : '/home';
+                        ? location.hash.substring(1)
+                        : 'sys/home';
 
                     coreMenu.load(uri);
                 }
@@ -144,7 +144,7 @@ let coreMenu = {
      * Перезагрузка содержимого страницы
      */
     reload: function () {
-        coreMenu.load('/mod' + location.hash.substring(1))
+        coreMenu.load(location.hash.substring(1))
     },
 
 
@@ -159,7 +159,7 @@ let coreMenu = {
         coreMenu.preloader.show();
 
         $.ajax({
-            url: coreMain.options.basePath + url,
+            url: url,
             method: "GET",
             dataType: 'text',
             success: function (response, textStatus, jqXHR) {
@@ -178,18 +178,11 @@ let coreMenu = {
 
                         if (typeof responseObj === 'object' &&
                             responseObj.hasOwnProperty('_buffer') &&
+                            typeof responseObj._buffer === 'string' &&
                             responseObj._buffer !== ''
                         ) {
                             contents.push(responseObj._buffer);
                             delete responseObj._buffer
-
-                            let clearResponseObj = [];
-
-                            $.each(responseObj, function (i, item) {
-                                clearResponseObj.push(item);
-                            });
-
-                            responseObj = clearResponseObj;
                         }
 
                         let renderContents = coreMenu._renderContent(responseObj);
@@ -493,12 +486,12 @@ let coreMenu = {
                         let module  = $(this).data('module');
                         let section = $(this).data('section');
 
-                        if (location.hash.substring(1) === '/' + module + '/' + section) {
+                        if (location.hash.substring(2) === module + '/' + section) {
                             if (window.screen.width < 600) {
                                 coreMenu._drawerToggle();
                             }
 
-                            coreMenu.load('/mod/' + module + '/' + section);
+                            coreMenu.load(module + '/' + section);
                         }
                     }
                 });
@@ -536,7 +529,7 @@ let coreMenu = {
 
         $('.page-menu .module-home').on('click', function (event) {
             if (event.button === 0 && ! event.ctrlKey)  {
-                coreMenu.load('/home');
+                coreMenu.load('sys/home');
 
                 if (window.screen.width < 600) {
                     coreMenu._drawerToggle();

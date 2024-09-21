@@ -47,14 +47,15 @@ if (PHP_SAPI === 'cli') {
     }
 }
 
-$vendor_autoload_file = "vendor/autoload.php";
+require_once 'autoload.php';
+
+$vendor_autoload_file = __DIR__ . "/vendor/autoload.php";
 
 if ( ! file_exists($vendor_autoload_file)) {
     throw new \Exception("No external libraries. You need to execute in the console: php " . DOC_ROOT . "/index.php --composer -p update");
 }
 
 require_once $vendor_autoload_file;
-require_once 'autoload.php';
 
 
 $config = new Config();

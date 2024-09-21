@@ -216,7 +216,7 @@ class View extends Common {
 
         $table = new Table();
         $table->setOverflow(true);
-        $table->setRecordsRequest('core3/mod/admin/index/handler/get_db_connections_records');
+        $table->setRecordsRequest('admin/index/handler/get_db_connections_records');
         $table->addHeaderIn()
             ->left([
                 (new Table\Control\Total)
@@ -277,7 +277,7 @@ class View extends Common {
 
         $table = new Table();
         $table->setOverflow(true);
-        $table->setRecordsRequest('core3/mod/admin/index/handler/get_system_process_list');
+        $table->setRecordsRequest('admin/index/handler/get_system_process_list');
 
         $table->addHeaderOut()
             ->left([
@@ -636,6 +636,8 @@ class View extends Common {
         $tpl = file_get_contents(__DIR__ . '/../../assets/index/html/db_list.html');
         $tpl = str_replace('[TYPE]',    $service_info['database']['type'], $tpl);
         $tpl = str_replace('[VERSION]', $service_info['database']['version'], $tpl);
+        $tpl = str_replace('[HOST]',    $service_info['database']['hostname'], $tpl);
+        $tpl = str_replace('[DB_NAME]', $service_info['database']['name'], $tpl);
         $tpl = str_replace('[SIZE]',    Tools::convertBytes($service_info['database']['size'], 'Mb'), $tpl);
 
         return $tpl;

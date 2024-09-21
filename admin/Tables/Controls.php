@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Mod\Admin\Tables;
+use Core3\Classes\Db\Row;
 use Core3\Classes\Db\Table;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 use Laminas\Db\Sql\Select;
@@ -56,12 +57,13 @@ class Controls extends Table {
 
 
     /**
+     * @param int $days
      * @return void
      */
-    public function deleteOld(): void {
+    public function deleteOld(int $days = 30): void {
 
         $this->delete([
-            'date_modified < ?' => date('Y-m-d H:i:s', strtotime('-1 month'))
+            'date_modified < ?' => date('Y-m-d H:i:s', strtotime("-{$days} days"))
         ]);
     }
 }

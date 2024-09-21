@@ -1,7 +1,7 @@
 
 var adminIndex = {
 
-    _baseUrl: 'core3/mod/admin/index',
+    _baseUrl: 'admin/index',
 
     /**
      * Очистка кэша

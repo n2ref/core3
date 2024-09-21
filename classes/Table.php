@@ -71,27 +71,27 @@ class Table extends \CoreUI\Table {
                     break;
 
                 case 'search':
-                    $this->setHeaderOut($this::LAST)->left([
-                        new Control\Search()
+                    $this->setHeaderIn($this::LAST)->left([
+                        (new Control\Search())->setButton('<i class="bi bi-search"></i> ' . $this->system->_('Поиск'), ['class' => 'btn'])
                     ]);
                     break;
 
                 case 'columns':
-                    $this->setHeaderOut($this::LAST)->left([
-                        new Control\Columns()
+                    $this->setHeaderIn($this::LAST)->left([
+                        (new Control\Columns())->setButton('<i class="bi bi-layout-three-columns"></i> ' . $this->system->_('Колонки'), ['class' => 'btn'])
                     ]);
                     break;
 
                 case 'add':
                     $url = is_string($options) ? $options : null;
-                    $this->setHeaderOut($this::LAST)->right([
+                    $this->setHeaderIn($this::LAST)->right([
                         $this->getBtnAdd($url)
                     ]);
                     break;
 
                 case 'delete':
                     $handler = is_string($options) ? $options : 'delete';
-                    $this->setHeaderOut($this::LAST)->right([
+                    $this->setHeaderIn($this::LAST)->right([
                         $this->getBtnDelete($handler)
                     ]);
                     break;
@@ -111,7 +111,7 @@ class Table extends \CoreUI\Table {
      */
     public function setHandler(string $handler, string $http_method = 'GET', array $params = null): self {
 
-        $this->setRecordsRequest("core3/mod/{$this->module}/{$this->section}/handler/{$handler}", $http_method, $params);
+        $this->setRecordsRequest("{$this->module}/{$this->section}/handler/{$handler}", $http_method, $params);
         return $this;
     }
 
@@ -143,7 +143,7 @@ class Table extends \CoreUI\Table {
             return null;
         }
 
-        $url      = "core3/mod/{$this->module}/{$this->section}/handler/{$handler}";
+        $url      = "{$this->module}/{$this->section}/handler/{$handler}";
         $table_id = $this->getId();
 
         return (new Control\Button('<i class="bi bi-trash"></i> ' . $this->system->_('Удалить')))
@@ -161,7 +161,7 @@ class Table extends \CoreUI\Table {
      */
     public function getColumnToggle(string $field, string $label, int $width, string $handler): Column\Toggle {
 
-        $switch_url = "/core3/mod/{$this->module}/{$this->section}/handler/{$handler}?id=[id]";
+        $switch_url = "{$this->module}/{$this->section}/handler/{$handler}?id=[id]";
         $table_id   = $this->getId();
 
         $column = new Column\Toggle($field, $label, $width);

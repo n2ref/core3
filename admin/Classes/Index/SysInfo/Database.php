@@ -30,8 +30,7 @@ class Database extends Db {
         $connections = [];
 
         switch ($this->getType()) {
-            case 'Pdo_Mysql':
-            case 'mysql':
+            case 'Mysql':
             case 'pgsql':
                 $connections = $this->db->fetchAll('SHOW FULL PROCESSLIST');
                 break;
@@ -49,8 +48,7 @@ class Database extends Db {
         $variables = [];
 
         switch ($this->getType()) {
-            case 'Pdo_Mysql':
-            case 'mysql':
+            case 'Mysql':
             case 'pgsql':
                 $variables_raw = $this->db->fetchAll('SHOW VARIABLES');
 
@@ -72,7 +70,13 @@ class Database extends Db {
      */
     protected function getType(): string {
 
-        return (string)$this->config?->system?->db?->base?->adapter ?: 'mysql';
+        $type = (string)$this->config?->system?->db?->base?->adapter ?: 'mysql';
+
+        if ($type == 'Pdo_Mysql') {
+            $type = 'Mysql';
+        }
+
+        return $type;
     }
 
 
@@ -92,8 +96,7 @@ class Database extends Db {
 				$sql = "SELECT VERSION FROM PRODUCT_COMPONENT_VERSION";
 				break;
 
-			case 'Pdo_Mysql':
-			case 'mysql':
+			case 'Mysql':
 			case 'pgsql':
 			default:
 				$sql = "SELECT VERSION() AS version";
@@ -129,8 +132,7 @@ class Database extends Db {
 
 		// This code is heavily influenced by a similar routine in phpMyAdmin 2.2.0
 		switch ($this->getType()) {
-			case 'mysql':
-			case 'Pdo_Mysql':
+			case 'Mysql':
                 $mysqlEngine = ['MyISAM', 'InnoDB', 'Aria'];
                 $db_name     = $this->config->system->db?->base?->params?->database ?: '';
 

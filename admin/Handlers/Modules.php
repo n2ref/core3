@@ -6,6 +6,7 @@ use Core3\Classes\Response;
 use Core3\Classes\Table;
 use Core3\Classes\Tools;
 use Core3\Exceptions\AppException;
+use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin\Classes\Modules\View;
@@ -17,132 +18,9 @@ use Laminas\Cache\Exception\ExceptionInterface;
  */
 class Modules extends Handler {
 
-
-    /**
-     * @param Request $request
-     * @return array
-     * @throws \Exception
-     */
-    public function getTableInstalled(Request $request): array {
-
-        $base_url = "#/admin/modules";
-        $view     = new View();
-        return $view->getTableInstalled($base_url);
-    }
+    private string $base_url = "#/admin/modules";
 
 
-    /**
-     * @param Request $request
-     * @return array
-     * @throws \Exception
-     */
-    public function getFormModule(Request $request): array {
-
-        $base_url  = "#/admin/modules";
-        $module_id = $request->getQuery('id');
-
-        if (empty($module_id)) {
-            throw new AppException($this->_('Не передан id модуля'));
-        }
-
-        if ( ! filter_var($module_id, FILTER_VALIDATE_INT)) {
-            throw new AppException($this->_('Указан некорректный id модуля'));
-        }
-
-        $module = $this->modAdmin->tableModules->getRowById($module_id);
-
-        if (empty($module)) {
-            throw new AppException($this->_('Указанный модуль не найден'));
-        }
-
-        return (new View())->getFormModule($base_url, $module);
-    }
-
-
-    /**
-     * @param Request $request
-     * @return array
-     * @throws \Exception
-     */
-    public function getTabSections(Request $request): array {
-
-        $base_url   = "#/admin/modules";
-        $module_id  = $request->getQuery('id');
-        $section_id = $request->getQuery('section_id');
-
-        if (empty($module_id)) {
-            throw new AppException($this->_('Не передан id модуля'));
-        }
-
-        if ( ! filter_var($module_id, FILTER_VALIDATE_INT)) {
-            throw new AppException($this->_('Указан некорректный id модуля'));
-        }
-
-        $module = $this->modAdmin->tableModules->getRowById($module_id);
-
-        if (empty($module)) {
-            throw new AppException($this->_('Указанный модуль не найден'));
-        }
-
-        $content = [];
-        $view    = new View();
-
-
-        if ($section_id >= 0) {
-            if ($section_id) {
-                $module_section = $this->modAdmin->tableModulesSections->getRowById($section_id);
-
-                if (empty($module_section)) {
-                    throw new AppException($this->_('Указанный раздел модуля не найден'));
-                }
-            }
-
-            $content[] = $view->getFormSection($base_url, $module_section ?? null);
-        }
-
-        $content[] = $view->getTableSections($base_url);
-
-
-        return $content;
-    }
-
-
-    /**
-     * @param Request $request
-     * @return array
-     * @throws \Exception
-     */
-    public function getTabVersion(Request $request): array {
-
-        $base_url   = "#/admin/modules";
-        $module_id  = $request->getQuery('id');
-        $version_id = $request->getQuery('version_id');
-
-        if (empty($module_id)) {
-            throw new AppException($this->_('Не передан id модуля'));
-        }
-
-        if ( ! filter_var($module_id, FILTER_VALIDATE_INT)) {
-            throw new AppException($this->_('Указан некорректный id модуля'));
-        }
-
-        $module = $this->modAdmin->tableModules->getRowById($module_id);
-
-        if (empty($module)) {
-            throw new AppException($this->_('Указанный модуль не найден'));
-        }
-
-        $content = [];
-        $view    = new View();
-
-
-        $content = [];
-        $content[] = $view->getFormVersions($base_url, $module_section ?? null);
-        $content[] = $view->getTableVersions($base_url);
-
-
-        return $content;
-    }
 
 
     /**
@@ -152,9 +30,7 @@ class Modules extends Handler {
      */
     public function getFormInstallHand(Request $request): array {
 
-        $base_url = "#/admin/modules";
-        $view     = new View();
-        return $view->getFormInstallHand($base_url);
+        return (new View())->getFormInstallHand($this->base_url);
     }
 
 
@@ -165,9 +41,7 @@ class Modules extends Handler {
      */
     public function getFormInstallFile(Request $request): array {
 
-        $base_url = "#/admin/modules";
-        $view     = new View();
-        return $view->getFormInstallFile($base_url);
+        return (new View())->getFormInstallFile($this->base_url);
     }
 
 
@@ -178,101 +52,9 @@ class Modules extends Handler {
      */
     public function getFormInstallLink(Request $request): array {
 
-        $base_url = "#/admin/modules";
-        $view     = new View();
-        return $view->getFormInstallLink($base_url);
+        return (new View())->getFormInstallLink($this->base_url);
     }
 
-
-    /**
-     * @param Request $request
-     * @return array
-     * @throws \Exception
-     */
-    public function getTableAvailable(Request $request): array {
-
-        $base_url = "#/admin/modules";
-        $view     = new View();
-        return $view->getTableAvailable($base_url);
-    }
-
-
-    /**
-     * Данные для таблицы
-     * @param Request $request
-     * @return Response
-     * @throws \CoreUI\Table\Exception
-     */
-    public function tableInstall(Request $request): Response {
-
-        $table = new Table\Db($request);
-
-//        $sort = $request->getQuery('sort');
-//
-//        if ($sort && is_array($sort)) {
-//            $table->setSort($sort, [
-//                'avatar'        => 'u.avatar',
-//                'login'         => 'u.login',
-//                'name'          => "CONCAT_WS(' ', u.lname, u.fname, u.mname)",
-//                'email'         => 'u.email',
-//                'role_title'    => 'r.title',
-//                'date_activity' => '(SELECT us.date_last_activity FROM core_users_sessions AS us WHERE u.id = us.user_id ORDER BY date_last_activity DESC LIMIT 1)',
-//                'date_created'  => 'u.date_created',
-//                'is_active_sw'  => "u.is_active_sw = 'Y'",
-//                'is_admin_sw'   => 'u.is_admin_sw',
-//            ]);
-//        }
-
-
-//        $search = $request->getQuery('search');
-//
-//        if ($search && is_array($search)) {
-//            $table->setSearch($search, [
-//                'login'        => (new Search\Like())->setField('u.login'),
-//                'role'         => (new Search\Equal())->setField('u.role_id'),
-//                'date_created' => (new Search\Between())->setField('u.date_created'),
-//                'is_admin_sw'  => (new Search\Equal())->setField('u.is_admin_sw'),
-//            ]);
-//        }
-
-        $table->setQuery("
-            SELECT u.id,
-                   u.login,
-                   u.email,
-                   CONCAT_WS(' ', u.lname, u.fname, u.mname) AS name,
-                   u.is_active,
-                   u.is_admin,
-                   u.date_created,
-                   r.title AS role_title,
-                   
-                   (SELECT us.date_last_activity
-                    FROM core_users_sessions AS us 
-                    WHERE u.id = us.user_id
-                    ORDER BY date_last_activity DESC
-                    LIMIT 1) AS date_activity
-            FROM core_users AS u
-                LEFT JOIN core_roles AS r ON u.role_id = r.id
-        ");
-
-        $records = $table->fetchRecords();
-
-        foreach ($records as $record) {
-
-            $record->login    = ['content' => $record->login, 'url' => "#/admin/users/{$record->id}"];
-            $record->avatar   = "core3/user/{$record->id}/avatar";
-            $record->is_admin = $record->is_admin == 1
-                ? [ 'type' => 'danger', 'text' => $this->_('Да') ]
-                : [ 'type' => 'none',   'text' => $this->_('Нет') ];
-
-            $record->login_user  = [
-                'content' => 'Войти',
-                'attr'    => ['class' => 'btn btn-sm btn-secondary'],
-                'onClick' => "adminUsers.loginUser('{$record->id}');",
-            ];
-        }
-
-        return $this->getResponseSuccess($table->getResult());
-    }
 
 
     /**
@@ -611,7 +393,7 @@ class Modules extends Handler {
 
 
                 //проверяем все SQL и PHP файлы на ошибки
-                require_once('core3/mod/admin/Modules_Install.php');
+                require_once('admin/Modules_Install.php');
 
                 $inst                          = new InstallModule();
                 $mInfo                         = array('install' => array());
@@ -741,4 +523,73 @@ class Modules extends Handler {
         return $this->response;
     }
 
+
+    /**
+     * Удаление пользователей
+     * @param Request $request
+     * @return Response
+     * @throws Exception
+     * @throws ExceptionInterface
+     * @throws AppException
+     */
+    public function deleteSection(Request $request): Response {
+
+        $this->checkHttpMethod($request, 'delete');
+
+        $controls = $request->getJsonContent();
+
+        if (empty($controls['id'])) {
+            return $this->getResponseError([ $this->_("Не указаны разделы") ]);
+        }
+
+        if ( ! is_array($controls['id'])) {
+            return $this->getResponseError([ $this->_("Некорректный список пользователей") ]);
+        }
+
+        foreach ($controls['id'] as $user_id) {
+            if ( ! empty($user_id) && is_numeric($user_id)) {
+                $this->modAdmin->modelUsers->delete((int)$user_id);
+            }
+        }
+
+        return $this->getResponseSuccess([
+            'status' => 'success'
+        ]);
+    }
+
+
+    /**
+     * Изменение активности для пользователя
+     * @param Request $request
+     * @return Response
+     * @throws AppException
+     * @throws DbException
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    public function switchActive(Request $request): Response {
+
+        $this->checkHttpMethod($request, 'patch');
+        $controls = $request->getJsonContent();
+
+        if ( ! in_array($controls['checked'], ['Y', 'N'])) {
+            return $this->getResponseError([ $this->_("Некорректные данные запроса") ]);
+        }
+
+        $user_id = $request->getQuery('id');
+
+        if ( ! $user_id) {
+            return $this->getResponseError([ $this->_("Не указан id пользователя") ]);
+        }
+
+        if ( ! is_numeric($user_id)) {
+            return $this->getResponseError([ $this->_("Указан некорректный id пользователя") ]);
+        }
+
+        $this->modAdmin->modelUsers->switchActive($user_id, $controls['checked'] == 'Y');
+
+        return $this->getResponseSuccess([
+            'status' => 'success'
+        ]);
+    }
 }

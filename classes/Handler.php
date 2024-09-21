@@ -343,13 +343,13 @@ class Handler extends Common {
      */
     protected function saveData(Table $table, array $data, string $row_id = null): AbstractRowGateway {
 
-        $table_name = $table->getTable();
+//        $table_name = $table->getTable();
 
-        $this->event("{$table_name}_pre_save", [
-            'id'    => $row_id,
-            'table' => $table,
-            'data'  => $data,
-        ]);
+//        $this->event("{$table_name}_pre_save", [
+//            'id'    => $row_id,
+//            'table' => $table,
+//            'data'  => $data,
+//        ]);
 
         if ($row_id) {
             $row = $table->getRowById($row_id);
@@ -372,11 +372,11 @@ class Handler extends Common {
             $type   = 'update';
         }
 
-        $this->event("{$table_name}_post_save", [
-            'row'   => $row,
-            'type'  => $type,
-            'table' => $table,
-        ]);
+//        $this->event("{$table_name}_post_save", [
+//            'row'   => $row,
+//            'type'  => $type,
+//            'table' => $table,
+//        ]);
 
 
         $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), $row_id);

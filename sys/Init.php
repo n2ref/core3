@@ -60,15 +60,7 @@ class Init extends Common {
             return false;
         }
 
-        // проверяем, есть ли в запросе токен
-        $access_token = ! empty($_SERVER['HTTP_ACCESS_TOKEN'])
-            ? $_SERVER['HTTP_ACCESS_TOKEN']
-            : '';
-
-        // проверяем, есть ли в запросе токен
-        $access_token = empty($access_token) && ! empty($_COOKIE['Core-Access-Token'])
-            ? $_COOKIE['Core-Access-Token']
-            : $access_token;
+        $access_token = $this->getAccessToken();
 
         $this->auth = $access_token
             ? $this->getAuthByToken($access_token)
@@ -246,6 +238,9 @@ class Init extends Common {
                 }
 
                 $this->logRequest();
+
+            } elseif ($this->getAccessToken()) {
+                throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
             }
 
 
@@ -337,7 +332,7 @@ class Init extends Common {
         $this->logResponse($response);
 
         $response->printHeaders();
-        return $response->getContent();
+        return (string)$response->getContent();
     }
 
 
@@ -525,45 +520,71 @@ class Init extends Common {
     private function getHandlerResponse(): mixed {
 
         $router = new Router();
-        $router->post('^/auth/login',                                                                    [Handler::class, 'login']);
-        $router->put('^/auth/logout',                                                                    [Handler::class, 'logout']);
-        $router->post('^/auth/refresh',                                                                  [Handler::class, 'refreshToken']);
-        $router->post('^/registration/email',                                                            [Handler::class, 'registrationEmail']);
-        $router->post('^/registration/email/check',                                                      [Handler::class, 'registrationEmailCheck']);
-        $router->post('^/restore',                                                                       [Handler::class, 'restorePass']);
-        $router->post('^/restore/check',                                                                 [Handler::class, 'restorePassCheck']);
-        $router->get('^/conf',                                                                           [Handler::class, 'getConf']);
-        $router->get('^/cabinet',                                                                        [Handler::class, 'getCabinet']);
-        $router->get('^/home',                                                                           [Handler::class, 'getHome']);
-        $router->get('^/user/{id:[0-9_]+}/avatar',                                                       [Handler::class, 'getUserAvatar']);
-        $router->any('^/mod/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}/handler/{method:[a-zA-Z0-9_/]+}',   [Handler::class, 'getModHandler']);
-        $router->get('^/mod/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}{mod_query:(?:/[a-zA-Z0-9_/\-]+|)}', [Handler::class, 'getModSection']);
+        $router->route('/sys/auth/login')->post([Handler::class, 'login']);
 
-        $uri   = mb_substr($_SERVER['REQUEST_URI'], mb_strlen(DOC_PATH . CORE_FOLDER));
-        $route = $router->getRoute($_SERVER['REQUEST_METHOD'], $uri);
-
-        if (empty($route)) {
-            throw new HttpException(404, 'not_found', '404 Not found');
+        if ($this->auth) {
+            $router->route('/sys/auth/logout')->put([Handler::class, 'logout']);
+            $router->route('/sys/auth/refresh')->post([Handler::class, 'refreshToken']);
         }
 
-        $request = new Request();
+        $router->route('/sys/registration/email')      ->post([Handler::class, 'registrationEmail']);
+        $router->route('/sys/registration/email/check')->post([Handler::class, 'registrationEmailCheck']);
+        $router->route('/sys/restore')                 ->post([Handler::class, 'restorePass']);
+        $router->route('/sys/restore/check')           ->post([Handler::class, 'restorePassCheck']);
+        $router->route('/sys/conf')                    ->get([Handler::class, 'getConf']);
+        $router->route('/api/.*')                      ->get([Handler::class, 'processApi']);
 
-        // Обнуление
-        $_GET     = [];
-        $_POST    = [];
-        $_REQUEST = [];
-        $_FILES   = [];
-        $_COOKIE  = [];
-
-        $params = [ $request ];
-
-        if ($route_params = $route->getParams()) {
-            foreach ($route_params as $param) {
-                $params[] = $param;
-            }
+        if ($this->auth) {
+            $router->route('/sys/cabinet')                                                               ->get([Handler::class, 'getCabinet']);
+            $router->route('/sys/home')                                                                  ->get([Handler::class, 'getHome']);
+            $router->route('/sys/user/{id:\d+}/avatar')                                                  ->get([Handler::class, 'getUserAvatar']);
+            $router->route('/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}/handler/{method}')                 ->any([Handler::class, 'getModHandler']);
+            $router->route('/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}{mod_query:(?:/[a-zA-Z0-9_/\-]+|)}')->any([Handler::class, 'getModSection']);
         }
 
-        return $route->run($params);
+        $uri          = mb_substr($_SERVER['REQUEST_URI'], mb_strlen(rtrim(DOC_PATH, '/')));
+        $route_method = $router->getRouteMethod($_SERVER['REQUEST_METHOD'], $uri);
+
+        if ($route_method) {
+            $request = new Request();
+
+            // Обнуление
+            $_GET     = [];
+            $_POST    = [];
+            $_REQUEST = [];
+            $_FILES   = [];
+            $_COOKIE  = [];
+
+            $route_method->prependParam($request);
+            return $route_method->run();
+
+        } elseif ($uri !== DOC_PATH) {
+            $response = new Response();
+            $response->setHttpCode(404);
+            $response->setHeader('Location', DOC_PATH);
+            return $response;
+        }
+
+        $index = file_get_contents(__DIR__ . '/../front/index.html');
+        return str_replace('[PATH]', DOC_PATH . CORE_FOLDER, $index);
+    }
+
+
+    /**
+     * Получение токена из запроса
+     * @return string
+     */
+    private function getAccessToken(): string {
+
+        // проверяем, есть ли в запросе токен
+        $access_token = ! empty($_SERVER['HTTP_ACCESS_TOKEN'])
+            ? $_SERVER['HTTP_ACCESS_TOKEN']
+            : '';
+
+        // проверяем, есть ли в запросе токен
+        return empty($access_token) && ! empty($_COOKIE['Core-Access-Token'])
+            ? $_COOKIE['Core-Access-Token']
+            : $access_token;
     }
 
 

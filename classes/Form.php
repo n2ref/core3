@@ -121,11 +121,11 @@ class Form extends \CoreUI\Form {
                 'id'          => $file_row->id,
                 'name'        => $file_row->file_name,
                 'size'        => $file_row->file_size,
-                'urlDownload' => "/core3/mod/{$this->module}/{$this->section}/handler/getFileDownload?t={$table_name}&id={$file_row->id}",
+                'urlDownload' => "{$this->module}/{$this->section}/handler/getFileDownload?t={$table_name}&id={$file_row->id}",
             ];
 
             if ($file_row->file_type && preg_match('~^image/.*~', $file_row->file_type)) {
-                $file['urlPreview'] = "/core3/mod/{$this->module}/{$this->section}/handler/getFilePreview?t={$table_name}&id={$file_row->id}";
+                $file['urlPreview'] = "{$this->module}/{$this->section}/handler/getFilePreview?t={$table_name}&id={$file_row->id}";
             }
 
             $result[] = $file;
@@ -167,7 +167,7 @@ class Form extends \CoreUI\Form {
         foreach ($fields as $field) {
             if ($field instanceof Field\FileUpload) {
                 if (empty($field->getUrl())) {
-                    $field->setUrl("/core3/mod/{$this->module}/{$this->section}/handler/uploadFile");
+                    $field->setUrl("{$this->module}/{$this->section}/handler/uploadFile");
                 }
             }
         }
@@ -197,12 +197,10 @@ class Form extends \CoreUI\Form {
         $send = $this->send_props;
 
         if ($send['handler']) {
-            $base_url = "/core3/mod/{$this->module}/{$this->section}/handler/{$send['handler']}";
-
             if ($send['record_id'] && $send['record_version']) {
-                $this->setSend("{$base_url}?id={$send['record_id']}&v={$send['record_version']}", $send['http_method']);
+                $this->setSend("{$send['handler']}?id={$send['record_id']}&v={$send['record_version']}", $send['http_method']);
             } else {
-                $this->setSend($base_url, $send['http_method']);
+                $this->setSend($send['handler'], $send['http_method']);
             }
         }
     }

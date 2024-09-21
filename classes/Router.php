@@ -1,6 +1,7 @@
 <?php
 namespace Core3\Classes;
-use Core3\Classes\Init\Router\Path;
+use Core3\Classes\Router\Route;
+use Core3\Classes\Router\Method;
 
 
 /**
@@ -9,101 +10,23 @@ use Core3\Classes\Init\Router\Path;
 class Router {
 
     /**
-     * @var array
+     * @var Route[]
      */
     private array $routes = [];
 
 
     /**
-     * @param string         $path
-     * @param array|\Closure $action
-     * @return void
+     * @param string $path
+     * @return Route
+     * @throws \Exception
      */
-    public function get(string $path, array|\Closure $action): void {
+    public function route(string $path): Route {
 
-        $this->method('get', $path, $action);
-    }
+        $route = new Route($path);
 
+        $this->routes[$path] = $route;
 
-    /**
-     * @param string         $path
-     * @param array|\Closure $action
-     * @return void
-     */
-    public function post(string $path, array|\Closure $action): void {
-
-        $this->method('post', $path, $action);
-    }
-
-
-    /**
-     * @param string         $path
-     * @param array|\Closure $action
-     * @return void
-     */
-    public function put(string $path, array|\Closure $action): void {
-
-        $this->method('put', $path, $action);
-    }
-
-
-    /**
-     * @param string         $path
-     * @param array|\Closure $action
-     * @return void
-     */
-    public function delete(string $path, array|\Closure $action): void {
-
-        $this->method('delete', $path, $action);
-    }
-
-
-    /**
-     * @param string         $path
-     * @param array|\Closure $action
-     * @return void
-     */
-    public function patch(string $path, array|\Closure $action): void {
-
-        $this->method('patch', $path, $action);
-    }
-
-
-    /**
-     * @param string         $path
-     * @param array|\Closure $action
-     * @return void
-     */
-    public function options(string $path, array|\Closure $action): void {
-
-        $this->method('options', $path, $action);
-    }
-
-
-    /**
-     * @param string         $path
-     * @param array|\Closure $action
-     * @return void
-     */
-    public function any(string $path, array|\Closure $action): void {
-
-        $this->method('*', $path, $action);
-    }
-
-
-    /**
-     * @param string         $method
-     * @param string         $path
-     * @param array|\Closure $action
-     * @return void
-     */
-    public function method(string $method, string $path, array|\Closure $action): void {
-
-        $this->routes[] = [
-            'method' => strtolower($method),
-            'path'   => $path,
-            'action' => $action,
-        ];
+        return $route;
     }
 
 
@@ -113,26 +36,18 @@ class Router {
      * @return Route|null
      * @throws \Exception
      */
-    public function getRoute(string $method, string $path):? Route {
+    public function getRouteMethod(string $method, string $path):? Method {
 
         $method = strtolower($method);
-
+        $path   = preg_replace('~\?.*~', '', $path);
 
         foreach ($this->routes as $route) {
 
-            if ($method == $route['method'] || $route['method'] == '*') {
-                $prepare_path = $this->preparePath($route['path']);
+            if (($params = $this->getRouteParams($route, $method, $path)) !== null) {
+                $route_method = $route->getMethod($method);
+                $route_method->setParams($params);
 
-                if (preg_match("~{$prepare_path}~u", $path, $matches)) {
-
-                    foreach ($matches as $key => $match) {
-                        if (is_numeric($key)) {
-                            unset($matches[$key]);
-                        }
-                    }
-
-                    return new Route($route['method'], $route['path'], $route['action'], $matches);
-                }
+                return $route_method;
             }
         }
 
@@ -141,56 +56,30 @@ class Router {
 
 
     /**
+     * @param Route  $route
      * @param string $method
      * @param string $path
-     * @return Route[]
-     * @throws \Exception
+     * @return array|null
      */
-    public function getRoutes(string $method, string $path): array {
+    private function getRouteParams(Route $route, string $method, string $path):? array {
 
-        $result = [];
-        $method = strtolower($method);
+        $methods = array_keys($route->getMethods());
 
-        foreach ($this->routes as $route) {
+        if (in_array($method, $methods) || in_array('*', $methods)) {
+            $path_regexp = $route->getPathRegexp();
 
-            if ($method == $route['method'] || $route['method'] == '*') {
-                $prepare_path = $this->preparePath($route['path']);
+            if (preg_match($path_regexp, $path, $matches)) {
 
-                if (preg_match("~{$prepare_path}~u", $path, $matches)) {
-
-                    foreach ($matches as $key => $match) {
-                        if (is_numeric($key)) {
-                            unset($matches[$key]);
-                        }
+                foreach ($matches as $key => $match) {
+                    if (is_numeric($key)) {
+                        unset($matches[$key]);
                     }
-
-                    $result[] = new Route($route['method'], $route['path'], $route['action'], $matches);
                 }
+
+                return $matches;
             }
         }
 
-        return $result;
-    }
-
-
-    /**
-     * @param string $path
-     * @return string
-     */
-    private function preparePath(string $path): string {
-
-        if (preg_match_all('~\{(?<name>[a-zA-Z0-9_]+)(?:|:(?<rule>[^}]+))\}~u', $path, $matches)) {
-
-            if ( ! empty($matches[0])) {
-                foreach ($matches[0] as $key => $match) {
-                    $count = 1;
-                    $name  = $matches['name'][$key];
-                    $rule  = $matches['rule'][$key] ?: '[\d\w_\-]+';
-                    $path  = str_replace($match, "(?<{$name}>{$rule})", $path, $count);
-                }
-            }
-        }
-
-        return $path;
+        return null;
     }
 }

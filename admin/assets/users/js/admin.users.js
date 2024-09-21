@@ -19,7 +19,7 @@ var adminUsers = {
                         Core.menu.preloader.show();
 
                         $.ajax({
-                            url      : 'core3/mod/admin/users/handler/login_user',
+                            url      : 'admin/users/login',
                             method   : 'post',
                             dataType : 'json',
                             data: {

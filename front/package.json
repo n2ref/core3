@@ -3,14 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build_all": "gulp build_tpl && gulp build_js_coreui && gulp build_js && gulp build_js_min && gulp build_js_all_min && gulp build_css_min && npm run test_js",
-
-    "build_tpl": "gulp build_tpl",
-    "build_js": "gulp build_js && gulp build_js_all_min",
-    "build_js_min": "gulp build_js_min && gulp build_js_all_min",
-    "build_js_coreui": "gulp build_js_coreui",
-
-    "build_css_min": "gulp build_css_min",
+    "build_all":  "gulp build_tpl && gulp build_js_coreui && gulp build_js && gulp build_js_min && gulp build_js_all_min && gulp build_css_min && npm run test_js",
+    "build_fast": "gulp build_tpl && gulp build_js_min_fast && gulp build_js_all_min_fast && gulp build_css_min_fast",
 
     "build_watch": "gulp build_watch",
     "test_js": "eslint -c .eslintrc.json --max-warnings 100 --ext .js ./dist"
@@ -28,15 +22,15 @@
     "jwt-decode": "3.1.2",
     "blueimp-md5-es6": "2.7.4",
     "ejs": "3.1.10",
-    "coreui-panel": "1.0.20",
+    "coreui-panel": "1.0.24",
     "coreui-modal": "1.0.6",
     "coreui-alert": "1.1.4",
     "coreui-info": "1.0.2",
     "coreui-notice": "1.1.1",
     "coreui-layout": "1.0.9",
-    "coreui-form": "1.0.37",
+    "coreui-form": "1.0.39",
     "coreui-form-field-select2": "1.0.2",
-    "coreui-table": "1.1.31",
+    "coreui-table": "1.1.32",
     "coreui-chart": "1.0.9",
     "coreui-breadcrumb": "1.0.3"
   },

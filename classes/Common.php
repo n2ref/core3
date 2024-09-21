@@ -26,7 +26,7 @@ class Common extends Db {
      */
 	public function __construct() {
 
-        $child_class_name = preg_match('~^Core3\\\Mod\\\([A-z0-9\_]+)\\\~', get_class($this), $match)
+        $child_class_name = preg_match('~^Core3\\\Mod\\\([a-zA-Z0-9\_]+)\\\~', get_class($this), $match)
             ? $match[1]
             : '';
 

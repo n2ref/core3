@@ -1,6 +1,7 @@
 <?php
 namespace Core3\Sys;
 use Core3\Classes\Common;
+use Core3\Classes\Registry;
 use Core3\Classes\Request;
 use Core3\Classes\Response;
 use Core3\Classes\Tools;
@@ -406,7 +407,7 @@ class Handler extends Common {
                 'id'     => $user_id,
                 'name'   => $this->auth->getUserName(),
                 'login'  => $this->auth->getUserLogin(),
-                'avatar' => "core3/user/{$user_id}/avatar",
+                'avatar' => "sys/user/{$user_id}/avatar",
             ],
             'system'  => [
                 'name' => $this->config?->system?->name ?: '',
@@ -429,6 +430,16 @@ class Handler extends Common {
             'lang'  => $this->config?->system?->lang,
             'theme' => $this->config?->system?->theme?->toArray(),
         ];
+    }
+
+
+    /**
+     * Обработка api запроса
+     * @return array|Response
+     */
+    public function processApi(): array|Response {
+
+        return [];
     }
 
 
@@ -508,12 +519,7 @@ class Handler extends Common {
             throw new HttpException(404, 'broken_section', $this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]));
         }
 
-        // Обнуление
-        $_GET     = [];
-        $_POST    = [];
-        $_REQUEST = [];
-        $_FILES   = [];
-        $_COOKIE  = [];
+        Registry::set('section', strtolower($section_name));
 
         return $controller->{"section{$section_name}"}($request);
     }

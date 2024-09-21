@@ -10,12 +10,12 @@ use Laminas\EventManager\EventManager;
 
 
 /**
- * @method preInsert(Row $event)
- * @method postInsert(Row $event)
- * @method preUpdate(Row $event)
- * @method postUpdate(Row $event)
- * @method preDelete(Row $event)
- * @method postDelete(Row $event)
+ * @method preInsert(Row $row)
+ * @method postInsert(Row $row)
+ * @method preUpdate(Row $row)
+ * @method postUpdate(Row $row)
+ * @method preDelete(Row $row)
+ * @method postDelete(Row $row)
  */
 abstract class Table extends AbstractTableGateway {
 
@@ -42,12 +42,12 @@ abstract class Table extends AbstractTableGateway {
         );
 
 
-        if (method_exists($this, 'preInsert'))  { $this->event_manager->attach('preInsert',  function (Event $event) { $target = $event->getTarget(); $this->preInsert($target); }); }
-        if (method_exists($this, 'postInsert')) { $this->event_manager->attach('postInsert', function (Event $event) { $target = $event->getTarget(); $this->postInsert($target); }); }
-        if (method_exists($this, 'preUpdate'))  { $this->event_manager->attach('preUpdate',  function (Event $event) { $target = $event->getTarget(); $this->preUpdate($target); }); }
-        if (method_exists($this, 'postUpdate')) { $this->event_manager->attach('postUpdate', function (Event $event) { $target = $event->getTarget(); $this->postUpdate($target); }); }
-        if (method_exists($this, 'preDelete'))  { $this->event_manager->attach('preDelete',  function (Event $event) { $target = $event->getTarget(); $this->preDelete($target); }); }
-        if (method_exists($this, 'postDelete')) { $this->event_manager->attach('postDelete', function (Event $event) { $target = $event->getTarget(); $this->postDelete($target); }); }
+        if (method_exists($this, 'preInsert'))  { $this->event_manager->attach('preInsert',  function (Event $event) { $this->preInsert($event->getTarget()); }); }
+        if (method_exists($this, 'postInsert')) { $this->event_manager->attach('postInsert', function (Event $event) { $this->postInsert($event->getTarget()); }); }
+        if (method_exists($this, 'preUpdate'))  { $this->event_manager->attach('preUpdate',  function (Event $event) { $this->preUpdate($event->getTarget()); }); }
+        if (method_exists($this, 'postUpdate')) { $this->event_manager->attach('postUpdate', function (Event $event) { $this->postUpdate($event->getTarget()); }); }
+        if (method_exists($this, 'preDelete'))  { $this->event_manager->attach('preDelete',  function (Event $event) { $this->preDelete($event->getTarget()); }); }
+        if (method_exists($this, 'postDelete')) { $this->event_manager->attach('postDelete', function (Event $event) { $this->postDelete($event->getTarget()); }); }
 
 
         $this->initialize();

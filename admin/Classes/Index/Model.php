@@ -33,9 +33,11 @@ class Model extends Common {
             'network_info'       => $server->getNetworkInfo(),
             'network_interfaces' => $server->getNetworkInterfaces(),
             'database'           => [
-                'type'    => $database_statistics['type'],
-                'version' => $database_statistics['version'],
-                'size'    => $database_statistics['size'],
+                'type'     => $database_statistics['type'],
+                'version'  => $database_statistics['version'],
+                'size'     => $database_statistics['size'],
+                'hostname' => $this->config?->system?->db?->base?->params?->hostname,
+                'name'     => $this->config?->system?->db?->base?->params?->database,
             ],
             'php' => [
                 'version'            => phpversion(),
@@ -45,6 +47,7 @@ class Model extends Common {
                 'extensions'         => Tools::getUploadMaxFileSize(),
             ],
         ];
+
 
 
         return $server_info;

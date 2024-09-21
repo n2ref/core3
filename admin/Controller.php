@@ -1,10 +1,16 @@
 <?php
 namespace Core3\Mod\Admin;
+use Core3\Classes\Response;
+use Core3\Mod\Admin\Classes\Modules;
+use Core3\Mod\Admin\Classes\Users;
 use Core3\Classes\Common;
 use Core3\Classes\Request;
+use Core3\Classes\Router;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
 use CoreUI\Panel\Control;
+use Monolog\Handler\MissingExtensionException;
+
 
 require_once 'Classes/autoload.php';
 
@@ -18,17 +24,17 @@ require_once 'Classes/autoload.php';
  * @property Tables\UsersFiles      $tableUsersFiles
  * @property Tables\UsersSession    $tableUsersSession
  * @property Tables\Controls        $tableControls
+ * @property Models\Users           $modelUsers
  */
 class Controller extends Common {
 
     /**
      * @param Request $request
-     * @return array|string|string[]
-     * @throws \Core3\Exceptions\DbException
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     * @return array
+     * @throws DbException
      * @throws \Exception
      */
-    public function sectionIndex(Request $request) {
+    public function sectionIndex(Request $request): array {
 
         $service_info = (new Classes\Index\Model())->getServerInfo();
         $view         = new Classes\Index\View();
@@ -50,25 +56,25 @@ class Controller extends Common {
 
 
 
-        $layout = new \CoreUI\Layout();
-        $layout->setJustify($layout::JUSTIFY_AROUND);
-        $layout->setDirection($layout::DIRECTION_ROW);
-        $layout->addItems()->setWidth(200)->setContent($view->getChartCpu($service_info));
-        $layout->addItems()->setWidth(200)->setContent($view->getChartMem($service_info));
-        $layout->addItems()->setWidth(200)->setContent($view->getChartSwap($service_info));
-        $layout->addItems()->setWidth(200)->setContent($view->getChartDisks($service_info));
+        $layout_sys = new \CoreUI\Layout();
+        $layout_sys->setJustify($layout_sys::JUSTIFY_AROUND);
+        $layout_sys->setDirection($layout_sys::DIRECTION_ROW);
+        $layout_sys->addItems()->setWidth(200)->setContent($view->getChartCpu($service_info));
+        $layout_sys->addItems()->setWidth(200)->setContent($view->getChartMem($service_info));
+        $layout_sys->addItems()->setWidth(200)->setContent($view->getChartSwap($service_info));
+        $layout_sys->addItems()->setWidth(200)->setContent($view->getChartDisks($service_info));
 
         $panel_system = new \CoreUI\Panel();
         $panel_system->setTitle('Системная информация');
         $panel_system->addControls([
             (new Control\Button('<i class="bi bi-list-ul"></i>'))->setOnClick('adminIndex.showSystemProcessList()')
         ]);
-
         $panel_system->setContent([
-            $layout->toArray(),
+            $layout_sys->toArray(),
             '<br><br>',
             $view->getTableSystem($service_info)
         ]);
+
         $content[] = $panel_system->toArray();
 
 
@@ -93,18 +99,18 @@ class Controller extends Common {
 
 
 
-        $layout = new \CoreUI\Layout();
-        $item = $layout->addItems();
+        $layout_php_db = new \CoreUI\Layout();
+        $item = $layout_php_db->addItems();
         $item->setWidthColumn(12);
         $item->addSize('lg')->setWidthColumn(6);
         $item->setContent($panel_php->toArray());
 
-        $item = $layout->addItems();
+        $item = $layout_php_db->addItems();
         $item->setWidthColumn(12);
         $item->addSize('lg')->setWidthColumn(6);
         $item->setContent($panel_db->toArray());
 
-        $content[] = $layout->toArray();
+        $content[] = $layout_php_db->toArray();
 
 
 
@@ -137,21 +143,98 @@ class Controller extends Common {
     /**
      * Модули
      * @param Request $request
-     * @return array
-     * @throws \Exception
+     * @return array|Response
+     * @throws MissingExtensionException
      */
-    public function sectionModules(Request $request): array {
-
-        $base_url = "#/admin/modules";
-        $load_url = "core3/mod/admin/modules/handler";
-        $panel    = new \CoreUI\Panel('tab');
-        $result   = [];
+    public function sectionModules(Request $request): array|Response {
 
         try {
+            $router = new Router();
+            $router->route('/admin/modules')                  ->get([Modules\Handler::class, 'getModules']);
+            $router->route('/admin/modules/installed')        ->get([Modules\Handler::class, 'getModules']);
+            $router->route('/admin/modules/installed/content')->get([Modules\Handler::class, 'getInstalledContent']);
+            $router->route('/admin/modules/installed/table')  ->get([Modules\Handler::class, 'getInstalledTable']);
+
+            $router->route('/admin/modules/installed/hand')
+                ->get([Modules\Handler::class, 'getInstalled'])
+                ->post([Modules\Handler::class, 'saveInstalledHand']);
+
+            $router->route('/admin/modules/installed/file')
+                ->get([Modules\Handler::class, 'getInstalledFile'])
+                ->post([Modules\Handler::class, 'saveInstalledFile']);
+
+            $router->route('/admin/modules/installed/link')
+                ->get([Modules\Handler::class, 'getInstalledLink'])
+                ->post([Modules\Handler::class, 'saveInstalledLink']);
+
+            $router->route('/admin/modules/available')         ->get([Modules\Handler::class, 'getModules']);
+            $router->route('/admin/modules/available/content') ->get([Modules\Handler::class, 'getAvailableContent']);
+            $router->route('/admin/modules/available/table')   ->get([Modules\Handler::class, 'getAvailableTable']);
+            $router->route('/admin/modules/available/{id:\d+}')->get([Modules\Handler::class, 'getAvailableModule']);
+
+            $router->route('/admin/modules/{id:\d+}')
+                ->get([Modules\Handler::class, 'getModule'])
+                ->post([Modules\Handler::class, 'saveModule'])
+                ->delete([Modules\Handler::class, 'deleteModule']);
+
+            $router->route('/admin/modules/{id:\d+}/module')        ->get([Modules\Handler::class, 'getModule']);
+            $router->route('/admin/modules/{id:\d+}/module/content')->get([Modules\Handler::class, 'getModuleContent']);
+
+            $router->route('/admin/modules/{id:\d+}/sections')        ->get([Modules\Handler::class, 'getModuleSections']);
+            $router->route('/admin/modules/{id:\d+}/sections/content')->get([Modules\Handler::class, 'getModuleSectionsContent']);
+            $router->route('/admin/modules/{id:\d+}/sections/table')
+                ->get([Modules\Handler::class, 'getModuleSections'])
+                ->delete([Modules\Handler::class, 'deleteModuleSections']);
+
+            $router->route('/admin/modules/{id:\d+}/sections/{section_id:\d+}')
+                ->get([Modules\Handler::class, 'getModuleSections'])
+                ->post([Modules\Handler::class, 'saveModuleSections']);
+            $router->route('/admin/modules/{id:\d+}/sections/{section_id:\d+}/content')->get([Modules\Handler::class, 'getModuleSectionsContent']);
+
+            $router->route('/admin/modules/{id:\d+}/versions')        ->get([Modules\Handler::class, 'getModuleVersions']);
+            $router->route('/admin/modules/{id:\d+}/versions/content')->get([Modules\Handler::class, 'getModuleVersionsContent']);
+
+            $route_method = $router->getRouteMethod($_SERVER['REQUEST_METHOD'], $request->getUri());
+
+            if ( ! $route_method) {
+                $response = new Response();
+                $response->setHttpCode(404);
+                return $response;
+            }
+
+
+            $route_method->prependParam($request);
+
+            try {
+                return $route_method->run();
+
+            } catch (AppException $e) {
+                $this->log->info($e->getMessage());
+                return \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'));
+
+            } catch (\Exception $e) {
+                $this->log->error($this->resource, $e);
+
+                return \CoreUI\Info::danger(
+                    $this->config?->system->debug?->on
+                        ? $e->getMessage()
+                        : $this->_('Обновите страницу или попробуйте позже'),
+                    $this->_('Ошибка')
+                );
+            }
+
+
+            $base_url    = "#/admin/modules";
+            $handler_url = "admin/modules/handler";
+            $result      = [];
+            $panel       = new \CoreUI\Panel('module');
+
+
+
             if ($params = $request->getPathParams('^/admin/modules/{module_id:\d+}')) {
 
                 $breadcrumb = new \CoreUI\Breadcrumb();
-                $breadcrumb->addItem('Модули',        $base_url);
+                $breadcrumb->addItem('Модули', $base_url);
                 $breadcrumb->addItem('Установленные', "{$base_url}/installed");
                 $breadcrumb->addItem('Модуль');
                 $result[] = $breadcrumb->toArray();
@@ -173,9 +256,9 @@ class Controller extends Common {
                         (new Control\Button('<i class="bi bi-trash"></i> ' . $this->_('Удалить')))->setAttr('class', 'btn btn-outline-danger'),
                     ]);
 
-                    $panel->addTab($this->_("Модуль"),  'module')->setUrlWindow("{$base_url}/{$module->id}/module")->setUrlContent("{$load_url}/getFormModule?id={$module->id}");
-                    $panel->addTab($this->_("Разделы"), 'sections')->setUrlWindow("{$base_url}/{$module->id}/sections")->setUrlContent("{$load_url}/getTabSections?id={$module->id}")->setCount($sections_count);
-                    $panel->addTab($this->_("Версии"),  'versions')->setUrlWindow("{$base_url}/{$module->id}/versions")->setUrlContent("{$load_url}/getTabVersion?id={$module->id}")->setCount($sections_count);
+                    $panel->addTab($this->_("Модуль"), 'module')->setUrlWindow("{$base_url}/{$module->id}/module")->setUrlContent("{$handler_url}/getFormModule?id={$module->id}");
+                    $panel->addTab($this->_("Разделы"), 'sections')->setUrlWindow("{$base_url}/{$module->id}/sections")->setUrlContent("{$handler_url}/getTabSections?id={$module->id}")->setCount($sections_count);
+                    $panel->addTab($this->_("Версии"), 'versions')->setUrlWindow("{$base_url}/{$module->id}/versions")->setUrlContent("{$handler_url}/getTabVersion?id={$module->id}")->setCount($sections_count);
 
                     if ($module->isset_updates) {
                         $panel->getTabById('versions')->setBadgeDot('danger');
@@ -184,135 +267,113 @@ class Controller extends Common {
                     $params = $request->getPathParams('^/admin/modules/{module_id:\d+}/{tab}');
                     $tab    = $params['tab'] ?? 'module';
                     $panel->setActiveTab($tab);
-                    $panel->setUrlContent($panel->getTabById($tab)->getUrlContent());
+
+                    if ($tab === 'sections' && $section_params = $request->getPathParams('^/admin/modules/{module_id:\d+}/sections/{section_id:\d+}')) {
+                        $panel->setUrlContent($panel->getTabById('sections')->getUrlContent() . "&section_id={$section_params['section_id']}");
+                    } else {
+                        $panel->setUrlContent($panel->getTabById($tab)->getUrlContent());
+                    }
 
 
                 } else {
                     $panel->setTitle($this->_('Добавление модуля'));
-                    $panel->addTab($this->_("Ручная установка"), 'hand')->setUrlWindow("{$base_url}/0/hand")->setUrlContent("{$load_url}/getFormInstallHand");
-                    $panel->addTab($this->_("Из файла"),         'file')->setUrlWindow("{$base_url}/0/file")->setUrlContent("{$load_url}/getFormInstallFile");
-                    $panel->addTab($this->_("По ссылке"),        'link')->setUrlWindow("{$base_url}/0/link")->setUrlContent("{$load_url}/getFormInstallLink");
+                    $panel->addTab($this->_("Ручная установка"), 'hand')->setUrlWindow("{$base_url}/0/hand")->setUrlContent("{$handler_url}/getFormInstallHand");
+                    $panel->addTab($this->_("Из файла"), 'file')->setUrlWindow("{$base_url}/0/file")->setUrlContent("{$handler_url}/getFormInstallFile");
+                    $panel->addTab($this->_("По ссылке"), 'link')->setUrlWindow("{$base_url}/0/link")->setUrlContent("{$handler_url}/getFormInstallLink");
 
 
                     $params = $request->getPathParams('^/admin/modules/0/{tab}$');
                     $tab    = $params['tab'] ?? 'hand';
+
                     $panel->setActiveTab($tab);
                     $panel->setUrlContent($panel->getTabById($tab)->getUrlContent());
                 }
 
+            } elseif ($params = $request->getPathParams('^/admin/modules/available/{module_id:\d+}')) {
+
             } else {
                 $count_modules = $this->tableModules->getCount();
 
-                $panel->addTab($this->_("Установленные"), 'installed')->setUrlWindow("{$base_url}/installed")->setUrlContent("{$load_url}/getTableInstalled")->setCount($count_modules);
-                $panel->addTab($this->_("Доступные"),     'available')->setUrlWindow("{$base_url}/available")->setUrlContent("{$load_url}/getTableAvailable");
+                $panel->addTab($this->_("Установленные"), 'installed')->setUrlWindow("{$base_url}/installed")->setUrlContent("{$handler_url}/getTableInstalled")->setCount($count_modules);
+                $panel->addTab($this->_("Доступные"),     'available')->setUrlWindow("{$base_url}/available")->setUrlContent("{$handler_url}/getTableAvailable");
 
                 $params = $request->getPathParams('^/admin/modules/{tab}$');
                 $tab    = $params['tab'] ?? 'installed';
+
                 $panel->setActiveTab($tab);
                 $panel->setUrlContent($panel->getTabById($tab)->getUrlContent());
             }
 
         } catch (AppException $e) {
             $this->log->info($e->getMessage());
-            $panel->setContent(
-                \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'))
-            );
+            return [\CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'))];
 
         } catch (\Exception $e) {
             $this->log->error($this->resource, $e);
-            $panel->setContent(
+            return [
                 \CoreUI\Info::danger(
                     $this->config?->system->debug?->on ? $e->getMessage() : $this->_('Обновите страницу или попробуйте позже'),
                     $this->_('Ошибка')
                 )
-            );
+            ];
         }
-
-        $result[] = $panel->toArray();
-
-        return $result;
     }
 
 
     /**
      * Справочник пользователей системы
      * @param Request $request
-     * @return array
-     * @throws DbException
+     * @return array|Response
+     * @throws MissingExtensionException
+     * @throws \Exception
      */
-    public function sectionUsers(Request $request): array {
+    public function sectionUsers(Request $request): array|Response {
 
-        $base_url = "#/admin/users";
+        $router = new Router();
+        $router->route('/admin/users')->get([Users\Handler::class, 'getUsers']);
+        $router->route('/admin/users/table')
+            ->get([   Users\Handler::class, 'getUsersTable'])
+            ->delete([Users\Handler::class, 'deleteUsersTable']);
 
-        $result = [];
-        $panel  = new \CoreUI\Panel();
-        $view   = new Classes\Users\View();
+        $router->route('/admin/users/login')->post([Users\Handler::class, 'loginUser']);
 
-        $content   = [];
-        $content[] = $this->getJsModule('admin', 'assets/users/js/admin.users.js');
+        $router->route('/admin/users/{id:\d+}')
+            ->get([  Users\Handler::class, 'getUser' ])
+            ->post([ Users\Handler::class, 'saveUser' ])
+            ->put([  Users\Handler::class, 'saveUserNew' ]);
+
+        $router->route('/admin/users/{id:\d+}/switch')         ->patch([ Users\Handler::class, 'switchUserActive' ]);
+        $router->route('/admin/users/{id:\d+}/avatar/preview') ->get([   Users\Handler::class, 'getFilePreview' ]);
+        $router->route('/admin/users/{id:\d+}/avatar/download')->get([   Users\Handler::class, 'getFileDownload' ]);
+
+        $route_method = $router->getRouteMethod($_SERVER['REQUEST_METHOD'], $request->getUri());
+
+        if ( ! $route_method) {
+            $response = new Response();
+            $response->setHttpCode(404);
+            return $response;
+        }
+
+        $route_method->prependParam($request);
+
 
         try {
-            if ($request->isPath('^/admin/users/.+$')) {
-                $params = $request->getPathParams('^/admin/users/{user_id:\d+}$');
-
-                if ( ! isset($params['user_id'])) {
-                    throw new AppException($this->_('Указан некорректный адрес. Вернитесь обратно и попробуйте снова'));
-                }
-
-                $breadcrumb = new \CoreUI\Breadcrumb();
-                $breadcrumb->addItem('Пользователи', $base_url);
-                $breadcrumb->addItem('Пользователь');
-
-                $result[] = $breadcrumb->toArray();
-
-                $panel->setContentFit($panel::FIT_MIN);
-
-
-                if ( ! empty($params['user_id'])) {
-                    $user = $this->tableUsers->getRowById($params['user_id']);
-
-                    if (empty($user)) {
-                        throw new AppException('Указанный пользователь не найден');
-                    }
-
-                    $name   = trim("{$user->lname} {$user->fname} {$user->mname}");
-                    $avatar = "<img src=\"core3/user/{$user->id}/avatar\" style=\"width: 32px;height: 32px\" class=\"rounded-circle border border-secondary-subtle\"> ";
-                    $panel->setTitle($avatar . ($name ?: $user->login), $this->_('Редактирование пользователя'));
-
-                    $content[] = $view->getForm($base_url, $user);
-
-                } else {
-                    $panel->setTitle($this->_('Добавление пользователя'));
-                    $content[] = $view->getFormNew($base_url);
-                }
-
-            } else {
-                $content[] = $view->getTable($base_url);
-            }
-
-            $panel->setContent($content);
+            return $route_method->run();
 
         } catch (AppException $e) {
             $this->log->info($e->getMessage());
-            $panel->setContent(
-                \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'))
-            );
+            return \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'));
 
         } catch (\Exception $e) {
-            $this->log->error('Admin users', $e);
-            $panel->setContent(
-                \CoreUI\Info::danger(
-                    $this->config?->system->debug?->on
-                        ? $e->getMessage()
-                        : $this->_('Обновите страницу или попробуйте позже'),
-                    $this->_('Ошибка')
-                )
+            $this->log->error($this->resource, $e);
+
+            return \CoreUI\Info::danger(
+                $this->config?->system->debug?->on
+                    ? $e->getMessage()
+                    : $this->_('Обновите страницу или попробуйте позже'),
+                $this->_('Ошибка')
             );
         }
-
-        $result[] = $panel->toArray();
-
-        return $result;
     }
 
 
