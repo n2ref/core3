@@ -169,6 +169,29 @@ let coreTokens = {
 
 
     /**
+     * Получение даты access токена
+     * @returns {Date}
+     */
+    getDateAccessToken() {
+
+        let accessToken = this.getAccessToken();
+        let tokenData   = coreTools.jwtDecode(accessToken);
+
+        return new Date(tokenData.exp * 1000);
+    },
+
+
+    /**
+     * Очистка аутентификации
+     */
+    clearTokens() {
+
+        this.clearAccessToken();
+        this.clearRefreshToken();
+    },
+
+
+    /**
      * Очистка аутентификации
      */
     clearAccessToken() {

@@ -16,6 +16,8 @@ let coreMenu = {
     _system: null,
     _modules: null,
     _events: {},
+    _errors: [],
+    _errorSend: false,
 
 
     /**
@@ -98,6 +100,12 @@ let coreMenu = {
                     coreMenu._system  = response.system;
                     coreMenu._modules = response.modules;
 
+                    if (coreMenu._system.hasOwnProperty('reg_errors') &&
+                        coreMenu._system.reg_errors
+                    ) {
+                        window.addEventListener('error', coreMenu._onError, true);
+                    }
+
                     coreMenu._renderMenu();
                     coreMenu._initComponents(response.system.conf);
                     coreMenu.preloader.hide();
@@ -111,7 +119,7 @@ let coreMenu = {
             },
             error: function (response) {
                 if (response.status === 403) {
-                    coreTokens.clearAccessToken();
+                    coreTokens.clearTokens();
                     coreMain.viewPage('auth');
 
                 } else if (response.status === 0) {
@@ -158,86 +166,105 @@ let coreMenu = {
 
         coreMenu.preloader.show();
 
-        $.ajax({
-            url: url,
-            method: "GET",
-            dataType: 'text',
-            success: function (response, textStatus, jqXHR) {
-                coreMenu.preloader.hide();
+        if (coreTokens.getDateAccessToken() <= new Date()) {
+            coreTokens.refreshToken(function () {
+                loadUrl(url);
+            }, function () {
+                coreTokens.clearTokens();
+                coreMain.viewPage('auth');
+            });
 
-                let params = coreTools.getParams(url);
-                coreMenu._setActiveModule(params.module, params.section);
+        } else {
+            loadUrl(url);
+        }
 
-                let contentType = jqXHR.getResponseHeader('Content-type');
-                let contents    = [];
 
-                // Обработка json
-                if (/^application\/json/.test(contentType)) {
-                    try {
-                        let responseObj = JSON.parse(response);
+        /**
+         * @param url
+         */
+        function loadUrl(url) {
 
-                        if (typeof responseObj === 'object' &&
-                            responseObj.hasOwnProperty('_buffer') &&
-                            typeof responseObj._buffer === 'string' &&
-                            responseObj._buffer !== ''
-                        ) {
-                            contents.push(responseObj._buffer);
-                            delete responseObj._buffer
+            $.ajax({
+                url: url,
+                method: "GET",
+                dataType: 'text',
+                success: function (response, textStatus, jqXHR) {
+                    coreMenu.preloader.hide();
+
+                    let params = coreTools.getParams(url);
+                    coreMenu._setActiveModule(params.module, params.section);
+
+                    let contentType = jqXHR.getResponseHeader('Content-type');
+                    let contents    = [];
+
+                    // Обработка json
+                    if (/^application\/json/.test(contentType)) {
+                        try {
+                            let responseObj = JSON.parse(response);
+
+                            if (typeof responseObj === 'object' &&
+                                responseObj.hasOwnProperty('_buffer') &&
+                                typeof responseObj._buffer === 'string' &&
+                                responseObj._buffer !== ''
+                            ) {
+                                contents.push(responseObj._buffer);
+                                delete responseObj._buffer
+                            }
+
+                            let renderContents = coreMenu._renderContent(responseObj);
+
+                            $.each(renderContents, function (i, contentItem) {
+                                contents.push(contentItem);
+                            });
+
+                        } catch (e) {
+                            contents = [response];
+                            console.warn(e)
                         }
 
-                        let renderContents = coreMenu._renderContent(responseObj);
-
-                        $.each(renderContents, function (i, contentItem) {
-                            contents.push(contentItem);
-                        });
-
-                    } catch (e) {
+                    } else {
                         contents = [response];
-                        console.warn(e)
                     }
 
-                } else {
-                    contents = [response];
-                }
+                    let mainContainer = $('.page-menu .main-content .main-wrapper');
+                    mainContainer.empty();
 
-                let mainContainer = $('.page-menu .main-content .main-wrapper');
-                mainContainer.empty();
+                    $.each(contents, function (key, content) {
+                        mainContainer.append(content);
+                    });
 
-                $.each(contents, function (key, content) {
-                    mainContainer.append(content);
-                });
-
-                mainContainer
-                    .css({ 'opacity': '0', 'margin-top': '15px' })
-                    .animate(
-                        { marginTop: 0, opacity: 1, },
-                        {
-                            duration: 235,
-                            specialEasing: { width: "linear", height: "easeOutBounce" },
-                            complete: function() {
-                                $(this).css({ 'opacity': '', 'margin-top': '' })
+                    mainContainer
+                        .css({ 'opacity': '0', 'margin-top': '15px' })
+                        .animate(
+                            { marginTop: 0, opacity: 1, },
+                            {
+                                duration: 235,
+                                specialEasing: { width: "linear", height: "easeOutBounce" },
+                                complete: function() {
+                                    $(this).css({ 'opacity': '', 'margin-top': '' })
+                                }
                             }
-                        }
-                    );
+                        );
 
 
-                coreMenu._trigger('shown.load.core3', this, [ url ]);
-            },
-            error: function (response) {
-                coreMenu.preloader.hide();
+                    coreMenu._trigger('shown.load.core3', this, [ url ]);
+                },
+                error: function (response) {
+                    coreMenu.preloader.hide();
 
-                if (response.status === 403) {
-                    coreTokens.clearAccessToken();
-                    coreMain.viewPage('auth');
+                    if (response.status === 403) {
+                        coreTokens.clearTokens();
+                        coreMain.viewPage('auth');
 
-                } else if (response.status === 0) {
-                    CoreUI.alert.danger('Ошибка', 'Проверьте подключение к интернету');
+                    } else if (response.status === 0) {
+                        CoreUI.alert.danger('Ошибка', 'Проверьте подключение к интернету');
 
-                } else {
-                    CoreUI.alert.danger('Ошибка', 'Обновите приложение или обратитесь к администратору');
+                    } else {
+                        CoreUI.alert.danger('Ошибка', 'Обновите страницу или обратитесь к администратору');
+                    }
                 }
-            }
-        });
+            });
+        }
     },
 
 
@@ -809,6 +836,89 @@ let coreMenu = {
                 }
 
                 $('head').append('<style id="theme-main">' + content + '</style>');
+            }
+        }
+    },
+
+
+    /**
+     * Событие обработки ошибок на странице
+     * @param {ErrorEvent} event
+     * @private
+     */
+    _onError: function (event) {
+
+        let accessToken = coreTokens.getAccessToken();
+
+        if (accessToken) {
+
+            // чтобы не плодить одинаковые ошибки
+            if (coreMenu._errors.length > 0) {
+                let lastError = coreMenu._errors.hasOwnProperty(coreMenu._errors.length)
+                    ? coreMenu._errors[coreMenu._errors.length]
+                    : null;
+
+                if (lastError &&
+                    lastError.error &&
+                    lastError.error.message === event.message &&
+                    lastError.error.file === event.filename &&
+                    lastError.error.line === event.lineno &&
+                    lastError.error.col === event.colno
+                ) {
+                    lastError.error.count++;
+                    return;
+                }
+            }
+
+            let client = coreTools.getClientInfo();
+            coreMenu._errors.push({
+                url: location.href,
+                time: coreTools.formatDate(new Date(), 'HH:mm:ss'),
+                client: client,
+                level: 'error',
+                error: {
+                    message: event.message,
+                    file: event.filename,
+                    line: event.lineno,
+                    col: event.colno,
+                    count: 1,
+                    stack : event.error.stack.split('\n').map(string => string.trim())
+                }
+            });
+
+
+            /**
+             *
+             */
+            function sendError() {
+
+                let sendErrors = coreMenu._errors.splice(0, 100);
+
+                coreMenu._errorSend = true;
+
+                $.ajax({
+                    url: coreMain.options.basePath + '/error',
+                    method: "POST",
+                    contentType: "application/json; charset=utf-8",
+                    headers: {
+                        'Access-Token': accessToken
+                    },
+                    data: JSON.stringify(sendErrors),
+                    error: function (response) {
+                        console.warn(response)
+                    }
+                })
+                .always(function() {
+                    coreMenu._errorSend = false;
+
+                    if (coreMenu._errors.length > 0) {
+                        setTimeout(sendError, 3000);
+                    }
+                });
+            }
+
+            if (coreMenu._errorSend === false) {
+                setTimeout(sendError, 500);
             }
         }
     }

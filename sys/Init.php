@@ -536,6 +536,7 @@ class Init extends Common {
 
         if ($this->auth) {
             $router->route('/sys/cabinet')                                                               ->get([Handler::class, 'getCabinet']);
+            $router->route('/sys/error')                                                                 ->post([Handler::class, 'logError']);
             $router->route('/sys/home')                                                                  ->get([Handler::class, 'getHome']);
             $router->route('/sys/user/{id:\d+}/avatar')                                                  ->get([Handler::class, 'getUserAvatar']);
             $router->route('/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}/handler/{method}')                 ->any([Handler::class, 'getModHandler']);

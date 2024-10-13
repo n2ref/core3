@@ -90,64 +90,71 @@ let coreMain = {
 
         return text;
     },
-}
-
-
-document.addEventListener('DOMContentLoaded', function () {
-
-    coreMain.on('hashchange', function () {
-        if ($('.page-auth')[0]) {
-            coreAuth.viewActualContainer();
-        }
-
-        if ($('.page.page-menu')[0]) {
-            if (window.screen.width < 600 && $('.page.page-menu.drawer-toggle')[0]) {
-                coreMenu._drawerToggle();
-            }
-
-            coreMenu.load(location.hash.substring(1));
-        }
-    });
-
-    // Событие установки
-    coreMain.install.promise = new Promise(function (resolve, reject) {
-
-        window.addEventListener('beforeinstallprompt', event => {
-            event.preventDefault();
-            coreMain.install.event = event;
-            resolve(event);
-        })
-    });
-
-
-    let accessToken = coreTokens.getAccessToken();
-
-    if ( ! accessToken) {
-        coreMain.viewPage('auth');
-
-    } else {
-        coreTokens.refreshToken(function() {
-            coreTokens.initRefresh();
-            coreMain.viewPage('menu');
-        }, function () {
-            coreMain.viewPage('auth');
-        });
-    }
-
-
-    if ("onhashchange" in window) {
-        window.onhashchange = coreMain.hashChange;
-    }
 
 
     /**
-     * Замена alert
-     * @param message
+     * Загрузка
+     * @private
      */
-    alert = function (message) {
-        CoreUI.alert.create({ type: 'warning', message: message });
+    _onLoad: function () {
+
+        coreMain.on('hashchange', function () {
+            if ($('.page-auth')[0]) {
+                coreAuth.viewActualContainer();
+            }
+
+            if ($('.page.page-menu')[0]) {
+                if (window.screen.width < 600 && $('.page.page-menu.drawer-toggle')[0]) {
+                    coreMenu._drawerToggle();
+                }
+
+                coreMenu.load(location.hash.substring(1));
+            }
+        });
+
+        // Событие установки
+        coreMain.install.promise = new Promise(function (resolve, reject) {
+
+            window.addEventListener('beforeinstallprompt', event => {
+                event.preventDefault();
+                coreMain.install.event = event;
+                resolve(event);
+            })
+        });
+
+
+        let accessToken = coreTokens.getAccessToken();
+
+        if ( ! accessToken) {
+            coreMain.viewPage('auth');
+
+        } else {
+            coreTokens.refreshToken(function() {
+                coreTokens.initRefresh();
+                coreMain.viewPage('menu');
+            }, function () {
+                coreMain.viewPage('auth');
+            });
+        }
+
+
+        if ("onhashchange" in window) {
+            window.onhashchange = coreMain.hashChange;
+        }
+
+
+        /**
+         * Замена alert
+         * @param message
+         */
+        alert = function (message) {
+            CoreUI.alert.create({ type: 'warning', message: message });
+        }
     }
-});
+}
+
+
+document.addEventListener('DOMContentLoaded', coreMain._onLoad);
 
 
 export default coreMain;

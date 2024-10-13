@@ -269,7 +269,7 @@ let coreAuth = {
             dataType: "json",
             success: function (response) {
 
-                coreTokens.clearAccessToken();
+                coreTokens.clearTokens();
                 coreTokens.deinitRefresh();
 
                 coreMain.viewPage('auth');
