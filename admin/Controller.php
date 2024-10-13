@@ -194,12 +194,10 @@ class Controller extends Common {
             $router->route('/admin/modules/{id:\d+}/versions')        ->get([Modules\Handler::class, 'getModuleVersions']);
             $router->route('/admin/modules/{id:\d+}/versions/content')->get([Modules\Handler::class, 'getModuleVersionsContent']);
 
-            $route_method = $router->getRouteMethod($_SERVER['REQUEST_METHOD'], $request->getUri());
+            $route_method = $router->getRouteMethod($request->getMethod(), $request->getUri());
 
             if ( ! $route_method) {
-                $response = new Response();
-                $response->setHttpCode(404);
-                return $response;
+                return Response::httpCode(404);
             }
 
 
@@ -346,12 +344,10 @@ class Controller extends Common {
         $router->route('/admin/users/{id:\d+}/avatar/preview') ->get([   Users\Handler::class, 'getFilePreview' ]);
         $router->route('/admin/users/{id:\d+}/avatar/download')->get([   Users\Handler::class, 'getFileDownload' ]);
 
-        $route_method = $router->getRouteMethod($_SERVER['REQUEST_METHOD'], $request->getUri());
+        $route_method = $router->getRouteMethod($request->getMethod(), $request->getUri());
 
         if ( ! $route_method) {
-            $response = new Response();
-            $response->setHttpCode(404);
-            return $response;
+            return Response::httpCode(404);
         }
 
         $route_method->prependParam($request);

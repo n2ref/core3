@@ -327,7 +327,7 @@ class Handler extends Common {
     /**
      * Отправка проверочного кода на email для восстановления пароля
      * @param Request $request
-     * @return array
+     * @return Response
      * @throws Exception
      */
     public function restorePassCheck(Request $request): Response {
@@ -336,6 +336,71 @@ class Handler extends Common {
 
         // TODO Доделать
         return [];
+    }
+
+
+    /**
+     * Получение ошибок от пользовательского клиента
+     * @param Request $request
+     * @return Response
+     * @throws Exception|\Monolog\Handler\MissingExtensionException
+     */
+    public function logError(Request $request): Response {
+
+        $this->checkAuth();
+
+        if ($this->config?->system?->log?->error_clients_file &&
+            $this->config?->system?->log?->dir &&
+            is_string($this->config?->system?->log?->error_clients_file) &&
+            is_string($this->config?->system?->log?->dir)
+        ) {
+            $errors = $request->getJsonContent();
+
+            if ($errors) {
+                $i     = 1;
+                $limit = 100;
+                foreach ($errors as $error) {
+                    if ($i >= $limit) {
+                        break;
+                    }
+
+                    if ( ! empty($error['url']) && is_string($error['url']) && mb_strlen($error['url']) > 255) {
+                        $error['url'] = mb_substr($error['url'], 0, 255);
+                    }
+                    if ( ! empty($error['time']) && is_string($error['time']) && mb_strlen($error['time']) > 19) {
+                        $error['time'] = mb_substr($error['time'], 0, 19);
+                    }
+                    if ( ! empty($error['client']) && is_string($error['client']) && mb_strlen($error['client']) > 19) {
+                        $error['client'] = mb_substr($error['client'], 0, 19);
+                    }
+
+                    $level = 'error';
+
+                    if ( ! empty($error['level']) && is_string($error['level'])) {
+                        $level = match ($error['level']) {
+                            'warning' => 'warning',
+                            'info'    => 'info',
+                            'error'   => 'error',
+                            default   => 'error',
+                        };
+                    }
+
+                    $this->log->file($this->config->system->log->error_clients_file)->{$level}('client error', [
+                        'login'  => $this->auth->getUserLogin(),
+                        'time'   => $error['time'] ?? null,
+                        'url'    => $error['url'] ?? null,
+                        'error'  => $error['error'] ?? null,
+                        'client' => $error['client'] ?? null,
+                    ]);
+
+                    $i++;
+                }
+            }
+        }
+
+
+
+        return Response::httpCode(200);
     }
 
 
@@ -378,9 +443,7 @@ class Handler extends Common {
      */
     public function getCabinet(): array {
 
-        if ( ! $this->auth) {
-            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
-        }
+        $this->checkAuth();
 
         $modules = $this->getModules();
 
@@ -402,6 +465,9 @@ class Handler extends Common {
 
         $user_id = $this->auth->getUserId();
 
+        $is_reg_errors = $this->config?->system?->log?->on &&
+                         $this->config?->system?->log?->error_clients_file;
+
         return [
             'user'    => [
                 'id'     => $user_id,
@@ -410,8 +476,9 @@ class Handler extends Common {
                 'avatar' => "sys/user/{$user_id}/avatar",
             ],
             'system'  => [
-                'name' => $this->config?->system?->name ?: '',
-                'conf' => $this->getConf(),
+                'name'       => $this->config?->system?->name ?: '',
+                'conf'       => $this->getConf(),
+                'reg_errors' => $is_reg_errors,
             ],
             'modules' => $modules
         ];
@@ -453,9 +520,7 @@ class Handler extends Common {
      */
     public function getHome(): mixed {
 
-        if ( ! $this->auth) {
-            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
-        }
+        $this->checkAuth();
 
         $location        = DOC_ROOT . "/mod/home";
         $controller_file = "{$location}/Controller.php";
@@ -499,9 +564,7 @@ class Handler extends Common {
      */
     public function getModSection(Request $request, string $module_name, string $section_name): mixed {
 
-        if ( ! $this->auth) {
-            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
-        }
+        $this->checkAuth();
 
         if ( ! $this->auth->isAllowed($module_name)) {
             throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к модулю %s!", [$module_name]));
@@ -541,9 +604,7 @@ class Handler extends Common {
      */
     public function getModHandler(Request $request, string $module_name, string $section_name, string $method_name): mixed {
 
-        if ( ! $this->auth) {
-            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
-        }
+        $this->checkAuth();
 
         if ( ! $this->auth->isAllowed($module_name)) {
             throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к модулю %s!", [$module_name]));
@@ -874,5 +935,17 @@ class Handler extends Common {
         }
 
         return $result;
+    }
+
+
+    /**
+     * @return void
+     * @throws HttpException
+     */
+    private function checkAuth(): void {
+
+        if ( ! $this->auth) {
+            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
+        }
     }
 }

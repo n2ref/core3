@@ -211,4 +211,17 @@ class Response {
 
         return $response;
     }
+
+
+    /**
+     * @param int $http_code
+     * @return Response
+     */
+    public static function httpCode(int $http_code): Response {
+
+        $response = new Response();
+        $response->setHttpCode($http_code);
+
+        return $response;
+    }
 }

@@ -239,8 +239,6 @@ class Init extends Common {
 
                 $this->logRequest();
 
-            } elseif ($this->getAccessToken()) {
-                throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
             }
 
 
@@ -521,10 +519,10 @@ class Init extends Common {
 
         $router = new Router();
         $router->route('/sys/auth/login')->post([Handler::class, 'login']);
+        $router->route('/sys/auth/refresh')->post([Handler::class, 'refreshToken']);
 
         if ($this->auth) {
             $router->route('/sys/auth/logout')->put([Handler::class, 'logout']);
-            $router->route('/sys/auth/refresh')->post([Handler::class, 'refreshToken']);
         }
 
         $router->route('/sys/registration/email')      ->post([Handler::class, 'registrationEmail']);
