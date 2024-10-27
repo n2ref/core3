@@ -118,7 +118,7 @@ let coreTokens = {
         if (dateExpired > new Date()) {
             let expires = "; expires=" + dateExpired.toUTCString();
 
-            document.cookie = "Core-Access-Token=" + accessToken + expires + "; path=/" + coreMain.options.basePath;
+            document.cookie = "Core-Access-Token=" + accessToken + expires + "; path=/";
         }
     },
 
@@ -198,9 +198,8 @@ let coreTokens = {
 
         localStorage.removeItem('core3_access_token');
 
-        document.cookie = 'Core-Access-Token=; Path=/' + coreMain.options.basePath + '; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        document.cookie = 'Core-Access-Token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     },
-
 
 
     /**
