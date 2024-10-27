@@ -27,16 +27,13 @@ class View extends Common {
      */
     public function getTable(string $base_url): array {
 
-        $roles = $this->modAdmin->tableRoles->fetchPairs('id', 'title');
-
         $table = new Table('admin', 'users', 'users');
         $table->setKit(['default', 'search', 'columns', 'add' => "{$base_url}/0", 'delete']);
-        //$table->setHandler('table');
-
         $table->setRecordsRequest("{$this->module}/{$this->section}/table");
-
         $table->setClickUrl("{$base_url}/[id]");
 
+
+        $roles = $this->modAdmin->tableRoles->fetchPairs('id', 'title');
 
         $table->setHeaderOut($table::LAST)
             ->left([
@@ -46,22 +43,27 @@ class View extends Common {
             ]);
 
         $table->addSearch([
-           (new Search\DatetimeRange('date_created', $this->_('Дата регистрации'))),
-           (new Search\Radio('is_admin',             $this->_('Админ')))->setOptions(['1' => $this->_('Да'), '0' => $this->_('Нет')])
+            (new Search\Text('login',                  $this->_('Логин'))),
+            (new Search\Text('name',                   $this->_('Имя'))),
+            (new Search\Text('email',                  $this->_('Email'))),
+            (new Search\DatetimeRange('date_activity', $this->_('Последняя активность'))),
+            (new Search\DatetimeRange('date_created',  $this->_('Дата регистрации'))),
+            (new Search\CheckboxBtn('is_admin',        $this->_('Админ')))->setOptions(['1' => $this->_('Да'), '0' => $this->_('Нет')]),
+            (new Search\CheckboxBtn('is_active',       $this->_('Активность')))->setOptions(['1' => $this->_('Да'), '0' => $this->_('Нет')]),
         ]);
 
         $table->addColumns([
             (new Column\Select()),
-            $table->getColumnToggle('is_active',    $this->_('Активность'),             45, 'switchActive'),
-            (new Column\Image('avatar',             $this->_('Аватар'),                 40))->setShowLabel(false)->setStyle('circle')->setBorder(true)->setImgSize(20, 20),
-            (new Column\Link('login',               $this->_('Логин')))->setMinWidth(100),
-            (new Column\Text('name',                $this->_('Имя')))->setNoWrap(true)->setMinWidth(150),
-            (new Column\Text('email',               $this->_('Email'),                  200)),
-            (new Column\Text('role_title',          $this->_('Роль'),                   200)),
-            (new Column\Datetime('date_activity',   $this->_('Последняя активность'),   185))->setMinWidth(185),
-            (new Column\Datetime('date_created',    $this->_('Дата регистрации'),       155))->setMinWidth(155),
-            (new Column\Badge('is_admin',           $this->_('Админ'),                  80))->setMinWidth(80),
-            (new Column\Button('login_user',        $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
+            $table->getColumnToggle('is_active',  $this->_('Активность'),             45, 'switchActive'),
+            (new Column\Image('avatar',           $this->_('Аватар'),                 40))->setShowLabel(false)->setStyle('circle')->setBorder(true)->setImgSize(20, 20),
+            (new Column\Link('login',             $this->_('Логин')))->setMinWidth(100),
+            (new Column\Text('name',              $this->_('Имя')))->setMinWidth(150)->setNoWrap(true),
+            (new Column\Text('email',             $this->_('Email'),                  200))->setMinWidth(180)->setNoWrap(true),
+            (new Column\Text('role_title',        $this->_('Роль'),                   200))->setMinWidth(150)->setNoWrap(true),
+            (new Column\Datetime('date_activity', $this->_('Последняя активность'),   185))->setMinWidth(185),
+            (new Column\Datetime('date_created',  $this->_('Дата регистрации'),       155))->setMinWidth(155),
+            (new Column\Badge('is_admin',         $this->_('Админ'),                  80))->setMinWidth(80),
+            (new Column\Button('login_user',      $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
         ]);
 
         return $table->toArray();
@@ -83,9 +85,16 @@ class View extends Common {
         $form->setSuccessLoadUrl('#/admin/users');
         $form->setOnSubmitSuccessDefault();
 
-        $avatar = $user->avatar_type == 'upload'
-            ? $form->getFiles($this->modAdmin->tableUsersFiles, 'avatar', $user->id)
-            : [];
+        $avatar = [];
+
+        if ($user->avatar_type == 'upload') {
+            $avatar = $form->getFiles($this->modAdmin->tableUsersFiles, 'avatar', $user->id, function (array $file) use ($user) {
+                $file['urlPreview']  = "/sys/user/{$user->id}/avatar";
+                $file['urlDownload'] = "/admin/users/{$user->id}/avatar/download";
+
+                return $file;
+            });
+        }
 
         $form->setRecord([
             'login'        => $user->login,
@@ -124,8 +133,8 @@ class View extends Common {
             (new Field\Text('lname',             $this->_('Фамилия')))->setWidth(200),
             (new Field\Text('fname',             $this->_('Имя')))->setWidth(200),
             (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
-            (new Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
-            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow($user->avatar_type == 'upload'),
+            (new Field\RadioBtn('avatar_type',   $this->_('Аватар')))->setOptions($avatar_types),
+            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow($user->avatar_type == 'upload')->setUrl("/admin/users/avatar/upload"),
             (new Field\Toggle('is_admin',        $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
             (new Field\Toggle('is_active',       $this->_('Активен'))),
         ]);
@@ -147,7 +156,7 @@ class View extends Common {
     public function getFormNew(string $base_url): array {
 
         $form = new Form('admin', 'users', 'user');
-        $form->setHandler('saveNew');
+        $form->setHandler("/admin/users/0");
         $form->setSuccessLoadUrl('#/admin/users');
         $form->setOnSubmitSuccessDefault();
 
@@ -188,8 +197,8 @@ class View extends Common {
             (new Field\Text('lname',             $this->_('Фамилия')))->setWidth(200),
             (new Field\Text('fname',             $this->_('Имя')))->setWidth(200),
             (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
-            (new Field\Radio('avatar_type',      $this->_('Аватар')))->setOptions($avatar_types),
-            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow(false),
+            (new Field\RadioBtn('avatar_type',   $this->_('Аватар')))->setOptions($avatar_types),
+            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow(false)->setUrl("/admin/users/avatar/upload"),
             (new Field\Toggle('is_admin',        $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
             (new Field\Toggle('is_active',       $this->_('Активен'))),
         ]);

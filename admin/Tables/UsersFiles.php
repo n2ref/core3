@@ -1,13 +1,13 @@
 <?php
 namespace Core3\Mod\Admin\Tables;
-use Core3\Classes\Db\Table;
-use Laminas\Db\RowGateway\AbstractRowGateway;
+use Core3\Classes\Db\Row;
+use Core3\Classes\Db\TableFiles;
 use Laminas\Db\Sql\Select;
 
 /**
  *
  */
-class UsersFiles extends Table {
+class UsersFiles extends TableFiles {
 
 
 	protected $table = "core_users_files";
@@ -18,9 +18,9 @@ class UsersFiles extends Table {
      * @param int         $user_id
      * @param string|null $field_name
      * @param int         $limit
-     * @return AbstractRowGateway|null
+     * @return Row|null
      */
-	public function getRowsByUser(int $user_id, string $field_name = null, int $limit = 0):? AbstractRowGateway {
+	public function getRowsByUser(int $user_id, string $field_name = null, int $limit = 0):? Row {
 
         $results = $this->select(function (Select $select) use ($user_id, $field_name, $limit) {
             $select->where(['ref_id' => $user_id]);

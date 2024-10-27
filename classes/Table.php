@@ -72,7 +72,9 @@ class Table extends \CoreUI\Table {
 
                 case 'search':
                     $this->setHeaderIn($this::LAST)->left([
-                        (new Control\Search())->setButton('<i class="bi bi-search"></i> ' . $this->system->_('Поиск'), ['class' => 'btn'])
+                        (new Control\Search())
+                            ->setButton('<i class="bi bi-search"></i> ' . $this->system->_('Поиск'), ['class' => 'btn'])
+                            ->setButtonClear('<i class="bi bi-x bi-x-lg text-danger"></i>', ['class' => 'btn'])
                     ]);
                     break;
 
@@ -98,20 +100,6 @@ class Table extends \CoreUI\Table {
             }
         }
 
-        return $this;
-    }
-
-
-    /**
-     * Установка обработчика
-     * @param string     $handler
-     * @param string     $http_method
-     * @param array|null $params
-     * @return self
-     */
-    public function setHandler(string $handler, string $http_method = 'GET', array $params = null): self {
-
-        $this->setRecordsRequest("{$this->module}/{$this->section}/handler/{$handler}", $http_method, $params);
         return $this;
     }
 

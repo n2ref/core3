@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes;
+use Core3\Classes\Db\Row;
 use Core3\Classes\Db\Table;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
@@ -19,32 +20,14 @@ use Laminas\Db\TableGateway\TableGateway;
 class Handler extends Common {
 
 
-
     /**
-     * Скачивание файла аватара
-     * @param Request $request
+     * Скачивание файла
+     * @param Row $file
      * @return Response
-     * @throws HttpException
      * @throws Exception
+     * @throws HttpException
      */
-    public function getFileDownload(Request $request): Response {
-
-        $id         = $request->getQuery('id');
-        $table_name = $request->getQuery('t');
-
-        if ( ! $id || ! is_numeric($id)) {
-            throw new HttpException(400, 'empty_id', $this->_('Не указан или некорректно указан id файла'));
-        }
-        if ( ! $table_name || ! is_string($table_name)) {
-            throw new HttpException(400, 'empty_table', $this->_('Не указана или некорректно указана таблица'));
-        }
-
-        $title = new TableGateway($table_name, $this->db);
-        $file  = $title->select(['id' => $id])->current();
-
-        if ( ! $file) {
-            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
-        }
+    public function getFileDownload(Row $file): Response {
 
         if ( ! $file->content) {
             throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
@@ -71,30 +54,13 @@ class Handler extends Common {
 
     /**
      * Получение файла для предпросмотра
-     * @param Request $request
+     * @param Row $file
      * @return Response
+     * @throws Exception
      * @throws HttpException
      * @throws ImageResizeException
-     * @throws Exception
      */
-    public function getFilePreview(Request $request): Response {
-
-        $id         = $request->getQuery('id');
-        $table_name = $request->getQuery('t');
-
-        if ( ! $id || ! is_numeric($id)) {
-            throw new HttpException(400, 'empty_id', $this->_('Не указан или некорректно указан id файла'));
-        }
-        if ( ! $table_name || ! is_string($table_name)) {
-            throw new HttpException(400, 'empty_table', $this->_('Не указана или некорректно указана таблица'));
-        }
-
-        $title = new TableGateway($table_name, $this->db);
-        $file  = $title->select(['id' => $id])->current();
-
-        if ( ! $file) {
-            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
-        }
+    public function getFilePreview(Row $file): Response {
 
         if ( ! isset($file->content) ||
              ! isset($file->thumb) ||

@@ -215,17 +215,17 @@ class View extends Common {
         $form->addFields([
             (new Field\Text('title',              $this->_('Название')))->setWidth(350)->setRequired(true),
             (new Field\Text('icon',               $this->_('Иконка')))->setWidth(350)
-                ->setDescriptionHelp($this->_('Укажите значение класса из доступных видов иконок: bootstrap, fontawesome, material')),
+                ->setHelp($this->_('Укажите значение класса из доступных видов иконок: bootstrap, fontawesome, material')),
             (new Field\Text('name',               $this->_('Идентификатор')))->setWidth(150)->setRequired(true)
                 ->setValidPattern('[\\da-z]')->setInvalidText('Маленькие латинские буквы или цифры')
-                ->setDescriptionHelp($this->_('Уникальное имя модуля, должно быть таким же как и папка в которой он находится')),
+                ->setHelp($this->_('Уникальное имя модуля, должно быть таким же как и папка в которой он находится')),
             (new Field\Text('version',            $this->_('Версия')))->setWidth(150)->setRequired(true)
                 ->setValidPattern('[\\d]+\\.[\\d]\\.[\\d]+(-[a-z0-9]+|)')->setInvalidText('Требуемый формат версии 0.0.0'),
             (new Field\Textarea('description',    $this->_('Описание')))->setWidth(350)->setHeight(50),
             (new Field\Text('group_name',      $this->_('Название группы')))->setWidth(350)
-                ->setDescriptionHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
+                ->setHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
             (new Field\Toggle('is_active',        $this->_('Активен'))),
-            (new Field\Toggle('is_visible',       $this->_('Видимый')))->setDescriptionHelp($this->_('Будет скрыт из меню, если не активно')),
+            (new Field\Toggle('is_visible',       $this->_('Видимый')))->setHelp($this->_('Будет скрыт из меню, если не активно')),
             (new Field\Toggle('is_visible_index', $this->_('Имеет главную страницу'))),
         ]);
 
@@ -260,7 +260,7 @@ class View extends Common {
         $form->addFields([
             (new Field\FileUpload('file',  $this->_('Файл модуля (.zip)')))->setAcceptZip()->setFilesLimit(1)->setRequired(),
             (new Field\Text('group_name',  $this->_('Название группы')))->setWidth(350)
-                ->setDescriptionHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
+                ->setHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
             (new Field\Toggle('is_active', $this->_('Активен'))),
         ]);
 
@@ -296,7 +296,7 @@ class View extends Common {
         $form->addFields([
             (new Field\Text('link',        $this->_('Ссылка на файл')))->setWidth(350)->setRequired(),
             (new Field\Text('group_name',  $this->_('Название группы')))->setWidth(350)
-                ->setDescriptionHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
+                ->setHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
             (new Field\Toggle('is_active', $this->_('Активен'))),
         ]);
 
@@ -337,10 +337,10 @@ class View extends Common {
         $form->addFields([
             (new Field\Text('title',           $this->_('Название')))->setWidth(350)->setRequired(true),
             (new Field\Text('icon',            $this->_('Иконка')))->setWidth(350)
-                ->setDescriptionHelp($this->_('Укажите значение класса из доступных видов иконок: bootstrap, fontawesome, material')),
+                ->setHelp($this->_('Укажите значение класса из доступных видов иконок: bootstrap, fontawesome, material')),
             (new Field\Textarea('description', $this->_('Описание')))->setWidth(350)->setHeight(50),
             (new Field\Text('group_name',      $this->_('Название группы')))->setWidth(350)
-                ->setDescriptionHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
+                ->setHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
             (new Field\Toggle('is_active',     $this->_('Активен')))->setValueY(1)->setValueN(0),
 
         ]);

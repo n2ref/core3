@@ -216,7 +216,7 @@ class View extends Common {
 
         $table = new Table();
         $table->setOverflow(true);
-        $table->setRecordsRequest('admin/index/handler/get_db_connections_records');
+        $table->setRecordsRequest('admin/index/db/connections/records');
         $table->addHeaderIn()
             ->left([
                 (new Table\Control\Total)
@@ -277,7 +277,7 @@ class View extends Common {
 
         $table = new Table();
         $table->setOverflow(true);
-        $table->setRecordsRequest('admin/index/handler/get_system_process_list');
+        $table->setRecordsRequest('admin/index/system/process/records');
 
         $table->addHeaderOut()
             ->left([

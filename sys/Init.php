@@ -238,7 +238,6 @@ class Init extends Common {
                 }
 
                 $this->logRequest();
-
             }
 
 
@@ -518,26 +517,21 @@ class Init extends Common {
     private function getHandlerResponse(): mixed {
 
         $router = new Router();
-        $router->route('/sys/auth/login')->post([Handler::class, 'login']);
-        $router->route('/sys/auth/refresh')->post([Handler::class, 'refreshToken']);
-
-        if ($this->auth) {
-            $router->route('/sys/auth/logout')->put([Handler::class, 'logout']);
-        }
-
+        $router->route('/sys/auth/login')              ->post([Handler::class, 'login']);
+        $router->route('/sys/auth/refresh')            ->post([Handler::class, 'refreshToken']);
         $router->route('/sys/registration/email')      ->post([Handler::class, 'registrationEmail']);
         $router->route('/sys/registration/email/check')->post([Handler::class, 'registrationEmailCheck']);
         $router->route('/sys/restore')                 ->post([Handler::class, 'restorePass']);
         $router->route('/sys/restore/check')           ->post([Handler::class, 'restorePassCheck']);
-        $router->route('/sys/conf')                    ->get([Handler::class, 'getConf']);
-        $router->route('/api/.*')                      ->get([Handler::class, 'processApi']);
+        $router->route('/sys/conf')                    ->get([ Handler::class, 'getConf']);
+        $router->route('/api/.*')                      ->get([ Handler::class, 'processApi']);
 
         if ($this->auth) {
+            $router->route('/sys/auth/logout')                                                           ->put([Handler::class, 'logout']);
             $router->route('/sys/cabinet')                                                               ->get([Handler::class, 'getCabinet']);
             $router->route('/sys/error')                                                                 ->post([Handler::class, 'logError']);
             $router->route('/sys/home')                                                                  ->get([Handler::class, 'getHome']);
             $router->route('/sys/user/{id:\d+}/avatar')                                                  ->get([Handler::class, 'getUserAvatar']);
-            $router->route('/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}/handler/{method}')                 ->any([Handler::class, 'getModHandler']);
             $router->route('/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}{mod_query:(?:/[a-zA-Z0-9_/\-]+|)}')->any([Handler::class, 'getModSection']);
         }
 

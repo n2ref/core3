@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes;
+use Core3\Classes\Db\Table;
 use Core3\Exceptions\Exception;
 use Core3\Mod\Admin;
 use Core3\Sys\Auth;
@@ -92,13 +93,14 @@ class Form extends \CoreUI\Form {
 
     /**
      * Получение файлов для поля
-     * @param Db\Table $table
-     * @param string   $field_name
-     * @param int      $id
+     * @param Table         $table
+     * @param string        $field_name
+     * @param int           $id
+     * @param \Closure|null $callback
      * @return array
      * @throws Exception
      */
-    public function getFiles(Db\Table $table, string $field_name, int $id): array {
+    public function getFiles(Db\Table $table, string $field_name, int $id, \Closure $callback = null): array {
 
         $table_name = $table->getTable();
 
@@ -114,24 +116,25 @@ class Form extends \CoreUI\Form {
             ]);
         });
 
-        $result = [];
+        $files = [];
 
         foreach ($files_row as $file_row) {
             $file = [
                 'id'          => $file_row->id,
                 'name'        => $file_row->file_name,
                 'size'        => $file_row->file_size,
-                'urlDownload' => "{$this->module}/{$this->section}/handler/getFileDownload?t={$table_name}&id={$file_row->id}",
+                'urlPreview'  => "",
+                'urlDownload' => "",
             ];
 
-            if ($file_row->file_type && preg_match('~^image/.*~', $file_row->file_type)) {
-                $file['urlPreview'] = "{$this->module}/{$this->section}/handler/getFilePreview?t={$table_name}&id={$file_row->id}";
+            if ($callback) {
+                $file = $callback($file);
             }
 
-            $result[] = $file;
+            $files[] = $file;
         }
 
-        return $result;
+        return $files;
     }
 
 
@@ -157,28 +160,6 @@ class Form extends \CoreUI\Form {
 
 
     /**
-     * Добавление полей
-     * @param array       $fields
-     * @param string|null $position
-     * @return self
-     */
-    public function addFields(array $fields, string $position = null): self {
-
-        foreach ($fields as $field) {
-            if ($field instanceof Field\FileUpload) {
-                if (empty($field->getUrl())) {
-                    $field->setUrl("{$this->module}/{$this->section}/handler/uploadFile");
-                }
-            }
-        }
-
-        parent::addFields($fields, $position);
-
-        return $this;
-    }
-
-
-    /**
      * Установка сообщения по умолчанию
      * @return void
      */
@@ -198,7 +179,9 @@ class Form extends \CoreUI\Form {
 
         if ($send['handler']) {
             if ($send['record_id'] && $send['record_version']) {
-                $this->setSend("{$send['handler']}?id={$send['record_id']}&v={$send['record_version']}", $send['http_method']);
+                $amp = strpos($send['handler'], '?') === false ? '?' : '&';
+                $this->setSend("{$send['handler']}{$amp}v={$send['record_version']}", $send['http_method']);
+
             } else {
                 $this->setSend($send['handler'], $send['http_method']);
             }

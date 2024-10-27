@@ -634,7 +634,6 @@ class Handler extends Common {
 
     /**
      * @return array
-     * @throws \Psr\Container\NotFoundExceptionInterface
      */
     private function getModules(): array {
 
@@ -679,8 +678,6 @@ class Handler extends Common {
      * @param int    $session_id
      * @return Token
      * @throws HttpException
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
      */
     private function getRefreshToken(string $user_login, int $session_id): Token {
 
@@ -705,12 +702,10 @@ class Handler extends Common {
      * @param int    $session_id
      * @return Token
      * @throws HttpException
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
      */
     private function getAccessToken(string $user_login, int $session_id): Token {
 
-        $access_token_exp  = $this->config?->system?->auth?->access_token?->expiration  ?: 1800; // 30 минут
+        $access_token_exp  = $this->config?->system?->auth?->access_token?->expiration ?: 1800; // 30 минут
 
         if ( ! is_numeric($access_token_exp)) {
             throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.access_token.expiration'), 'error_access_token', 500);
