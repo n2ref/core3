@@ -18,19 +18,23 @@ use Laminas\Db\RowGateway\AbstractRowGateway;
  */
 class View extends Common {
 
+    private string $base_url = "admin/users";
+
 
     /**
      * таблица с юзерами
-     * @param string $base_url
      * @return array
-     * @throws Exception
      */
-    public function getTable(string $base_url): array {
+    public function getTable(): array {
 
-        $table = new Table('admin', 'users', 'users');
-        $table->setKit(['default', 'search', 'columns', 'add' => "{$base_url}/0", 'delete']);
-        $table->setRecordsRequest("{$this->module}/{$this->section}/table");
-        $table->setClickUrl("{$base_url}/[id]");
+        $table = new Table('admin', 'users');
+        $table->addControlsDefault();
+        $table->addControlSearch();
+        $table->addControlColumns();
+        $table->addControlBtnAdd("#/{$this->base_url}/0");
+        $table->addControlBtnDelete("{$this->base_url}/records");
+        $table->setRecordsRequest("{$this->base_url}/records");
+        $table->setClickUrl("#/{$this->base_url}/[id]");
 
 
         $roles = $this->modAdmin->tableRoles->fetchPairs('id', 'title');
@@ -54,7 +58,7 @@ class View extends Common {
 
         $table->addColumns([
             (new Column\Select()),
-            $table->getColumnToggle('is_active',  $this->_('Активность'),             45, 'switchActive'),
+            $table->getColumnToggle('is_active',  $this->_('Активность'),             45),
             (new Column\Image('avatar',           $this->_('Аватар'),                 40))->setShowLabel(false)->setStyle('circle')->setBorder(true)->setImgSize(20, 20),
             (new Column\Link('login',             $this->_('Логин')))->setMinWidth(100),
             (new Column\Text('name',              $this->_('Имя')))->setMinWidth(150)->setNoWrap(true),
@@ -72,25 +76,24 @@ class View extends Common {
 
     /**
      * Редактирование пользователя
-     * @param string             $base_url
      * @param AbstractRowGateway $user
      * @return array
      * @throws Exception
      */
-    public function getForm(string $base_url, AbstractRowGateway $user): array {
+    public function getForm(AbstractRowGateway $user): array {
 
-        $form = new Form('admin', 'users', 'user');
+        $form = new Form('admin', 'users');
         $form->setTable($this->modAdmin->tableUsers, $user->id);
-        $form->setHandler("/admin/users/{$user->id}", 'put');
-        $form->setSuccessLoadUrl('#/admin/users');
-        $form->setOnSubmitSuccessDefault();
+        $form->setHandler("{$this->base_url}/{$user->id}", 'put');
+        $form->setSuccessLoadUrl("#/{$this->base_url}");
+        $form->setSuccessNotice();
 
         $avatar = [];
 
         if ($user->avatar_type == 'upload') {
             $avatar = $form->getFiles($this->modAdmin->tableUsersFiles, 'avatar', $user->id, function (array $file) use ($user) {
                 $file['urlPreview']  = "/sys/user/{$user->id}/avatar";
-                $file['urlDownload'] = "/admin/users/{$user->id}/avatar/download";
+                $file['urlDownload'] = "/{$this->base_url}/{$user->id}/avatar/download";
 
                 return $file;
             });
@@ -111,9 +114,9 @@ class View extends Common {
         ]);
 
         $avatar_types = [
-            ['value' => 'generate', 'text' => 'Генерация аватара', 'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
-            ['value' => 'upload',   'text' => 'Загрузить',         'onchange' => "CoreUI.form.get('user').getField('avatar').show();" ],
-            ['value' => 'none',     'text' => 'Без аватара',       'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
+            ['value' => 'generate', 'text' => 'Генерация аватара', 'onchange' => "CoreUI.form.get('admin_users').getField('avatar').hide();" ],
+            ['value' => 'upload',   'text' => 'Загрузить',         'onchange' => "CoreUI.form.get('admin_users').getField('avatar').show();" ],
+            ['value' => 'none',     'text' => 'Без аватара',       'onchange' => "CoreUI.form.get('admin_users').getField('avatar').hide();" ],
         ];
 
         $roles_rows = $this->modAdmin->tableRoles->fetchAll();
@@ -134,14 +137,14 @@ class View extends Common {
             (new Field\Text('fname',             $this->_('Имя')))->setWidth(200),
             (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
             (new Field\RadioBtn('avatar_type',   $this->_('Аватар')))->setOptions($avatar_types),
-            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow($user->avatar_type == 'upload')->setUrl("/admin/users/avatar/upload"),
+            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow($user->avatar_type == 'upload')->setUrl("/{$this->base_url}/avatar/upload"),
             (new Field\Toggle('is_admin',        $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
             (new Field\Toggle('is_active',       $this->_('Активен'))),
         ]);
 
         $form->addControls([
             $form->getBtnSubmit(),
-            (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+            (new Control\Link('Отмена'))->setUrl("#/{$this->base_url}")->setAttr('class', 'btn btn-secondary'),
         ]);
 
         return $form->toArray();
@@ -150,15 +153,14 @@ class View extends Common {
 
     /**
      * Добавление пользователя
-     * @param string $base_url
      * @return array
      */
-    public function getFormNew(string $base_url): array {
+    public function getFormNew(): array {
 
-        $form = new Form('admin', 'users', 'user');
-        $form->setHandler("/admin/users/0");
-        $form->setSuccessLoadUrl('#/admin/users');
-        $form->setOnSubmitSuccessDefault();
+        $form = new Form('admin', 'users');
+        $form->setHandler("{$this->base_url}/0");
+        $form->setSuccessLoadUrl("#/{$this->base_url}");
+        $form->setSuccessNotice();
 
         $form->setRecord([
             'login'        => '',
@@ -175,9 +177,9 @@ class View extends Common {
         ]);
 
         $avatar_types = [
-            ['value' => 'generate', 'text' => 'Генерация аватара', 'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
-            ['value' => 'upload',   'text' => 'Загрузить',         'onchange' => "CoreUI.form.get('user').getField('avatar').show();" ],
-            ['value' => 'none',     'text' => 'Без аватара',       'onchange' => "CoreUI.form.get('user').getField('avatar').hide();" ],
+            ['value' => 'generate', 'text' => 'Генерация аватара', 'onchange' => "CoreUI.form.get('admin_users').getField('avatar').hide();" ],
+            ['value' => 'upload',   'text' => 'Загрузить',         'onchange' => "CoreUI.form.get('admin_users').getField('avatar').show();" ],
+            ['value' => 'none',     'text' => 'Без аватара',       'onchange' => "CoreUI.form.get('admin_users').getField('avatar').hide();" ],
         ];
 
         $roles_rows = $this->modAdmin->tableRoles->fetchAll();
@@ -198,14 +200,14 @@ class View extends Common {
             (new Field\Text('fname',             $this->_('Имя')))->setWidth(200),
             (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
             (new Field\RadioBtn('avatar_type',   $this->_('Аватар')))->setOptions($avatar_types),
-            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow(false)->setUrl("/admin/users/avatar/upload"),
+            (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow(false)->setUrl("/{$this->base_url}/avatar/upload"),
             (new Field\Toggle('is_admin',        $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
             (new Field\Toggle('is_active',       $this->_('Активен'))),
         ]);
 
         $form->addControls([
             $form->getBtnSubmit(),
-            (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+            (new Control\Link('Отмена'))->setUrl("#/{$this->base_url}")->setAttr('class', 'btn btn-secondary'),
         ]);
 
         return $form->toArray();

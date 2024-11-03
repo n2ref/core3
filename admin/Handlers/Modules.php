@@ -61,7 +61,6 @@ class Modules extends Handler {
      * Сохранение модуля
      * @param Request $request
      * @return Response
-     * @throws AppException
      * @throws HttpException
      * @throws Exception
      * @throws ExceptionInterface
@@ -72,11 +71,11 @@ class Modules extends Handler {
         $this->checkVersion($this->modAdmin->tableModules, $request);
 
         $fields = [
-            'title'       => 'req,string(1-): Название',
-            'icon'        => 'string(0-255): Иконка',
-            'description' => 'string(0-65000): Описание',
-            'group_name'  => 'string(0-255): Название группы',
-            'is_active'   => 'switch: Активен',
+            'title'       => 'req,string(1-): ' . $this->_('Название'),
+            'icon'        => 'string(0-255): ' . $this->_('Иконка'),
+            'description' => 'string(0-65000): ' . $this->_('Описание'),
+            'group_name'  => 'string(0-255): ' . $this->_('Название группы'),
+            'is_active'   => 'switch: ' . $this->_('Активен'),
         ];
 
         $record_id = $request->getQuery('id');
@@ -84,7 +83,7 @@ class Modules extends Handler {
         $controls  = $this->clearData($controls);
 
         if (empty($record_id)) {
-            throw new AppException($this->_("Не указан id для сохранения изменений"));
+            throw new HttpException(400, $this->_("Не указан id для сохранения изменений"));
         }
 
 
@@ -123,7 +122,6 @@ class Modules extends Handler {
      * Ручное добавление модуля
      * @param Request $request
      * @return Response
-     * @throws AppException
      * @throws HttpException
      * @throws Exception
      * @throws ExceptionInterface
@@ -155,7 +153,7 @@ class Modules extends Handler {
 
 
         if ( ! $this->modAdmin->tableModules->isUniqueName($controls['name'])) {
-            throw new AppException($this->_("Модуль с таким идентификатором уже существует"));
+            throw new HttpException(400, $this->_("Модуль с таким идентификатором уже существует"));
         }
 
         $controls['seq'] = 1 + $this->modAdmin->tableModules->getMaxSeq();
@@ -529,8 +527,7 @@ class Modules extends Handler {
      * @param Request $request
      * @return Response
      * @throws Exception
-     * @throws ExceptionInterface
-     * @throws AppException
+     * @throws HttpException
      */
     public function deleteSection(Request $request): Response {
 
@@ -539,16 +536,16 @@ class Modules extends Handler {
         $controls = $request->getJsonContent();
 
         if (empty($controls['id'])) {
-            return $this->getResponseError([ $this->_("Не указаны разделы") ]);
+            throw new HttpException(400, $this->_("Не указаны разделы"));
         }
 
         if ( ! is_array($controls['id'])) {
-            return $this->getResponseError([ $this->_("Некорректный список пользователей") ]);
+            throw new HttpException(400, $this->_("Некорректный список пользователей"));
         }
 
         foreach ($controls['id'] as $user_id) {
             if ( ! empty($user_id) && is_numeric($user_id)) {
-                $this->modAdmin->modelUsers->delete((int)$user_id);
+                $this->modAdmin->modelUsers->deleteById((int)$user_id);
             }
         }
 
@@ -562,31 +559,37 @@ class Modules extends Handler {
      * Изменение активности для пользователя
      * @param Request $request
      * @return Response
-     * @throws AppException
+     * @throws HttpException
      * @throws DbException
      * @throws Exception
-     * @throws ExceptionInterface
      */
     public function switchActive(Request $request): Response {
 
         $this->checkHttpMethod($request, 'patch');
         $controls = $request->getJsonContent();
 
-        if ( ! in_array($controls['checked'], ['Y', 'N'])) {
-            return $this->getResponseError([ $this->_("Некорректные данные запроса") ]);
+        if ( ! in_array($controls['checked'], ['1', '0'])) {
+            throw new HttpException(400, $this->_("Некорректные данные запроса"));
         }
 
-        $user_id = $request->getQuery('id');
+        $module_id = $request->getQuery('id');
 
-        if ( ! $user_id) {
-            return $this->getResponseError([ $this->_("Не указан id пользователя") ]);
+        if ( ! $module_id) {
+            throw new HttpException(400, $this->_("Не указан id модуля"));
         }
 
-        if ( ! is_numeric($user_id)) {
-            return $this->getResponseError([ $this->_("Указан некорректный id пользователя") ]);
+        if ( ! is_numeric($module_id)) {
+            throw new HttpException(400, $this->_("Указан некорректный id модуля"));
         }
 
-        $this->modAdmin->modelUsers->switchActive($user_id, $controls['checked'] == 'Y');
+        $module = $this->modAdmin->tableModules->getRowById($module_id);
+
+        if ( ! $module) {
+            throw new HttpException(400, $this->_("Указанный модуль не найден"));
+        }
+
+        $module->is_active = $controls['checked'];
+        $module->save();
 
         return $this->getResponseSuccess([
             'status' => 'success'

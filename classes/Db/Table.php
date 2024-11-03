@@ -1,5 +1,9 @@
 <?php
 namespace Core3\Classes\Db;
+use Core3\Classes\Common;
+use Core3\Exceptions\DbException;
+use Core3\Exceptions\Exception;
+use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 use Laminas\Db\Sql\Select;
@@ -155,6 +159,33 @@ abstract class Table extends AbstractTableGateway {
     public function find(array|int $id): ResultSetInterface {
 
         return $this->select([$this->primary_key => $id]);
+    }
+
+
+    /**
+     * Вызов обработки события
+     * @param string $event_name
+     * @param array  $data
+     * @return array
+     * @throws DbException
+     * @throws Exception
+     * @throws ExceptionInterface
+     */
+    protected function event(string $event_name, array $data): array {
+
+        $key = '_common';
+
+        if ($this->hasStaticCache($key)) {
+            $common = $this->getStaticCache($key);
+        }
+
+        if (empty($common)) {
+            $common = new Common();
+            $this->setStaticCache($key, $common);
+        }
+
+
+        return $common->event($event_name, $data);
     }
 
 

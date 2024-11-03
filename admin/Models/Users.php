@@ -1,9 +1,12 @@
 <?php
 namespace Core3\Mod\Admin\Models;
 use Core3\Classes\Common;
+use Core3\Classes\Tools;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
+use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin;
+use Core3\Mod\Admin\Classes\Users\Files;
 use Laminas\Cache\Exception\ExceptionInterface;
 
 
@@ -70,48 +73,131 @@ class Users extends Common {
      * Удаление пользователя
      * @param int $user_id
      * @return void
-     * @throws DbException
-     * @throws Exception
-     * @throws ExceptionInterface
      */
-    public function delete(int $user_id): void {
+    public function deleteById(int $user_id): void {
+
+        $this->modAdmin->tableUsers->getRowById($user_id)
+            ?->delete();
+    }
+
+
+    /**
+     * Удаление пользователя
+     * @param string $user_login
+     * @return void
+     */
+    public function deleteByLogin(string $user_login): void {
+
+        $this->modAdmin->tableUsers->getRowByLogin($user_login)
+            ?->delete();
+    }
+
+
+    /**
+     * Добавление пользователя
+     * @param array $data
+     * @return int
+     * @throws HttpException
+     * @throws Exception
+     */
+    public function create(array $data): int {
+
+        if (empty($data['login'])) {
+            throw new Exception($this->_('Не указано обязательное поле %s', ['login']));
+        }
+
+        if (empty($data['role_id'])) {
+            throw new Exception($this->_('Не указано обязательное поле %s', ['role_id']));
+        }
+
+        if (empty($data['pass'])) {
+            throw new Exception($this->_('Не указано обязательное поле %s', ['pass']));
+        }
+
+        if ( ! $this->modAdmin->tableUsers->isUniqueLogin($data['login'])) {
+            throw new Exception($this->_("Пользователь с таким логином уже существует"));
+        }
+
+        if ( ! empty($data['email']) &&
+             ! $this->modAdmin->tableUsers->isUniqueEmail($data['email'])
+        ) {
+            throw new Exception($this->_("Пользователь с таким email уже существует"));
+        }
+
+        $data['pass'] = Tools::passSalt(md5($data['pass']));
+
+        $this->db->beginTransaction();
+        try {
+            $this->modAdmin->tableUsers->insert($data);
+
+            $user_id = $this->modAdmin->tableUsers->getLastInsertValue();
+
+            if ( ! empty($data['avatar_type']) && $data['avatar_type'] == 'generate') {
+                $user = $this->modAdmin->tableUsers->getRowById($user_id);
+                (new Files())->generateAvatar($user);
+            }
+
+            $this->db->commit();
+
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return $user_id;
+    }
+
+
+    /**
+     * Обновление данных пользователя
+     * @param int   $user_id
+     * @param array $data
+     * @return void
+     */
+    public function update(int $user_id, array $data): void {
 
         $user = $this->modAdmin->tableUsers->getRowById($user_id);
 
         if ($user) {
-            $this->event($this->modAdmin->tableUsers->getTable() . '_pre_delete', [
-                'user' => $user,
-            ]);
+            $fields  = [ 'role_id', 'email', 'fname', 'lname', 'mname', 'is_active', ];
+            $is_save = false;
 
-            $user->delete();
+            foreach ($fields as $field) {
+                if (array_key_exists($field, $data) &&
+                    (is_string($data[$field]) || is_numeric($data[$field]) || is_null($data[$field]))
+                ) {
+                    $user->{$field} = $data[$field];
 
-            $this->event($this->modAdmin->tableUsers->getTable() . '_post_delete', [
-                'user' => $user,
-            ]);
+                    $is_save = true;
+                }
+            }
+
+            if ($is_save) {
+                $user->save();
+            }
         }
     }
 
 
     /**
-     * Переключение активности пользователя
-     * @param int  $user_id
-     * @param bool $is_active
+     * Сохранение персональных данных для пользователя
+     * @param int        $user_id
+     * @param string     $name
+     * @param array|null $data
      * @return void
-     * @throws DbException
-     * @throws Exception
-     * @throws ExceptionInterface
      */
-    public function switchActive(int $user_id, bool $is_active): void {
+    public function saveData(int $user_id, string $name, array $data = null): void {
 
-        $user = $this->modAdmin->tableUsers->getRowById($user_id);
+    }
 
-        if ($user && ($user->is_active == '1') != $is_active) {
-            $user->is_active = $is_active ? '1' : '0';
-            $user->save();
 
-            $this->event($this->modAdmin->tableUsers->getTable() . '_switch_active', [
-                'user' => $user,
-            ]);
-        }
+    /**
+     * Получение персональных данных для пользователя
+     * @param int    $user_id
+     * @param string $name
+     * @return array|null
+     */
+    public function getData(int $user_id, string $name):? array {
+
     }
 }

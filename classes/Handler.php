@@ -30,7 +30,7 @@ class Handler extends Common {
     public function getFileDownload(Row $file): Response {
 
         if ( ! $file->content) {
-            throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
+            throw new HttpException(500, $this->_('Указанный файл сломан'), 'file_broken');
         }
 
         $response = new Response();
@@ -70,15 +70,15 @@ class Handler extends Common {
              ! isset($file->file_type) ||
              ! isset($file->field_name)
         ) {
-            throw new HttpException(404, 'table_incorrect', $this->_('Указанная таблица не соответствует стандартам'));
+            throw new HttpException(404, $this->_('Указанная таблица не соответствует стандартам'), 'table_incorrect');
         }
 
         if ( ! $file->content) {
-            throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
+            throw new HttpException(500, $this->_('Указанный файл сломан'), 'file_broken');
         }
 
         if ( ! $file->thumb && ( ! $file->file_type || ! preg_match('~^image/.*~', $file->file_type))) {
-            throw new HttpException(404, 'file_is_not_image', $this->_('Указанный файл не является картинкой'));
+            throw new HttpException(404, $this->_('Указанный файл не является картинкой'), 'file_is_not_image');
         }
 
         $response = new Response();
@@ -301,54 +301,44 @@ class Handler extends Common {
      * @param Table       $table
      * @param array       $data
      * @param string|null $row_id
-     * @return AbstractRowGateway
+     * @return Row
      * @throws AppException
-     * @throws DbException
      * @throws Exception
-     * @throws ExceptionInterface
      */
-    protected function saveData(Table $table, array $data, string $row_id = null): AbstractRowGateway {
+    protected function saveData(Table $table, array $data, string $row_id = null): Row {
 
-//        $table_name = $table->getTable();
+        $this->db->beginTransaction();
+        try {
+            if ($row_id) {
+                $row = $table->getRowById($row_id);
 
-//        $this->event("{$table_name}_pre_save", [
-//            'id'    => $row_id,
-//            'table' => $table,
-//            'data'  => $data,
-//        ]);
+                if (empty($row)) {
+                    throw new AppException($this->_('Сохраняемая запись удалена. Обновите страницу и попробуй снова'));
+                }
 
-        if ($row_id) {
-            $row = $table->getRowById($row_id);
+                foreach ($data as $field => $value) {
+                    $row->{$field} = $value;
+                }
+                $row->save();
 
-            if (empty($row)) {
-                throw new AppException($this->_('Сохраняемая запись удалена. Обновите страницу и попробуй снова'));
+            } else {
+                $table->insert($data);
+
+                $row_id = $table->getLastInsertValue();
+                $row    = $table->getRowById($row_id);
             }
 
-            foreach ($data as $field => $value) {
-                $row->{$field} = $value;
+
+            $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), $row_id);
+            if ($control) {
+                $control->version += 1;
+                $control->save();
             }
-            $row->save();
-            $type = 'create';
+            $this->db->commit();
 
-        } else {
-            $table->insert($data);
-
-            $row_id = $table->getLastInsertValue();
-            $row    = $table->getRowById($row_id);
-            $type   = 'update';
-        }
-
-//        $this->event("{$table_name}_post_save", [
-//            'row'   => $row,
-//            'type'  => $type,
-//            'table' => $table,
-//        ]);
-
-
-        $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), $row_id);
-        if ($control) {
-            $control->version += 1;
-            $control->save();
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw $e;
         }
 
         $this->modAdmin->tableControls->deleteOld();

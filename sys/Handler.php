@@ -45,21 +45,21 @@ class Handler extends Common {
         ];
 
         if ($errors = Validator::validateFields($fields, $params)) {
-            throw new HttpException(400, 'invalid_param', current($errors));
+            throw new HttpException(400, current($errors), 'invalid_param');
         }
 
         $user = $this->modAdmin->tableUsers->getRowByLoginEmail($params['login']);
 
         if ( ! $user) {
-            throw new HttpException(400, 'login_not_found', $this->_('Пользователя с таким логином нет'));
+            throw new HttpException(400, $this->_('Пользователя с таким логином нет'), 'login_not_found');
         }
 
         if ($user->is_active == '0') {
-            throw new HttpException(400, 'user_inactive', $this->_('Этот пользователь деактивирован'));
+            throw new HttpException(400, $this->_('Этот пользователь деактивирован'), 'user_inactive');
         }
 
         if ($user->pass != Tools::passSalt($params['password'])) {
-            throw new HttpException(400, 'pass_incorrect', $this->_('Неверный пароль') . Tools::passSalt($params['password']));
+            throw new HttpException(400, $this->_('Неверный пароль') . Tools::passSalt($params['password']), 'pass_incorrect');
         }
 
         $session = [
@@ -135,7 +135,7 @@ class Handler extends Common {
         ];
 
         if ($errors = Validator::validateFields($fields, $params)) {
-            throw new HttpException(400, 'invalid_param', current($errors));
+            throw new HttpException(400, current($errors), 'invalid_param');
         }
 
 
@@ -149,17 +149,17 @@ class Handler extends Common {
             $token_exp  = $decoded['exp'] ?? 0;
 
         } catch (\Exception $e) {
-            throw new HttpException(403, 'token_invalid', $this->_('Токен не прошел валидацию'));
+            throw new HttpException(403, $this->_('Токен не прошел валидацию'), 'token_invalid');
         }
 
         if (empty($session_id) || ! is_numeric($session_id)) {
-            throw new HttpException(403, 'token_incorrect', $this->_('Некорректный токен'));
+            throw new HttpException(403, $this->_('Некорректный токен'), 'token_incorrect');
         }
 
         if ($token_exp < time() ||
             $token_iss != $_SERVER['SERVER_NAME']
         ) {
-            throw new HttpException(403, 'session_inactive', $this->_('Эта сессия больше не активна. Войдите заново'));
+            throw new HttpException(403, $this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive');
         }
 
 
@@ -167,28 +167,28 @@ class Handler extends Common {
         $session = $this->modAdmin->tableUsersSession->getRowById($session_id);
 
         if (empty($session)) {
-            throw new HttpException(403, 'session_not_found', $this->_('Сессия не найдена'));
+            throw new HttpException(403, $this->_('Сессия не найдена'), 'session_not_found');
         }
 
         if ($session->fingerprint != $params['fp']) {
             // TODO Добавить оповещение о перехвате токена
-            throw new HttpException(403, 'fingerprint_invalid', $this->_('Некорректный отпечаток системы'));
+            throw new HttpException(403, $this->_('Некорректный отпечаток системы'), 'fingerprint_invalid');
         }
 
         if ($session->token_hash != crc32($params['refresh_token'])) {
             // TODO Добавить оповещение о перехвате токена
-            throw new HttpException(403, 'token_invalid', $this->_('Токен не активен'));
+            throw new HttpException(403, $this->_('Токен не активен'), 'token_invalid');
         }
 
         if ($session->is_active == 0 || $session->date_expired < date('Y-m-d H:i:s')) {
-            throw new HttpException(403, 'session_inactive', $this->_('Эта сессия больше не активна. Войдите заново'));
+            throw new HttpException(403, $this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive');
         }
 
 
         $user = $this->modAdmin->tableUsers->find($session->user_id)->current();
 
         if (empty($user)) {
-            throw new HttpException(403, 'session_user_not_found', $this->_('Пользователь не найден'));
+            throw new HttpException(403, $this->_('Пользователь не найден'), 'session_user_not_found');
         }
 
         $refresh_token = $this->getRefreshToken($user->login, $session_id);
@@ -230,7 +230,7 @@ class Handler extends Common {
         ];
 
         if ($errors = Validator::validateFields($fields, $params)) {
-            throw new HttpException(400, 'invalid_param', current($errors));
+            throw new HttpException(400, current($errors), 'invalid_param');
         }
 
         $params['lname'] = htmlspecialchars($params['lname']);
@@ -239,7 +239,7 @@ class Handler extends Common {
 
         if ($user instanceof Clients\Client) {
             if ($user->status !== 'new') {
-                throw new HttpException(400, 'email_isset', 'Пользователь с таким email уже зарегистрирован');
+                throw new HttpException(400, 'Пользователь с таким email уже зарегистрирован', 'email_isset');
             }
 
             if ( ! $user->reg_code ||
@@ -247,11 +247,11 @@ class Handler extends Common {
                 $user->reg_code != $params['code'] ||
                 $user->reg_expired <= date('Y-m-d H:i:s')
             ) {
-                throw new HttpException(400, 'code_incorrect', 'Указан некорректный код, либо его действие закончилось');
+                throw new HttpException(400, 'Указан некорректный код, либо его действие закончилось', 'code_incorrect');
             }
 
         } else {
-            throw new HttpException(400, 'email_not_found', 'Введите email и получите код регистрации');
+            throw new HttpException(400, 'Введите email и получите код регистрации', 'email_not_found');
         }
 
         $user->update([
@@ -367,9 +367,6 @@ class Handler extends Common {
                     if ( ! empty($error['url']) && is_string($error['url']) && mb_strlen($error['url']) > 255) {
                         $error['url'] = mb_substr($error['url'], 0, 255);
                     }
-                    if ( ! empty($error['time']) && is_string($error['time']) && mb_strlen($error['time']) > 19) {
-                        $error['time'] = mb_substr($error['time'], 0, 19);
-                    }
                     if ( ! empty($error['client']) && is_string($error['client']) && mb_strlen($error['client']) > 19) {
                         $error['client'] = mb_substr($error['client'], 0, 19);
                     }
@@ -385,9 +382,7 @@ class Handler extends Common {
                         };
                     }
 
-                    $this->log->file($this->config->system->log->error_clients_file)->{$level}('client error', [
-                        'login'  => $this->auth->getUserLogin(),
-                        'time'   => $error['time'] ?? null,
+                    $this->log->file($this->config->system->log->error_clients_file)->{$level}($this->auth->getUserLogin(), [
                         'url'    => $error['url'] ?? null,
                         'error'  => $error['error'] ?? null,
                         'client' => $error['client'] ?? null,
@@ -416,13 +411,13 @@ class Handler extends Common {
     public function getUserAvatar(Request $request, int $user_id): Response {
 
         if ( ! $user_id) {
-            throw new HttpException(400, 'empty_user_id', $this->_('Не указан id пользователя'));
+            throw new HttpException(400, $this->_('Не указан id пользователя'), 'empty_user_id');
         }
 
         $user = $this->modAdmin->tableUsers->getRowById($user_id);
 
         if ( ! $user) {
-            throw new HttpException(400, 'user_not_found', $this->_('Указанный пользователь не найден'));
+            throw new HttpException(400, $this->_('Указанный пользователь не найден'), 'user_not_found');
         }
 
         if ($user->avatar_type === 'none') {
@@ -455,7 +450,7 @@ class Handler extends Common {
                 'is_visible_index' => true,
                 'sections'         => [
                     ["name" => "modules",  'title' => $this->_("Модули")],
-                    ["name" => "settings", 'title' => $this->_("Конфигурация")],
+                    ["name" => "settings", 'title' => $this->_("Настройки")],
                     ["name" => "users",    'title' => $this->_("Пользователи")],
                     ["name" => "roles",    'title' => $this->_("Роли")],
                     ["name" => "monitor",  'title' => $this->_("Мониторинг")],
@@ -526,7 +521,7 @@ class Handler extends Common {
         $controller_file = "{$location}/Controller.php";
 
         if ( ! file_exists($controller_file)) {
-            throw new HttpException(500, 'broken', $this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", ['home']));
+            throw new HttpException(500, $this->_("Модуль \"%s\" сломан. Не найден файл контроллера.", ['home']), 'broken');
         }
 
         $autoload_file = "{$location}/vendor/autoload.php";
@@ -540,13 +535,13 @@ class Handler extends Common {
         $module_class_name = "\\Core3\\Mod\\Home\\Controller";
 
         if ( ! class_exists($module_class_name)) {
-            throw new HttpException(500, 'broken', $this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", ['home']));
+            throw new HttpException(500, $this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", ['home']), 'broken');
         }
 
         $controller = new $module_class_name();
 
         if ( ! method_exists($controller, 'index')) {
-            throw new HttpException(500, 'broken', $this->_("Модуль \"%s\" сломан. Не найден метод index.", ['home']));
+            throw new HttpException(500, $this->_("Модуль \"%s\" сломан. Не найден метод index.", ['home']), 'broken');
         }
 
         return $controller->index();
@@ -567,11 +562,11 @@ class Handler extends Common {
         $this->checkAuth();
 
         if ( ! $this->auth->isAllowed($module_name)) {
-            throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к модулю %s!", [$module_name]));
+            throw new HttpException(403, $this->_("У вас нет доступа к модулю %s!", [$module_name]), 'forbidden');
         }
 
         if ( ! $this->auth->isAllowed("{$module_name}_{$section_name}")) {
-            throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к разделу %s!", [$section_name]));
+            throw new HttpException(403, $this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden');
         }
 
 
@@ -579,7 +574,7 @@ class Handler extends Common {
         $controller   = $this->getModuleController($module_name);
 
         if ( ! is_callable([$controller, "section{$section_name}"])) {
-            throw new HttpException(404, 'broken_section', $this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]));
+            throw new HttpException(404, $this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]), 'broken_section');
         }
 
         Registry::set('section', strtolower($section_name));
@@ -607,11 +602,11 @@ class Handler extends Common {
         $this->checkAuth();
 
         if ( ! $this->auth->isAllowed($module_name)) {
-            throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к модулю %s!", [$module_name]));
+            throw new HttpException(403, $this->_("У вас нет доступа к модулю %s!", [$module_name]), 'forbidden');
         }
 
         if ( ! $this->auth->isAllowed("{$module_name}_{$section_name}")) {
-            throw new HttpException(403, 'forbidden', $this->_("У вас нет доступа к разделу %s!", [$section_name]));
+            throw new HttpException(403, $this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden');
         }
 
         if (strpos($method_name, '_') !== false) {
@@ -625,7 +620,7 @@ class Handler extends Common {
         if ( ! is_callable([$handler, $method_name]) ||
              ! in_array($method_name, get_class_methods($handler))
         ) {
-            throw new HttpException(403, 'incorrect_handler_method', $this->_("Ошибка. Не найден метод обработчика: %s", [$method_name]));
+            throw new HttpException(403, $this->_("Ошибка. Не найден метод обработчика: %s", [$method_name]), 'incorrect_handler_method');
         }
 
         return $handler->$method_name($request);
@@ -684,7 +679,7 @@ class Handler extends Common {
         $refresh_token_exp = $this->config?->system?->auth?->refresh_token?->expiration ?: 7776000; // 90 дней
 
         if ( ! is_numeric($refresh_token_exp)) {
-            throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.refresh_token.expiration'), 'error_refresh_token', 500);
+            throw new HttpException(500, $this->_('Система настроена некорректно. Задайте system.auth.refresh_token.expiration'), 'error_refresh_token');
         }
 
         $sign      = $this->config?->system?->auth?->token_sign ?: 'gyctmn34ycrr0471yc4r';
@@ -708,7 +703,7 @@ class Handler extends Common {
         $access_token_exp  = $this->config?->system?->auth?->access_token?->expiration ?: 1800; // 30 минут
 
         if ( ! is_numeric($access_token_exp)) {
-            throw new HttpException($this->_('Система настроена некорректно. Задайте system.auth.access_token.expiration'), 'error_access_token', 500);
+            throw new HttpException(500, $this->_('Система настроена некорректно. Задайте system.auth.access_token.expiration'), 'error_access_token');
         }
 
         $sign      = $this->config?->system?->auth?->token_sign ?: 'gyctmn34ycrr0471yc4r';
@@ -731,7 +726,7 @@ class Handler extends Common {
         $file_path = DOC_ROOT. '/core3/front/src/img/default.png';
 
         if ( ! is_file($file_path)) {
-            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
+            throw new HttpException(404, $this->_('Указанный файл не найден'), 'file_not_found');
         }
 
         $file_content = file_get_contents($file_path);
@@ -739,7 +734,7 @@ class Handler extends Common {
         $file_hash    = md5($file_content);
 
         if ( ! $file_type || ! preg_match('~^image/.*~', $file_type)) {
-            throw new HttpException(404, 'file_is_not_image', $this->_('Указанный файл не является картинкой'));
+            throw new HttpException(404, $this->_('Указанный файл не является картинкой'), 'file_is_not_image');
         }
 
         $response = new Response();
@@ -778,15 +773,15 @@ class Handler extends Common {
         $file = $this->modAdmin->tableUsersFiles->getRowsByUser($user_id, 'avatar', 1);
 
         if ( ! $file) {
-            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
+            throw new HttpException(404, $this->_('Указанный файл не найден'), 'file_not_found');
         }
 
         if ( ! $file->content) {
-            throw new HttpException(500, 'file_broken', $this->_('Указанный файл сломан'));
+            throw new HttpException(500, $this->_('Указанный файл сломан'), 'file_broken');
         }
 
         if ( ! $file->thumb && ( ! $file->file_type || ! preg_match('~^image/.*~', $file->file_type))) {
-            throw new HttpException(404, 'file_is_not_image', $this->_('Указанный файл не является картинкой'));
+            throw new HttpException(404, $this->_('Указанный файл не является картинкой'), 'file_is_not_image');
         }
 
         $response = new Response();
@@ -940,7 +935,7 @@ class Handler extends Common {
     private function checkAuth(): void {
 
         if ( ! $this->auth) {
-            throw new HttpException(403, 'forbidden', $this->_('У вас нет доступа к системе'));
+            throw new HttpException(403, $this->_('У вас нет доступа к системе'), 'forbidden');
         }
     }
 }

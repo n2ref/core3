@@ -27,13 +27,12 @@ class System {
      * Перевод текста
      * @param string $text
      * @param array  $params
-     * @param string $domain
      * @return string|null
      */
-    public static function _(string $text, array $params = [], string $domain = 'core3'): ?string {
+    public static function _(string $text, array $params = []): ?string {
 
         $translate      = Registry::has('translate') ? Registry::get('translate') : null;
-        $translate_text = $translate?->tr($text, $domain);
+        $translate_text = $translate?->tr($text, 'core3');
 
         $func_params = [$translate_text];
 

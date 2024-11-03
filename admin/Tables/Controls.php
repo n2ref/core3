@@ -63,7 +63,7 @@ class Controls extends Table {
     public function deleteOld(int $days = 30): void {
 
         $this->delete([
-            'date_modified < ?' => date('Y-m-d H:i:s', strtotime("-{$days} days"))
+            'date_modify < ?' => date('Y-m-d H:i:s', strtotime("-{$days} days"))
         ]);
     }
 }

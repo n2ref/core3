@@ -34,6 +34,10 @@ class Form extends \CoreUI\Form {
      */
     public function __construct(string $module, string $section, string $form_id = null) {
 
+        $form_id = $form_id
+            ? "{$module}_{$section}_{$form_id}"
+            : "{$module}_{$section}";
+
         parent::__construct($form_id);
 
         $this->module  = $module;
@@ -161,11 +165,14 @@ class Form extends \CoreUI\Form {
 
     /**
      * Установка сообщения по умолчанию
+     * @param string|null $notice
      * @return void
      */
-    public function setOnSubmitSuccessDefault(): void {
+    public function setSuccessNotice(string $notice = null): void {
 
-        $this->setOnSubmitSuccess("CoreUI.notice.default('" . $this->system->_('Сохранено') . "')");
+        $notice = $notice ?: $this->system->_('Сохранено');
+
+        $this->setOnSubmitSuccess("CoreUI.notice.default('{$notice}')");
     }
 
 

@@ -228,7 +228,7 @@ class Common extends Db {
      * @throws ExceptionInterface
      * @throws Exception
      */
-    protected function event(string $event_name, array $data): array {
+    public function event(string $event_name, array $data): array {
 
         $modules = $this->modAdmin->tableModules->getRowsByActive();
         $results  = [];

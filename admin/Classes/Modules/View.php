@@ -51,7 +51,7 @@ class View extends Common {
 
         $table->addColumns([
             (new Column\Numbers()),
-            $table->getColumnToggle('is_active', $this->_('Активность'),   45, 'switchActive'),
+            $table->getColumnToggle('is_active', $this->_('Активность'),   45),
             (new Column\Link('title',            $this->_('Название')))->setMinWidth(200),
             (new Column\Text('Описание',         $this->_('Описание'),     300))->setMinWidth(100),
             (new Column\Text('name',             $this->_('Идентификатор')))->setWidth(200)->setShow(false),
@@ -151,7 +151,7 @@ class View extends Common {
 
         $table->addColumns([
             (new Column\Numbers()),
-            $table->getColumnToggle('is_active', $this->_('Активность'),   45, 'switchSectionActive'),
+            $table->getColumnToggle('is_active', $this->_('Активность'),   45),
             (new Column\Link('title',            $this->_('Название')))->setMinWidth(200),
             (new Column\Text('name',             $this->_('Идентификатор'))),
         ]);
@@ -161,7 +161,7 @@ class View extends Common {
             $table->setHeaderOut($table::FIRST)->right([
                 $table->getBtnAdd("{$window_url}/0")
                     ->setOnClick("CoreUI.panel.get('module').loadContent('{$content_url}/0', '{$window_url}/0')"),
-                $table->getBtnDelete('deleteSection')
+                $table->getBtnDelete("{$content_url}/delete")
             ]);
 
             $table->addColumns([
@@ -197,7 +197,7 @@ class View extends Common {
         $form = new Form('admin', 'modules', 'module');
         $form->setHandler('saveHand');
         $form->setSuccessLoadUrl($this->base_url);
-        $form->setOnSubmitSuccessDefault();
+        $form->setSuccessNotice();
 
         $form->setRecord([
             'title'            => '',
@@ -248,7 +248,7 @@ class View extends Common {
         $form = new Form('admin', 'modules', 'module');
         $form->setHandler('saveFile');
         $form->setSuccessLoadUrl($this->base_url);
-        $form->setOnSubmitSuccessDefault();
+        $form->setSuccessNotice();
 
         $form->setRecord([
             'file'       => null,
@@ -284,7 +284,7 @@ class View extends Common {
         $form = new Form('admin', 'modules', 'module');
         $form->setHandler('saveLink');
         $form->setSuccessLoadUrl($this->base_url);
-        $form->setOnSubmitSuccessDefault();
+        $form->setSuccessNotice();
 
         $form->setRecord([
             'link'       => '',
@@ -322,7 +322,7 @@ class View extends Common {
         $form->setTable($this->modAdmin->tableModules, $module->id);
         $form->setHandler('save', 'put');
         $form->setSuccessLoadUrl($this->base_url);
-        $form->setOnSubmitSuccessDefault();
+        $form->setSuccessNotice();
         $form->setWidthLabel(160);
 
 
@@ -370,7 +370,7 @@ class View extends Common {
         $form->setHandler('saveSection');
         $form->setTitle($module_section ? $this->_('Изменение раздела') : $this->_('Добавление раздела'));
         $form->setSuccessLoadUrl($this->base_url);
-        $form->setOnSubmitSuccessDefault();
+        $form->setSuccessNotice();
         $form->setWidthLabel(160);
 
 

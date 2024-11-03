@@ -11,14 +11,14 @@ class HttpException extends Exception {
 
 
     /**
-     * @param int    $http_code
-     * @param string $error_code
-     * @param string $message
+     * @param int         $http_code
+     * @param string      $message
+     * @param string|null $error_code
      */
-    public function __construct(int $http_code, string $error_code, string $message) {
+    public function __construct(int $http_code, string $message, string $error_code = null) {
 
         parent::__construct($message, $http_code);
-        $this->error_code = $error_code;
+        $this->error_code = (string)$error_code;
     }
 
 

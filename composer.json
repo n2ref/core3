@@ -75,7 +75,7 @@
   },
   "scripts": {
     "post-update-cmd": [
-      "wget https://download.db-ip.com/free/dbip-city-lite-2024-08.mmdb.gz -O ip.mmdb.gz && gzip -d ip.mmdb.gz && find . -name 'dbip-*.mmdb' -exec bash -c 'mv $0 ip.mmdb' {} \\;  && rm ip.mmdb.gz"
+      "wget https://download.db-ip.com/free/dbip-city-lite-2024-10.mmdb.gz -O ip.mmdb.gz && gzip -d ip.mmdb.gz && find . -name 'dbip-*.mmdb' -exec bash -c 'mv $0 ip.mmdb' {} \\;  && rm ip.mmdb.gz"
     ]
   }
 }

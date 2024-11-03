@@ -6,6 +6,7 @@ use CoreUI\Table\Abstract;
 use CoreUI\Table\Column;
 use CoreUI\Table\Column\Toggle;
 use CoreUI\Table\Control;
+use CoreUI\Table\Control\Button;
 
 
 /**
@@ -25,9 +26,9 @@ class Table extends \CoreUI\Table {
      */
     public function __construct(string $module, string $section, string $table_id = null) {
 
-        if (empty($table_id)) {
-            $table_id = crc32(uniqid());
-        }
+        $table_id = $table_id
+            ? "{$module}_{$section}_{$table_id}"
+            : "{$module}_{$section}";
 
         parent::__construct($table_id);
 
@@ -92,13 +93,95 @@ class Table extends \CoreUI\Table {
                     break;
 
                 case 'delete':
-                    $handler = is_string($options) ? $options : 'delete';
+                    $handler = is_string($options) ? $options : '';
                     $this->setHeaderIn($this::LAST)->right([
                         $this->getBtnDelete($handler)
                     ]);
                     break;
             }
         }
+
+        return $this;
+    }
+
+
+    /**
+     * @return $this
+     */
+    public function addControlsDefault(): self {
+
+        $this->setSearchLabelWidth(180);
+        $this->setMaxHeight(800);
+        $this->setShowScrollShadow(true);
+        $this->setSaveState(true);
+
+        $this->setFooterOut($this::FIRST)
+            ->left([
+                new Control\Total,
+                new Control\Pages(),
+            ])
+            ->right([
+                new Control\PageSize([ 25, 50, 100, 1000 ])
+            ]);
+
+        return $this;
+    }
+
+
+    /**
+     * @return $this
+     */
+    public function addControlSearch(): self {
+
+        $this->setHeaderIn($this::LAST)
+            ->left([
+                (new Control\Search())
+                    ->setButton('<i class="bi bi-search"></i> ' . $this->system->_('Поиск'), ['class' => 'btn'])
+                    ->setButtonClear('<i class="bi bi-x bi-x-lg text-danger"></i>', ['class' => 'btn'])
+            ]);
+
+        return $this;
+    }
+
+
+    /**
+     * @return $this
+     */
+    public function addControlColumns(): self {
+
+        $this->setHeaderIn($this::LAST)
+            ->left([
+                (new Control\Columns())
+                    ->setButton('<i class="bi bi-layout-three-columns"></i> ' . $this->system->_('Колонки'), ['class' => 'btn'])
+            ]);
+
+        return $this;
+    }
+
+
+    /**
+     * @param string $url
+     * @return $this
+     */
+    public function addControlBtnAdd(string $url = ''): self {
+
+        $this->setHeaderIn($this::LAST)->right([
+            $this->getBtnAdd($url)
+        ]);
+
+        return $this;
+    }
+
+
+    /**
+     * @param string $handler
+     * @return $this
+     */
+    public function addControlBtnDelete(string $handler = ''): self {
+
+        $this->setHeaderIn($this::LAST)->right([
+            $this->getBtnDelete($handler)
+        ]);
 
         return $this;
     }
@@ -122,16 +205,15 @@ class Table extends \CoreUI\Table {
 
     /**
      * Получение кнопки удаления
-     * @param string $handler
-     * @return Control\Button|null
+     * @param string $url
+     * @return Button|null
      */
-    public function getBtnDelete(string $handler = 'delete'):? Control\Button {
+    public function getBtnDelete(string $url):? Control\Button {
 
         if ( ! $this->auth->isAllowed("{$this->module}_{$this->section}", 'delete')) {
             return null;
         }
 
-        $url      = "{$this->module}/{$this->section}/handler/{$handler}";
         $table_id = $this->getId();
 
         return (new Control\Button('<i class="bi bi-trash"></i> ' . $this->system->_('Удалить')))
@@ -147,14 +229,15 @@ class Table extends \CoreUI\Table {
      * @param string $handler
      * @return Toggle
      */
-    public function getColumnToggle(string $field, string $label, int $width, string $handler): Column\Toggle {
+    public function getColumnToggle(string $field, string $label, int $width, string $handler = '/[id]'): Column\Toggle {
 
-        $switch_url = "{$this->module}/{$this->section}/handler/{$handler}?id=[id]";
+        $switch_url = "{$this->module}/{$this->section}{$handler}";
         $table_id   = $this->getId();
 
         $column = new Column\Toggle($field, $label, $width);
         $column->setOnChange("Core.ui.table.get('{$table_id}').switch('{$switch_url}', checked, id)")
             ->setValueY(1)
+            ->setValueN(0)
             ->setShowLabel(false);
 
         return $column;

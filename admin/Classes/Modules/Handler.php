@@ -1,23 +1,16 @@
 <?php
 namespace Core3\Mod\Admin\Classes\Modules;
-use Core3\Classes\Common;
-use Core3\Classes\Db\Row;
-use Core3\Classes\Form;
 use Core3\Classes\Request;
-use Core3\Classes\Table;
+use Core3\Classes\Response;
 use Core3\Exceptions\AppException;
-use CoreUI\Table\Filter;
-use CoreUI\Table\Column;
-use CoreUI\Table\Control as TableControl;
-use CoreUI\Form\Field;
+use Core3\Exceptions\HttpException;
 use CoreUI\Form\Control;
-use Laminas\Db\Sql\Select;
 
 
 /**
  *
  */
-class Handler extends Common {
+class Handler extends \Core3\Classes\Handler {
 
     private string $base_url    = "#/admin/modules";
     private string $handler_url = "admin/modules";
@@ -195,6 +188,38 @@ class Handler extends Common {
 
 
         return $content;
+    }
+
+
+    /**
+     * @param Request $request
+     * @param int     $module_id
+     * @return Response
+     * @throws AppException
+     * @throws HttpException
+     * @throws \Core3\Exceptions\Exception
+     */
+    public function switchActiveModule(Request $request, int $module_id): Response {
+
+        $this->checkHttpMethod($request, 'patch');
+        $controls = $request->getJsonContent();
+
+        if ( ! in_array($controls['checked'], ['1', '0'])) {
+            throw new HttpException(400, $this->_("Некорректные данные запроса"));
+        }
+
+        $module = $this->modAdmin->tableModules->getRowById($module_id);
+
+        if (empty($module)) {
+            throw new HttpException(400, $this->_("Указанный модуль не найден"));
+        }
+
+        $module->is_active = $controls['checked'];
+        $module->save();
+
+        return $this->getResponseSuccess([
+            'status' => 'success'
+        ]);
     }
 
 

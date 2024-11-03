@@ -341,10 +341,10 @@ class Validator extends System {
                                         foreach ($items as $item) {
                                             if ($item == 'alphanumeric') {
                                                 $items_title[] = 'a-Z, 0-9';
-                                                $items_test[]  = "\w\d";
+                                                $items_test[]  = "[a-zA-Z0-9]";
                                             } else {
                                                 $items_title[] = $item;
-                                                $items_test[]  = preg_quote($item);
+                                                $items_test[]  = $item;
                                             }
                                         }
 

@@ -5,11 +5,9 @@ use Core3\Classes\Request;
 use Core3\Classes\Response;
 use Core3\Classes\Table;
 use Core3\Classes\Tools;
-use Core3\Exceptions\AppException;
 use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
 use CoreUI\Table\Adapters\Mysql\Search;
-use Gumlet\ImageResizeException;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\RowGateway\AbstractRowGateway;
 
@@ -19,7 +17,7 @@ use Laminas\Db\RowGateway\AbstractRowGateway;
  */
 class Handler extends Classes\Handler {
 
-    private string $base_url = "#/admin/users";
+    private string $base_url = "admin/users";
 
     /**
      * @param Request $request
@@ -30,7 +28,7 @@ class Handler extends Classes\Handler {
 
         $content   = [];
         $content[] = $this->getJsModule('admin', 'assets/users/js/admin.users.js');
-        $content[] = (new View())->getTable($this->base_url);
+        $content[] = (new View())->getTable();
 
         $panel = new \CoreUI\Panel();
         $panel->setContent($content);
@@ -44,7 +42,6 @@ class Handler extends Classes\Handler {
      * @param Request $request
      * @param int     $user_id
      * @return Response
-     * @throws AppException
      * @throws HttpException
      * @throws Exception
      * @throws ExceptionInterface
@@ -55,15 +52,15 @@ class Handler extends Classes\Handler {
         $this->checkVersion($this->modAdmin->tableUsers, $request);
 
         $fields = [
-            'email'        => 'email: Email',
-            'role_id'      => 'req,int(1-): Роль',
-            'pass'         => 'string(4-): Пароль',
-            'fname'        => 'string(0-255): Имя',
-            'lname'        => 'string(0-255): Фамилия',
-            'mname'        => 'string(0-255): Отчество',
-            'is_admin'     => 'string(1|0): Администратор безопасности',
-            'is_active'    => 'string(1|0): Активен',
-            'avatar_type'  => 'string(none|generate|upload): Аватар',
+            'email'       => 'email: ' . $this->_('Email'),
+            'role_id'     => 'req,int(1-): ' . $this->_('Роль'),
+            'pass'        => 'string(4-): ' . $this->_('Пароль'),
+            'fname'       => 'string(0-255): ' . $this->_('Имя'),
+            'lname'       => 'string(0-255): ' . $this->_('Фамилия'),
+            'mname'       => 'string(0-255): ' . $this->_('Отчество'),
+            'is_admin'    => 'string(1|0): ' . $this->_('Администратор безопасности'),
+            'is_active'   => 'string(1|0): ' . $this->_('Активен'),
+            'avatar_type' => 'string(none|generate|upload): ' . $this->_('Аватар'),
         ];
 
         $controls = $request->getFormContent() ?? [];
@@ -83,7 +80,7 @@ class Handler extends Classes\Handler {
         if ( ! empty($controls['email']) &&
              ! $this->modAdmin->tableUsers->isUniqueEmail($controls['email'], $user_id)
         ) {
-            throw new AppException($this->_("Пользователь с таким email уже существует."));
+            throw new HttpException(400, $this->_("Пользователь с таким email уже существует."));
         }
 
         if ( ! empty($controls['pass'])) {
@@ -93,33 +90,19 @@ class Handler extends Classes\Handler {
             unset($controls['pass']);
         }
 
-        $controls['name'] = trim(implode(' ', [
-            $controls['lname'] ?? '',
-            $controls['fname'] ?? '',
-            $controls['mname'] ?? ''
-        ]));
-
 
         $this->db->beginTransaction();
         try {
-            $row_old = $this->modAdmin->tableUsers->getRowById($user_id);
-            $row     = $this->saveData($this->modAdmin->tableUsers, $controls, $user_id);
+            $user = $this->saveData($this->modAdmin->tableUsers, $controls, $user_id);
 
             if ($controls['avatar_type'] != 'upload') {
                 $avatar = [];
             }
 
-            $this->saveFiles($this->modAdmin->tableUsersFiles, $row->id, 'avatar', $avatar);
+            $this->saveFiles($this->modAdmin->tableUsersFiles, $user->id, 'avatar', $avatar);
 
             if ($controls['avatar_type'] == 'generate') {
-                $this->generateAvatar($row);
-            }
-
-            if ($row_old->is_active != $row->is_active) {
-                $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
-                    'id'        => $row->id,
-                    'is_active' => $row->is_active == '1',
-                ]);
+                (new Files())->generateAvatar($user);
             }
 
             $this->db->commit();
@@ -130,7 +113,7 @@ class Handler extends Classes\Handler {
         }
 
         return $this->getResponseSuccess([
-            'id' => $row->id
+            'id' => $user->id
         ]);
     }
 
@@ -139,7 +122,6 @@ class Handler extends Classes\Handler {
      * Сохранение пользователя
      * @param Request $request
      * @return Response
-     * @throws AppException
      * @throws HttpException
      * @throws Exception
      * @throws ExceptionInterface
@@ -178,38 +160,27 @@ class Handler extends Classes\Handler {
         }
 
         if ( ! $this->modAdmin->tableUsers->isUniqueLogin($controls['login'])) {
-            throw new AppException($this->_("Пользователь с таким логином уже существует"));
+            throw new HttpException(400, $this->_("Пользователь с таким логином уже существует"));
         }
 
         if ( ! empty($controls['email']) &&
              ! $this->modAdmin->tableUsers->isUniqueEmail($controls['email'])
         ) {
-            throw new AppException($this->_("Пользователь с таким email уже существует"));
+            throw new HttpException(400, $this->_("Пользователь с таким email уже существует"));
         }
 
         $controls['pass'] = Tools::passSalt(md5($controls['pass']));
-        $controls['name'] = trim(implode(' ', [
-            $controls['lname'] ?? '',
-            $controls['fname'] ?? '',
-            $controls['mname'] ?? ''
-        ]));
-
 
         $this->db->beginTransaction();
         try {
-            $row = $this->saveData($this->modAdmin->tableUsers, $controls);
+            $user = $this->saveData($this->modAdmin->tableUsers, $controls);
 
             if ($controls['avatar_type'] == 'upload') {
-                $this->saveFiles($this->modAdmin->tableUsersFiles, $row->id, 'avatar', $avatar);
+                $this->saveFiles($this->modAdmin->tableUsersFiles, $user->id, 'avatar', $avatar);
 
             } elseif ($controls['avatar_type'] == 'generate') {
-                $this->generateAvatar($row);
+                (new Files())->generateAvatar($user);
             }
-
-            $this->event($this->modAdmin->tableUsers->getTable() . '_active', [
-                'id'        => $row->id,
-                'is_active' => $controls['is_active'] == '1',
-            ]);
 
             $this->db->commit();
 
@@ -219,7 +190,7 @@ class Handler extends Classes\Handler {
         }
 
         return $this->getResponseSuccess([
-            'id' => $row->id
+            'id' => $user->id
         ]);
     }
 
@@ -230,26 +201,26 @@ class Handler extends Classes\Handler {
      * @param int     $user_id
      * @return Response
      * @throws Exception
-     * @throws ExceptionInterface
      * @throws \Core3\Exceptions\DbException
-     * @throws AppException
+     * @throws HttpException
      */
     public function switchUserActive(Request $request, int $user_id): Response {
 
         $this->checkHttpMethod($request, 'patch');
         $controls = $request->getJsonContent();
 
-        if ( ! in_array($controls['checked'], ['Y', 'N'])) {
-            return $this->getResponseError([ $this->_("Некорректные данные запроса") ]);
+        if ( ! in_array($controls['checked'], ['1', '0'])) {
+            throw new HttpException(400, $this->_("Некорректные данные запроса"));
         }
 
         $user = $this->modAdmin->tableUsers->getRowById($user_id);
 
         if (empty($user)) {
-            throw new AppException($this->_('Указанный пользователь не найден'));
+            throw new HttpException(400, $this->_("Указанный пользователь не найден"));
         }
 
-        $this->modAdmin->modelUsers->switchActive($user_id, $controls['checked'] == 'Y');
+        $user->is_active = $controls['checked'];
+        $user->save();
 
         return $this->getResponseSuccess([
             'status' => 'success'
@@ -264,14 +235,14 @@ class Handler extends Classes\Handler {
      * @return Response
      * @throws Exception
      * @throws \Core3\Exceptions\DbException
-     * @throws AppException
+     * @throws HttpException
      */
     public function getAvatarDownload(Request $request, int $user_id): Response {
 
         $file = $this->modAdmin->tableUsersFiles->getRowsByUser($user_id);
 
         if ( ! $file) {
-            throw new HttpException(404, 'file_not_found', $this->_('Указанный файл не найден'));
+            throw new HttpException(404, $this->_('Указанный файл не найден'), 'file_not_found');
         }
 
         return $this->getFileDownload($file);
@@ -283,8 +254,7 @@ class Handler extends Classes\Handler {
      * @param Request $request
      * @return Response
      * @throws Exception
-     * @throws ExceptionInterface
-     * @throws AppException
+     * @throws HttpException
      */
     public function deleteUsersTable(Request $request): Response {
 
@@ -293,16 +263,16 @@ class Handler extends Classes\Handler {
         $controls = $request->getJsonContent();
 
         if (empty($controls['id'])) {
-            return $this->getResponseError([ $this->_("Не указаны пользователи") ]);
+            throw new HttpException(400, $this->_("Не указаны пользователи"));
         }
 
         if ( ! is_array($controls['id'])) {
-            return $this->getResponseError([ $this->_("Некорректный список пользователей") ]);
+            throw new HttpException(400, $this->_("Некорректный список пользователей"));
         }
 
         foreach ($controls['id'] as $user_id) {
             if ( ! empty($user_id) && is_numeric($user_id)) {
-                $this->modAdmin->modelUsers->delete((int)$user_id);
+                $this->modAdmin->tableUsers->getRowById((int)$user_id)?->delete();
             }
         }
 
@@ -398,13 +368,13 @@ class Handler extends Classes\Handler {
      * @param Request $request
      * @param int     $user_id
      * @return array
-     * @throws AppException
+     * @throws HttpException
      * @throws Exception
      */
     public function getUser(Request $request, int $user_id): array {
 
         $breadcrumb = new \CoreUI\Breadcrumb();
-        $breadcrumb->addItem($this->_('Пользователи'), $this->base_url);
+        $breadcrumb->addItem($this->_('Пользователи'), "#/{$this->base_url}");
         $breadcrumb->addItem($this->_('Пользователь'));
 
         $result   = [];
@@ -420,18 +390,18 @@ class Handler extends Classes\Handler {
             $user = $this->modAdmin->tableUsers->getRowById($user_id);
 
             if (empty($user)) {
-                throw new AppException($this->_('Указанный пользователь не найден'));
+                throw new HttpException(404, $this->_('Указанный пользователь не найден'));
             }
 
             $name   = trim("{$user->lname} {$user->fname} {$user->mname}");
             $avatar = "<img src=\"sys/user/{$user->id}/avatar\" style=\"width: 32px;height: 32px\" class=\"rounded-circle border border-secondary-subtle\"> ";
             $panel->setTitle($avatar . ($name ?: $user->login), $this->_('Редактирование пользователя'));
 
-            $content[] = $view->getForm($this->base_url, $user);
+            $content[] = $view->getForm($user);
 
         } else {
             $panel->setTitle($this->_('Добавление пользователя'));
-            $content[] = $view->getFormNew($this->base_url);
+            $content[] = $view->getFormNew();
         }
 
         $panel->setContent($content);
@@ -452,13 +422,13 @@ class Handler extends Classes\Handler {
         $user_id = $request->getPost()['user_id'] ?? '';
 
         if (empty($user_id)) {
-            throw new HttpException(400, 'user_id_not_found', $this->_('Не задан id пользователя'));
+            throw new HttpException(400, $this->_('Не задан id пользователя'), 'user_id_not_found');
         }
 
         $user = $this->modAdmin->tableUsers->getRowById($user_id);
 
         if (empty($user)) {
-            throw new HttpException(400, 'user_not_found', $this->_('Указанный пользователь не найден'));
+            throw new HttpException(400, $this->_('Указанный пользователь не найден'), 'user_not_found');
         }
 
         $session_id = $this->auth->getSessionId();
@@ -469,32 +439,6 @@ class Handler extends Classes\Handler {
 
         return $this->getResponseSuccess([
             'status' => 'success'
-        ]);
-    }
-
-
-    /**
-     * Формирование аватара
-     * @param AbstractRowGateway $user
-     * @return void
-     */
-    private function generateAvatar(AbstractRowGateway $user): void {
-
-        $icon = new \Jdenticon\Identicon();
-        $icon->setValue($user->login);
-        $icon->setSize(200);
-
-        $file = $icon->getImageData('png');
-
-        $this->modAdmin->tableUsersFiles->insert([
-            'ref_id'     => $user->id,
-            'file_name'  => 'avatar.png',
-            'file_size'  => strlen($file),
-            'file_hash'  => md5($file),
-            'file_type'  => 'image/png',
-            'field_name' => 'avatar',
-            'thumb'      => null,
-            'content'    => $file,
         ]);
     }
 }

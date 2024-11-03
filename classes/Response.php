@@ -33,20 +33,22 @@ class Response {
 
 
     /**
-     * @return void
+     * @return self
      */
-    public function setContentTypeJson(): void {
+    public function setContentTypeJson(): self {
 
         $this->setHeader('Content-Type', 'application/json; charset=utf-8');
+        return $this;
     }
 
 
     /**
-     * @return void
+     * @return self
      */
-    public function setContentTypeHtml(): void {
+    public function setContentTypeHtml(): self {
 
         $this->setHeader('Content-Type', 'text/html');
+        return $this;
     }
 
 
@@ -61,29 +63,33 @@ class Response {
 
     /**
      * @param array $headers
-     * @return void
+     * @return self
      */
-    public function setHeaders(array $headers): void {
+    public function setHeaders(array $headers): self {
 
         foreach ($headers as $name => $value) {
             if (is_scalar($value)) {
                 $this->setHeader($name, $value);
             }
         }
+
+        return $this;
     }
 
 
     /**
      * @param string $name
      * @param string $value
-     * @return void
+     * @return self
      */
-    public function setHeader(string $name, string $value): void {
+    public function setHeader(string $name, string $value): self {
 
         $name = trim($name);
         $name = ucwords(strtolower($name));
 
         $this->headers[$name] = trim($value);
+
+        return $this;
     }
 
 
@@ -108,56 +114,64 @@ class Response {
 
     /**
      * @param mixed $content
-     * @return void
+     * @return self
      * @throws Exception
      */
-    public function setContent(mixed $content): void {
+    public function setContent(mixed $content): self {
 
         if ( ! is_scalar($content)) {
             throw new Exception('Incorrect content type');
         }
 
         $this->content = $content;
+
+        return $this;
     }
 
 
     /**
      * @param mixed $content
-     * @return void
+     * @return self
      */
-    public function setContentJson(mixed $content): void {
+    public function setContentJson(mixed $content): self {
 
         $this->content = json_encode($content, JSON_UNESCAPED_UNICODE);
+
+        return $this;
     }
 
 
     /**
      * @param mixed $content
-     * @return void
+     * @return self
      * @throws Exception
      */
-    public function appendContent(mixed $content): void {
+    public function appendContent(mixed $content): self {
 
         if ( ! is_scalar($content)) {
             throw new Exception('Incorrect content type');
         }
 
         $this->content = $content . $this->content;
+
+        return $this;
     }
 
 
     /**
      * @param mixed $content
-     * @return void
+     * @return self
      * @throws Exception
      */
-    public function prependContent(mixed $content): void {
+    public function prependContent(mixed $content): self {
 
         if ( ! is_scalar($content)) {
             throw new Exception('Incorrect content type');
         }
 
         $this->content .= $content;
+
+        return $this;
     }
 
 

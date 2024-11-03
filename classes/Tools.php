@@ -306,14 +306,22 @@ class Tools {
 
         $args = [];
 
-        foreach ($fields as $field) {
+        foreach ($fields as $name => $field) {
 
-            if ( ! isset($field['field']) ||
-                 ! isset($field['order']) ||
-                 ! is_string($field['field']) ||
-                 ! is_string($field['order'])
-            ) {
-                continue;
+            if (is_array($field)) {
+                if ( ! isset($field['field']) ||
+                     ! isset($field['order']) ||
+                     ! is_string($field['field']) ||
+                     ! is_string($field['order'])
+                ) {
+                    continue;
+                }
+            } else {
+                if ( ! is_string($field)) {
+                    continue;
+                }
+
+                $field = ['field' => $name, 'order' => $field];
             }
 
             $args[] = array_map(function($row) use($field) {
