@@ -61,7 +61,7 @@ class coreUiTableInstance {
                                         CoreUI.alert.danger(response.error_message || Core._("Ошибка. Попробуйте обновить страницу и выполнить удаление еще раз."));
 
                                     } else {
-                                        CoreUI.notice.defalt(Core._('Выбранные записи удалены'))
+                                        CoreUI.notice.default(Core._('Выбранные записи удалены'))
 
                                         if (callbackSuccess && typeof callbackSuccess == 'function') {
                                             callbackSuccess();
@@ -134,7 +134,7 @@ class coreUiTableInstance {
                             dataType   : 'json',
                             contentType: "application/json; charset=utf-8",
                             data       : JSON.stringify({
-                                checked: isChecked ? 'Y' : 'N',
+                                checked: isChecked ? '1' : '0',
                             }),
                             success    : function (response) {
                                 if (response.status !== 'success') {

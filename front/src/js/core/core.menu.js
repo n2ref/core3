@@ -848,6 +848,10 @@ let coreMenu = {
      */
     _onError: function (event) {
 
+        if (typeof event.error === 'undefined') {
+            return;
+        }
+
         let accessToken = coreTokens.getAccessToken();
 
         if (accessToken) {
@@ -873,7 +877,6 @@ let coreMenu = {
             let client = coreTools.getClientInfo();
             coreMenu._errors.push({
                 url: location.href,
-                time: coreTools.formatDate(new Date(), 'HH:mm:ss'),
                 client: client,
                 level: 'error',
                 error: {
