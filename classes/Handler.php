@@ -1,17 +1,15 @@
 <?php
 namespace Core3\Classes;
 use Core3\Classes\Db\Row;
+use Core3\Classes\Db\RowFile;
 use Core3\Classes\Db\Table;
+use Core3\Classes\Db\TableFiles;
 use Core3\Exceptions\AppException;
-use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
 use Gumlet\ImageResize;
 use Gumlet\ImageResizeException;
-use Laminas\Cache\Exception\ExceptionInterface;
-use Laminas\Db\RowGateway\AbstractRowGateway;
 use Laminas\Db\Sql\Select;
-use Laminas\Db\TableGateway\TableGateway;
 
 
 /**
@@ -22,31 +20,33 @@ class Handler extends Common {
 
     /**
      * Скачивание файла
-     * @param Row $file
+     * @param RowFile $file
      * @return Response
      * @throws Exception
      * @throws HttpException
      */
-    public function getFileDownload(Row $file): Response {
+    public function getFileDownload(RowFile $file): Response {
 
-        if ( ! $file->content) {
+        $content = $file->getContent();
+
+        if (is_null($content)) {
             throw new HttpException(500, $this->_('Указанный файл сломан'), 'file_broken');
         }
 
         $response = new Response();
 
-        if ($file->file_type) {
-            $response->setHeader('Content-Type', $file->file_type);
+        if ($file->getType()) {
+            $response->setHeader('Content-Type', $file->getType());
         }
 
-        $filename_encode = rawurlencode($file->file_name);
-        $response->setHeader('Content-Disposition', "attachment; filename=\"{$file->file_name}\"; filename*=utf-8''{$filename_encode}\"");
+        $filename_encode = rawurlencode($file->getName());
+        $response->setHeader('Content-Disposition', "attachment; filename=\"{$file->getName()}\"; filename*=utf-8''{$filename_encode}\"");
 
-        if ($file->file_size) {
-            $response->setHeader('Content-Length', $file->file_size);
+        if ($file->getSize()) {
+            $response->setHeader('Content-Length', $file->getSize());
         }
 
-        $response->setContent($file->content);
+        $response->setContent($content);
 
         return $response;
     }
@@ -54,68 +54,67 @@ class Handler extends Common {
 
     /**
      * Получение файла для предпросмотра
-     * @param Row $file
+     * @param RowFile $file
      * @return Response
      * @throws Exception
      * @throws HttpException
      * @throws ImageResizeException
      */
-    public function getFilePreview(Row $file): Response {
+    public function getFilePreview(RowFile $file): Response {
 
-        if ( ! isset($file->content) ||
-             ! isset($file->thumb) ||
-             ! isset($file->file_name) ||
-             ! isset($file->file_size) ||
-             ! isset($file->file_hash) ||
-             ! isset($file->file_type) ||
-             ! isset($file->field_name)
-        ) {
-            throw new HttpException(404, $this->_('Указанная таблица не соответствует стандартам'), 'table_incorrect');
-        }
-
-        if ( ! $file->content) {
-            throw new HttpException(500, $this->_('Указанный файл сломан'), 'file_broken');
-        }
-
-        if ( ! $file->thumb && ( ! $file->file_type || ! preg_match('~^image/.*~', $file->file_type))) {
+        if ( ! $file->getThumb() && $file->isTypeImage()) {
             throw new HttpException(404, $this->_('Указанный файл не является картинкой'), 'file_is_not_image');
         }
 
         $response = new Response();
 
-        if ($file->file_type) {
-            $response->setHeader('Content-Type', $file->file_type);
+        if ($file->getType()) {
+            $response->setHeader('Content-Type', $file->getType());
         }
 
-        if ($file->file_name) {
-            $filename_encode = rawurlencode($file->file_name);
-            $response->setHeader('Content-Disposition', "filename=\"{$file->file_name}\"; filename*=utf-8''{$filename_encode}\"");
+        if ($file->getName()) {
+            $filename_encode = rawurlencode($file->getName());
+            $response->setHeader('Content-Disposition', "filename=\"{$file->getName()}\"; filename*=utf-8''{$filename_encode}\"");
         }
 
 
-        if ($file->file_hash) {
-            $etagHeader = (isset($_SERVER['HTTP_IF_NONE_MATCH']) ? trim($_SERVER['HTTP_IF_NONE_MATCH']) : false);
+        if ($file->getHash()) {
+            $etagHeader = isset($_SERVER['HTTP_IF_NONE_MATCH'])
+                ? trim($_SERVER['HTTP_IF_NONE_MATCH'])
+                : false;
 
-            $response->setHeader('Etag',          $file->file_hash);
+            $response->setHeader('Etag',          $file->getHash());
             $response->setHeader('Cache-Control', 'public');
 
-            //check if page has changed. If not, send 304 and exit
-            if ($etagHeader == $file->file_hash) {
+            if ($etagHeader == $file->getHash()) {
                 $response->setHttpCode(304);
                 return $response;
             }
         }
 
-        if ( ! $file->thumb) {
-            $image = ImageResize::createFromString($file->content);
+        if ( ! $file->getThumb()) {
+            $content = $file->getContent();
+
+            if ( ! $content) {
+                throw new HttpException(500, $this->_('Указанный файл сломан'), 'file_broken');
+            }
+
+            $image = ImageResize::createFromString($content);
             $image->resizeToBestFit(80, 80);
 
-            $file->thumb = $image->getImageAsString(IMAGETYPE_PNG);
+            $meta           = $file->getMeta();
+            $meta['width']  = $image->getSourceWidth();
+            $meta['height'] = $image->getSourceHeight();
+
+            $table_fields = $file->getTable()->getFields();
+
+            $file->{$table_fields['meta']}  = json_encode($meta);
+            $file->{$table_fields['thumb']} = $image->getImageAsString(IMAGETYPE_PNG);
             $file->save();
         }
 
-        $response->setHeader('Content-Length', strlen($file->thumb));
-        $response->setContent($file->thumb);
+        $response->setHeader('Content-Length', strlen($file->getThumb()));
+        $response->setContent($file->getThumb());
 
         return $response;
     }
@@ -141,6 +140,9 @@ class Handler extends Common {
 
         if ($file['error']) {
             throw new AppException($this->_('Ошибка загрузки файла'));
+        }
+        if ( ! $this->config?->system?->tmp) {
+            throw new AppException($this->_('Не заполнена обязательная настройка: system.tmp'));
         }
         if ( ! is_dir($this->config->system->tmp)) {
             throw new AppException($this->_("Временная директория не найдена: %s", [$this->config->system->tmp]));
@@ -349,14 +351,15 @@ class Handler extends Common {
 
     /**
      * Сохранение файлов
-     * @param Table  $table
-     * @param int    $row_id
-     * @param string $field_name
-     * @param array  $files
+     * @param TableFiles  $table
+     * @param int         $row_id
+     * @param array       $files
+     * @param string|null $object_type
      * @return void
      * @throws AppException
+     * @throws Exception
      */
-    protected function saveFiles(Table $table, int $row_id, string $field_name, array $files): void {
+    protected function saveFiles(TableFiles $table, int $row_id, array $files, string $object_type = null): void {
 
         $files_id = [];
 
@@ -368,7 +371,7 @@ class Handler extends Common {
                 $files_id[] = $file['id'];
 
             } else {
-                $file_id = $this->saveFile($table, $row_id, $field_name, $file);
+                $file_id = $this->saveFile($table, $row_id, $file, $object_type);
 
                 if ($file_id) {
                     $files_id[] = $file_id;
@@ -376,10 +379,12 @@ class Handler extends Common {
             }
         }
 
-        $rows = $table->select(function (Select $select) use ($row_id, $field_name, $files_id) {
+        $fields = $table->getFields();
+
+        $rows = $table->select(function (Select $select) use ($row_id, $object_type, $files_id, $fields) {
             $select->where([
-                'ref_id'     => $row_id,
-                'field_name' => $field_name,
+                $fields['ref_id']      => $row_id,
+                $fields['object_type'] => $object_type,
             ]);
 
             if ($files_id) {
@@ -395,14 +400,15 @@ class Handler extends Common {
 
     /**
      * Сохранение файла
-     * @param Table  $table
-     * @param int    $row_id
-     * @param string $field_name
-     * @param array  $file
+     * @param TableFiles  $table
+     * @param int         $row_id
+     * @param array       $file
+     * @param string|null $object_type
      * @return int|null
      * @throws AppException
+     * @throws Exception
      */
-    protected function saveFile(Table $table, int $row_id, string $field_name, array $file):? int {
+    protected function saveFile(TableFiles $table, int $row_id, array $file, string $object_type = null):? int {
 
         if ( ! empty($file['upload']) &&
              ! empty($file['upload']['file_name']) &&
@@ -416,19 +422,21 @@ class Handler extends Common {
                 throw new AppException( $this->_('Не удалось получить файл: %s', $file_name) );
             }
 
-            if ( ! is_file($file_path) || ! is_writable($file_path)) {
+            if ( ! is_file($file_path) || ! is_readable($file_path)) {
                 throw new AppException( $this->_('Загруженный вами файл не найден: %s', $file_name) );
             }
 
+            $fields = $table->getFields();
+
             $table->insert([
-                'ref_id'     => $row_id,
-                'file_name'  => ! empty($file['name']) && is_string($file['name']) ? $file['name'] : $file_name,
-                'file_size'  => filesize($file_path),
-                'file_hash'  => md5_file($file_path),
-                'file_type'  => ! empty($file['type']) && is_string($file['type']) ? $file['type'] : mime_content_type($file_path),
-                'field_name' => $field_name,
-                'thumb'      => null,
-                'content'    => file_get_contents($file_path),
+                $fields['ref_id']      => $row_id,
+                $fields['name']        => ! empty($file['name']) && is_string($file['name']) ? $file['name'] : $file_name,
+                $fields['size']        => filesize($file_path),
+                $fields['hash']        => md5_file($file_path),
+                $fields['type']        => ! empty($file['type']) && is_string($file['type']) ? $file['type'] : mime_content_type($file_path),
+                $fields['object_type'] => $object_type,
+                $fields['thumb']       => null,
+                $fields['content']     => file_get_contents($file_path),
             ]);
 
             unlink($file_path);

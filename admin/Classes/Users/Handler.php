@@ -66,10 +66,10 @@ class Handler extends Classes\Handler {
         $controls = $request->getFormContent() ?? [];
         $controls = $this->clearData($controls);
 
-        $avatar = null;
+        $files = null;
 
         if ( ! empty($controls['avatar'])) {
-            $avatar = $controls['avatar'];
+            $files = $controls['avatar'];
             unset($controls['avatar']);
         }
 
@@ -93,15 +93,16 @@ class Handler extends Classes\Handler {
 
         $this->db->beginTransaction();
         try {
-            $user = $this->saveData($this->modAdmin->tableUsers, $controls, $user_id);
+            $this->modAdmin->modelUsers->update($user_id, $controls);
 
             if ($controls['avatar_type'] != 'upload') {
-                $avatar = [];
+                $files = [];
             }
 
-            $this->saveFiles($this->modAdmin->tableUsersFiles, $user->id, 'avatar', $avatar);
+            $this->saveFiles($this->modAdmin->tableUsersFiles, $user_id, $files, 'avatar');
 
             if ($controls['avatar_type'] == 'generate') {
+                $user = $this->modAdmin->tableUsers->getRowById($user_id);
                 (new Files())->generateAvatar($user);
             }
 
@@ -113,7 +114,7 @@ class Handler extends Classes\Handler {
         }
 
         return $this->getResponseSuccess([
-            'id' => $user->id
+            'id' => $user_id
         ]);
     }
 
@@ -124,7 +125,6 @@ class Handler extends Classes\Handler {
      * @return Response
      * @throws HttpException
      * @throws Exception
-     * @throws ExceptionInterface
      */
 	public function saveUserNew(Request $request): Response {
 
@@ -148,10 +148,10 @@ class Handler extends Classes\Handler {
         $controls = $this->clearData($controls);
 
 
-        $avatar = null;
+        $files = null;
 
         if ( ! empty($controls['avatar'])) {
-            $avatar = $controls['avatar'];
+            $files = $controls['avatar'];
             unset($controls['avatar']);
         }
 
@@ -173,12 +173,13 @@ class Handler extends Classes\Handler {
 
         $this->db->beginTransaction();
         try {
-            $user = $this->saveData($this->modAdmin->tableUsers, $controls);
+            $user_id = $this->modAdmin->modelUsers->create($controls);
 
             if ($controls['avatar_type'] == 'upload') {
-                $this->saveFiles($this->modAdmin->tableUsersFiles, $user->id, 'avatar', $avatar);
+                $this->saveFiles($this->modAdmin->tableUsersFiles, $user_id, $files, 'avatar');
 
             } elseif ($controls['avatar_type'] == 'generate') {
+                $user = $this->modAdmin->tableUsers->getRowById($user_id);
                 (new Files())->generateAvatar($user);
             }
 
@@ -190,7 +191,7 @@ class Handler extends Classes\Handler {
         }
 
         return $this->getResponseSuccess([
-            'id' => $user->id
+            'id' => $user_id
         ]);
     }
 
@@ -256,7 +257,7 @@ class Handler extends Classes\Handler {
      * @throws Exception
      * @throws HttpException
      */
-    public function deleteUsersTable(Request $request): Response {
+    public function deleteUsers(Request $request): Response {
 
         $this->checkHttpMethod($request, 'delete');
 
@@ -288,7 +289,7 @@ class Handler extends Classes\Handler {
      * @return Response
      * @throws \CoreUI\Table\Exception
      */
-    public function getUsersTable(Request $request): Response {
+    public function getUsersRecords(Request $request): Response {
 
         $table = new Table\Db($request);
 
@@ -341,6 +342,8 @@ class Handler extends Classes\Handler {
                     LIMIT 1) AS date_activity
             FROM core_users AS u
                 LEFT JOIN core_roles AS r ON u.role_id = r.id
+            ORDER BY u.is_active DESC,
+                     u.login
         ");
 
         $records = $table->fetchRecords();
@@ -370,6 +373,7 @@ class Handler extends Classes\Handler {
      * @return array
      * @throws HttpException
      * @throws Exception
+     * @throws \Exception
      */
     public function getUser(Request $request, int $user_id): array {
 

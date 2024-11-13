@@ -159,7 +159,10 @@ class Users extends Common {
         $user = $this->modAdmin->tableUsers->getRowById($user_id);
 
         if ($user) {
-            $fields  = [ 'role_id', 'email', 'fname', 'lname', 'mname', 'is_active', ];
+            $fields  = [
+                'role_id', 'email', 'fname', 'lname', 'mname',
+                'pass', 'is_active', 'avatar_type', 'is_admin'
+            ];
             $is_save = false;
 
             foreach ($fields as $field) {
@@ -173,6 +176,12 @@ class Users extends Common {
             }
 
             if ($is_save) {
+                $user->name = trim(implode(' ', [
+                    trim($user->lname ?: ''),
+                    trim($user->fname ?: ''),
+                    trim($user->mname ?: ''),
+                ])) ?: null;
+
                 $user->save();
             }
         }

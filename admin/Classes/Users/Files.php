@@ -24,14 +24,14 @@ class Files extends Common {
         $file = $icon->getImageData('png');
 
         $this->modAdmin->tableUsersFiles->insert([
-            'ref_id'     => $user->id,
-            'file_name'  => 'avatar.png',
-            'file_size'  => strlen($file),
-            'file_hash'  => md5($file),
-            'file_type'  => 'image/png',
-            'field_name' => 'avatar',
-            'thumb'      => null,
-            'content'    => $file,
+            'ref_id'      => $user->id,
+            'name'        => 'avatar.png',
+            'size'        => strlen($file),
+            'hash'        => md5($file),
+            'type'        => 'image/png',
+            'object_type' => 'avatar',
+            'thumb'       => null,
+            'content'     => $file,
         ]);
     }
 }

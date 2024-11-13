@@ -49,6 +49,7 @@
     "n2ref/coreui-layout": "1.0.x-dev",
     "n2ref/coreui-breadcrumb": "v1.0.1",
 
+    "aws/aws-sdk-php": "3.325.3",
     "geoip2/geoip2": "v3.0.0",
     "gumlet/php-image-resize": "2.0.4",
     "jdenticon/jdenticon": "1.0.2",

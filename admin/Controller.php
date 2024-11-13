@@ -259,8 +259,8 @@ class Controller extends Common {
         $router = new Router();
         $router->route('/admin/users')->get([Users\Handler::class, 'getUsers']);
         $router->route('/admin/users/records')
-            ->get([   Users\Handler::class, 'getUsersTable'])
-            ->delete([Users\Handler::class, 'deleteUsersTable']);
+            ->get([Users\Handler::class, 'getUsersRecords'])
+            ->delete([Users\Handler::class, 'deleteUsers']);
 
         $router->route('/admin/users/login')->post([Users\Handler::class, 'loginUser']);
         $router->route('/admin/users/avatar/upload')->post([Users\Handler::class, 'uploadFile']);

@@ -776,43 +776,50 @@ class Handler extends Common {
             throw new HttpException(404, $this->_('Указанный файл не найден'), 'file_not_found');
         }
 
-        if ( ! $file->content) {
-            throw new HttpException(500, $this->_('Указанный файл сломан'), 'file_broken');
-        }
-
-        if ( ! $file->thumb && ( ! $file->file_type || ! preg_match('~^image/.*~', $file->file_type))) {
+        if ( ! $file->thumb && $file->isTypeImage()) {
             throw new HttpException(404, $this->_('Указанный файл не является картинкой'), 'file_is_not_image');
         }
 
         $response = new Response();
 
-        if ($file->file_type) {
-            $response->setHeader('Content-Type', $file->file_type);
+        if ($file->type) {
+            $response->setHeader('Content-Type', $file->type);
         }
 
-        if ($file->file_name) {
-            $filename_encode = rawurlencode($file->file_name);
-            $response->setHeader('Content-Disposition', "filename=\"{$file->file_name}\"; filename*=utf-8''{$filename_encode}\"");
+        if ($file->name) {
+            $filename_encode = rawurlencode($file->name);
+            $response->setHeader('Content-Disposition', "filename=\"{$file->name}\"; filename*=utf-8''{$filename_encode}\"");
         }
 
 
-        if ($file->file_hash) {
+        if ($file->hash) {
             $etagHeader = (isset($_SERVER['HTTP_IF_NONE_MATCH']) ? trim($_SERVER['HTTP_IF_NONE_MATCH']) : false);
 
-            $response->setHeader('Etag',          $file->file_hash);
+            $response->setHeader('Etag',          $file->hash);
             $response->setHeader('Cache-Control', 'public');
 
             //check if page has changed. If not, send 304 and exit
-            if ($etagHeader == $file->file_hash) {
+            if ($etagHeader == $file->hash) {
                 $response->setHttpCode(304);
                 return $response;
             }
         }
 
         if ( ! $file->thumb) {
-            $image = ImageResize::createFromString($file->content);
+            $content = $file->getContent();
+
+            if ( ! $content) {
+                throw new HttpException(500, $this->_('Указанный файл сломан'), 'file_broken');
+            }
+
+            $image = ImageResize::createFromString($content);
             $image->resizeToBestFit(80, 80);
 
+            $meta           = $file->getMeta();
+            $meta['width']  = $image->getSourceWidth();
+            $meta['height'] = $image->getSourceHeight();
+
+            $file->meta  = json_encode($meta);
             $file->thumb = $image->getImageAsString(IMAGETYPE_PNG);
             $file->save();
         }

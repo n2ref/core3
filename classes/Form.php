@@ -1,11 +1,10 @@
 <?php
 namespace Core3\Classes;
-use Core3\Classes\Db\Table;
+use Core3\Classes\Db\TableAbstract;
 use Core3\Exceptions\Exception;
 use Core3\Mod\Admin;
 use Core3\Sys\Auth;
 use CoreUI\Form\Control;
-use CoreUI\Form\Field;
 use Laminas\Db\Sql\Select;
 
 
@@ -97,14 +96,14 @@ class Form extends \CoreUI\Form {
 
     /**
      * Получение файлов для поля
-     * @param Table         $table
-     * @param string        $field_name
+     * @param TableAbstract $table
+     * @param string        $object_type
      * @param int           $id
      * @param \Closure|null $callback
      * @return array
      * @throws Exception
      */
-    public function getFiles(Db\Table $table, string $field_name, int $id, \Closure $callback = null): array {
+    public function getFiles(Db\TableAbstract $table, string $object_type, int $id, \Closure $callback = null): array {
 
         $table_name = $table->getTable();
 
@@ -113,10 +112,10 @@ class Form extends \CoreUI\Form {
         }
 
 
-        $files_row = $table->select(function (Select $select) use ($id, $field_name) {
+        $files_row = $table->select(function (Select $select) use ($id, $object_type) {
             $select->where([
-                'ref_id'     => $id,
-                'field_name' => $field_name,
+                'ref_id'      => $id,
+                'object_type' => $object_type,
             ]);
         });
 
@@ -125,8 +124,8 @@ class Form extends \CoreUI\Form {
         foreach ($files_row as $file_row) {
             $file = [
                 'id'          => $file_row->id,
-                'name'        => $file_row->file_name,
-                'size'        => $file_row->file_size,
+                'name'        => $file_row->name,
+                'size'        => $file_row->size,
                 'urlPreview'  => "",
                 'urlDownload' => "",
             ];
