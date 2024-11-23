@@ -197,6 +197,23 @@ class Users extends Common {
      */
     public function saveData(int $user_id, string $name, array $data = null): void {
 
+        $row = $this->modAdmin->tableUsersData->getRowByUserName($user_id, $name);
+
+        if ($row) {
+            if (is_null($data)) {
+                $row->delete();
+            } else {
+                $row->value = json_encode($data);
+                $row->save();
+            }
+
+        } else {
+            $this->modAdmin->tableUsersData->insert([
+                'user_id' => $user_id,
+                'name'    => $name,
+                'value'   => json_encode($data),
+            ]);
+        }
     }
 
 
@@ -208,5 +225,13 @@ class Users extends Common {
      */
     public function getData(int $user_id, string $name):? array {
 
+        $data = null;
+        $row  = $this->modAdmin->tableUsersData->getRowByUserName($user_id, $name);
+
+        if ($row) {
+            $data = $row->value ? json_decode($row->value, true) : [];
+        }
+
+        return $data;
     }
 }
