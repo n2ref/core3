@@ -63,7 +63,7 @@ class Handler extends Classes\Handler {
             'avatar_type' => 'string(none|generate|upload): ' . $this->_('Аватар'),
         ];
 
-        $controls = $request->getFormContent() ?? [];
+        $controls = $request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
         $files = null;
@@ -144,7 +144,7 @@ class Handler extends Classes\Handler {
             'avatar_type'  => 'string(none|generate|upload): Аватар',
         ];
 
-        $controls = $request->getFormContent() ?? [];
+        $controls = $request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
 

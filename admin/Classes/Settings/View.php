@@ -68,7 +68,7 @@ class View extends Common {
             (new Column\Text('value',             $this->_('Значение')))->setMinWidth(180)->setNoWrap(true),
             (new Column\Text('note',              $this->_('Описание')))->setMinWidth(180)->setNoWrap(true),
             (new Column\Datetime('date_modify',   $this->_('Дата изменения'),         155))->setMinWidth(155),
-            (new Column\Text('user_modify',       $this->_('Автор изменения'),        155))->setMinWidth(155)->setShow(false),
+            (new Column\Text('author_modify',     $this->_('Автор изменения'),        155))->setMinWidth(155)->setShow(false),
         ]);
 
 

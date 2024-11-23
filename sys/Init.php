@@ -349,29 +349,9 @@ class Init extends Common {
         }
 
         if (empty($acl)) {
-            $modules = $this->db->fetchAll("
-                SELECT m.name
-                FROM core_modules AS m
-                WHERE m.is_active
-                ORDER BY m.seq
-            ");
-
-            $sections = $this->db->fetchAll("
-                SELECT ms.name,
-                       m.name AS module_name
-                FROM core_modules_sections AS ms
-                    JOIN core_modules AS m ON ms.module_id = m.id
-                WHERE ms.is_active
-                  AND m.is_active
-                ORDER BY m.seq, ms.seq
-            ");
-
-            $role_privileges = $this->db->fetchOne("
-                SELECT privileges
-                FROM core_roles
-                WHERE id = ?
-            ", $role_id);
-
+            $modules  = (new Admin\Tables\Modules())->getRowsByActive();
+            $sections = (new Admin\Tables\ModulesSections())->getRowsByActive();
+            $role     = (new Admin\Tables\Roles())->getRowById($role_id);
 
             $acl = new Permissions\Acl\Acl();
             $acl->addRole(new Permissions\Acl\Role\GenericRole($role_id));
@@ -381,33 +361,36 @@ class Init extends Common {
             $modules_info = [];
 
             foreach ($modules as $module) {
-                $modules_info[$module['name']] = $this->getModuleInfoFromFile($module['name']);
+                $modules_info[$module->name] = $this->getModuleInfoFromFile($module->name);
 
-                $resources[$module['name']] = ! empty($modules_info[$module['name']]) &&
-                                              ! empty($modules_info[$module['name']]['privileges']) &&
-                                              is_array($modules_info[$module['name']]['privileges'])
-                    ? array_keys($modules_info[$module['name']]['privileges'])
+                $resources[$module->name] = ! empty($modules_info[$module->name]) &&
+                                            ! empty($modules_info[$module->name]['privileges']) &&
+                                            is_array($modules_info[$module->name]['privileges'])
+                    ? $modules_info[$module->name]['privileges']
                     : [];
 
-                $acl->addResource(new Permissions\Acl\Resource\GenericResource($module['name']));
+                $acl->addResource(new Permissions\Acl\Resource\GenericResource($module->name));
+
+
+                foreach ($sections as $section) {
+                    if ($section->module_id == $module->id) {
+                        $resource             = "{$module->name}_{$section->name}";
+                        $resources[$resource] = ! empty($modules_info[$module->name]['sections']) &&
+                                                ! empty($modules_info[$module->name]['sections'][$section->name]) &&
+                                                is_array($modules_info[$module->name]['sections'][$section->name]) &&
+                                                ! empty($modules_info[$module->name]['sections'][$section->name]['privileges']) &&
+                                                is_array($modules_info[$module->name]['sections'][$section->name]['privileges'])
+                            ? $modules_info[$module->name]['sections'][$section->name]['privileges']
+                            : [];
+
+                        $acl->addResource(new Permissions\Acl\Resource\GenericResource($resource), $module->name);
+                    }
+                }
             }
 
-            foreach ($sections as $section) {
-                $resource             = "{$section['module_name']}_{$section['name']}";
-                $resources[$resource] = ! empty($modules_info[$section['module_name']]['sections']) &&
-                                        ! empty($modules_info[$section['module_name']]['sections'][$section['name']]) &&
-                                        is_array($modules_info[$section['module_name']]['sections'][$section['name']]) &&
-                                        ! empty($modules_info[$section['module_name']]['sections'][$section['name']['privileges']]) &&
-                                        is_array($modules_info[$section['module_name']]['sections'][$section['name']['privileges']])
-                    ? array_keys($modules_info[$section['module_name']]['sections'][$section['name']['privileges']])
-                    : [];
 
-                $acl->addResource(new Permissions\Acl\Resource\GenericResource($resource), $section['module_name']);
-            }
-
-
-            $role_privileges    = $role_privileges ? json_decode($role_privileges, true) : [];
-            $privileges_default = [ 'read', 'edit', 'delete' ];
+            $role_privileges    = $role->privileges ? json_decode($role->privileges, true) : [];
+            $privileges_default = [ 'access', 'edit', 'delete' ];
 
             if ( ! empty($resources)) {
                 foreach ($resources as $resource => $privileges) {

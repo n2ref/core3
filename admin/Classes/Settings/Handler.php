@@ -178,7 +178,7 @@ class Handler extends Classes\Handler {
             'is_active' => 'string(1|0): ' . $this->_('Активно'),
         ];
 
-        $controls = $request->getFormContent() ?? [];
+        $controls = $request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
         if ($errors = $this->validateFields($fields, $controls)) {
@@ -234,7 +234,7 @@ class Handler extends Classes\Handler {
 //        $this->addField('note',       $this->_('Название'))->string(0, 65000);
 //        $this->addField('is_active',  $this->_('Название'))->string('1|0');
 
-        $controls = $request->getFormContent() ?? [];
+        $controls = $request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
         if ($errors = $this->validateFields($fields, $controls)) {

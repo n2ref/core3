@@ -79,7 +79,7 @@ class Modules extends Handler {
         ];
 
         $record_id = $request->getQuery('id');
-        $controls  = $request->getFormContent() ?? [];
+        $controls  = $request->getJsonContent() ?? [];
         $controls  = $this->clearData($controls);
 
         if (empty($record_id)) {
@@ -144,7 +144,7 @@ class Modules extends Handler {
         ];
 
 
-        $controls = $request->getFormContent() ?? [];
+        $controls = $request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
         if ($errors = $this->validateFields($fields, $controls)) {

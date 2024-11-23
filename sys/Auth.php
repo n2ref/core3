@@ -8,7 +8,7 @@ use Laminas\Permissions;
  */
 class Auth {
 
-    const PRIVILEGE_READ   = 'read';
+    const PRIVILEGE_ACCESS = 'access';
     const PRIVILEGE_EDIT   = 'edit';
     const PRIVILEGE_DELETE = 'delete';
 
@@ -164,7 +164,7 @@ class Auth {
 
 
     /**
-     * Доступ роли к ресурсу по всем параметрам, за исключением тех, что указаны в $except
+     * Доступ роли к ресурсу по всем параметрам
      * @param string $resource
      * @return bool
      */
@@ -175,7 +175,7 @@ class Auth {
         }
 
         $privileges = [
-            self::PRIVILEGE_READ,
+            self::PRIVILEGE_ACCESS,
             self::PRIVILEGE_EDIT,
             self::PRIVILEGE_DELETE
         ];
@@ -211,7 +211,7 @@ class Auth {
      * @param string $privilege
      * @return bool
      */
-    public function isAllowed(string $resource, string $privilege = self::PRIVILEGE_READ): bool {
+    public function isAllowed(string $resource, string $privilege = self::PRIVILEGE_ACCESS): bool {
 
         if ($this->isAdmin()) {
             return true;

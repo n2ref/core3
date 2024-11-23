@@ -91,7 +91,7 @@ class View extends Common {
         $avatar = [];
 
         if ($user->avatar_type == 'upload') {
-            $avatar = $form->getFiles($this->modAdmin->tableUsersFiles, 'avatar', $user->id, function (array $file) use ($user) {
+            $avatar = $form->getFiles($this->modAdmin->tableUsersFiles, $user->id, 'avatar', function (array $file) use ($user) {
                 $file['urlPreview']  = "/sys/user/{$user->id}/avatar";
                 $file['urlDownload'] = "/{$this->base_url}/{$user->id}/avatar/download";
 

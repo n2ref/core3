@@ -2,10 +2,12 @@
 namespace Core3\Mod\Admin;
 use Core3\Classes\Response;
 use Core3\Exceptions\DbException;
+use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin\Classes\Modules;
 use Core3\Mod\Admin\Classes\Users;
 use Core3\Mod\Admin\Classes\Index;
+use Core3\Mod\Admin\Classes\Roles;
 use Core3\Mod\Admin\Classes\Settings;
 use Core3\Classes\Common;
 use Core3\Classes\Request;
@@ -360,37 +362,60 @@ class Controller extends Common {
 
     /**
      * Роли и доступ
-     * @return array
-     * @throws \Exception|\Laminas\Cache\Exception\ExceptionInterface
+     * @param Request $request
+     * @return Response|array
+     * @throws MissingExtensionException
+     * @throws Exception
+     * @throws \Exception
      */
-    public function sectionRoles(): array {
+    public function sectionRoles(Request $request): Response|array {
 
-        $panel = new \CoreUI\Panel();
-        $panel->setTitle($this->_("Роли и доступ"));
+        $router = new Router();
+        $router->route('/admin/roles(/|){tab:(|access)}')->get([Roles\Handler::class, 'getRoles']);
+        $router->route('/admin/roles/table')
+            ->get([Roles\Handler::class, 'getRolesTable'])
+            ->delete([Roles\Handler::class, 'deleteRoles']);
 
-        if ( ! empty($_GET['edit'])) {
+        $router->route('/admin/roles/access')
+            ->post([Roles\Handler::class, 'setAccess']);
 
-        } else {
+        $router->route('/admin/roles/access/table')
+            ->get([Roles\Handler::class, 'getAccessTable']);
 
+        $router->route('/admin/roles/{id:\d+}')
+            ->get([ Roles\Handler::class, 'getRole' ])
+            ->post([ Roles\Handler::class, 'saveRole' ]);
+
+
+        $route_method = $router->getRouteMethod($request->getMethod(), $request->getUri());
+
+        if ( ! $route_method) {
+            return Response::httpCode(404);
         }
 
-        $panel->setContent('');
-
-        $job_id = $this->startWorkerJob('jobName', ['22222']);
-
-        echo '<pre>';
-        print_r($this->worker->getInfo());
-        echo '</pre>';
+        $route_method->prependParam($request);
 
 
-//        $this->worker->startJob('admin', 'jobName',  ['param1 data']);
-       // $this->worker->stop();
-        echo '<pre>';
-        print_r($this->worker->getJobInfo($job_id));
-        echo '</pre>';
-//        $this->worker->restart();
+        try {
+            return $route_method->run();
 
-        return $panel->toArray();
+        } catch (HttpException $e) {
+            $this->log->info($e->getMessage());
+            return Response::errorJson($e->getCode(), $e->getErrorCode(), $e->getMessage());
+
+        } catch (AppException $e) {
+            $this->log->info($e->getMessage());
+            return \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'));
+
+        } catch (\Exception $e) {
+            $this->log->error($this->resource, $e);
+
+            return Response::errorJson(500, 'error',
+                $this->config?->system->debug?->on
+                    ? $e->getMessage()
+                    : $this->_('Ошибка. Обновите страницу или попробуйте позже')
+            );
+        }
     }
 
 

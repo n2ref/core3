@@ -258,10 +258,10 @@ class Handler extends Common {
 
     /**
      * Проверка http метода
-     * @param Request      $request
+     * @param Request $request
      * @param array|string $allow_methods
      * @return void
-     * @throws AppException
+     * @throws HttpException
      */
     protected function checkHttpMethod(Request $request, array|string $allow_methods): void {
 
@@ -270,7 +270,7 @@ class Handler extends Common {
         }
 
         if ( ! in_array($request->getMethod(), $allow_methods)) {
-            throw new AppException($this->_("Некорректный метод запроса. Доступно: %s", implode(', ', $allow_methods)));
+            throw new HttpException(400, $this->_("Некорректный метод запроса. Доступно: %s", [ implode(', ', $allow_methods) ]));
         }
     }
 
@@ -280,7 +280,7 @@ class Handler extends Common {
      * @param Table   $table
      * @param Request $request
      * @return void
-     * @throws AppException
+     * @throws HttpException
      */
     protected function checkVersion(Table $table, Request $request): void {
 
@@ -290,7 +290,7 @@ class Handler extends Common {
             $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), $record_id);
 
             if ( ! $control || $control->version != $request->getQuery('v')) {
-                throw new AppException($this->_(
+                throw new HttpException(400, $this->_(
                     'Кто-то редактировал эту запись одновременно с вами, но успел сохранить данные раньше вас. ' .
                     'Обновите страницу и проверьте, возможно этот кто-то сделал за вас работу'
                 ));
@@ -304,7 +304,7 @@ class Handler extends Common {
      * @param array       $data
      * @param string|null $row_id
      * @return Row
-     * @throws AppException
+     * @throws HttpException
      * @throws Exception
      */
     protected function saveData(Table $table, array $data, string $row_id = null): Row {
@@ -315,7 +315,7 @@ class Handler extends Common {
                 $row = $table->getRowById($row_id);
 
                 if (empty($row)) {
-                    throw new AppException($this->_('Сохраняемая запись удалена. Обновите страницу и попробуй снова'));
+                    throw new HttpException(400, $this->_('Сохраняемая запись удалена. Обновите страницу и попробуй снова'));
                 }
 
                 foreach ($data as $field => $value) {

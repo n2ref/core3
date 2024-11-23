@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Mod\Admin\Tables;
+use Core3\Classes\Db\Row;
 use Core3\Classes\Db\Table;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\Sql\Expression;
@@ -12,6 +13,21 @@ use Laminas\Db\Sql\Select;
 class Modules extends Table {
 
     protected $table = 'core_modules';
+
+
+    /**
+     * Получение модуля по имени
+     * @param string $name
+     * @return Row|null
+     */
+    public function getRowByName(string $name):? Row {
+
+        $results = $this->select(function (Select $select) use ($name) {
+            $select->where([ 'name' => $name ]);
+        });
+
+        return $results->current();
+    }
 
 
     /**

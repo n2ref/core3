@@ -1,10 +1,13 @@
 <?php
 namespace Core3\Classes;
+use Core3\Classes\Db\Table;
 use Core3\Classes\Db\TableAbstract;
+use Core3\Classes\Db\TableFiles;
 use Core3\Exceptions\Exception;
 use Core3\Mod\Admin;
 use Core3\Sys\Auth;
 use CoreUI\Form\Control;
+use CoreUI\Form\Control\Submit;
 use Laminas\Db\Sql\Select;
 
 
@@ -61,17 +64,19 @@ class Form extends \CoreUI\Form {
 
     /**
      * Установка
-     * @param Db\Table $table
-     * @param int      $record_id
+     * @param Table    $table
+     * @param int|null $record_id
      * @return $this
      */
-    public function setTable(Db\Table $table, int $record_id): self {
+    public function setTable(Db\Table $table, int $record_id = null): self {
 
-        $admin = new Admin\Controller();
-        $control = $admin->tableControls->createRow($table->getTable(), $record_id);
+        if ($record_id) {
+            $admin   = new Admin\Controller();
+            $control = $admin->tableControls->createRow($table->getTable(), $record_id);
 
-        $this->send_props['record_id']      = $record_id;
-        $this->send_props['record_version'] = $control->version;
+            $this->send_props['record_id']      = $record_id;
+            $this->send_props['record_version'] = $control->version;
+        }
 
         $this->fillSend();
         return $this;
@@ -96,27 +101,22 @@ class Form extends \CoreUI\Form {
 
     /**
      * Получение файлов для поля
-     * @param TableAbstract $table
-     * @param string        $object_type
+     * @param TableFiles    $table
      * @param int           $id
+     * @param string|null   $object_type
      * @param \Closure|null $callback
      * @return array
-     * @throws Exception
      */
-    public function getFiles(Db\TableAbstract $table, string $object_type, int $id, \Closure $callback = null): array {
+    public function getFiles(Db\TableFiles $table, int $id, string $object_type = null, \Closure $callback = null): array {
 
-        $table_name = $table->getTable();
+        $fields = $table->getFields();
 
-        if ( ! str_ends_with($table_name, '_files')) {
-            throw new Exception('Incorrect table');
-        }
+        $files_row = $table->select(function (Select $select) use ($id, $object_type, $fields) {
+            $select->where([ $fields['ref_id'] => $id, ]);
 
-
-        $files_row = $table->select(function (Select $select) use ($id, $object_type) {
-            $select->where([
-                'ref_id'      => $id,
-                'object_type' => $object_type,
-            ]);
+            if ($object_type) {
+                $select->where([$fields['object_type'] => $object_type,]);
+            }
         });
 
         $files = [];
@@ -163,6 +163,19 @@ class Form extends \CoreUI\Form {
 
 
     /**
+     * Получение кнопки для отмены
+     * @param string      $url
+     * @param string|null $content
+     * @return Control\Link|null
+     */
+    public function getBtnCancel(string $url, string $content = null):? Control\Link {
+
+        return (new Control\Link($content ?: $this->system->_('Отмена'), $url))
+            ->setAttr('class', 'btn btn-secondary');
+    }
+
+
+    /**
      * Установка сообщения по умолчанию
      * @param string|null $notice
      * @return void
@@ -186,10 +199,10 @@ class Form extends \CoreUI\Form {
         if ($send['handler']) {
             if ($send['record_id'] && $send['record_version']) {
                 $amp = strpos($send['handler'], '?') === false ? '?' : '&';
-                $this->setSend("{$send['handler']}{$amp}v={$send['record_version']}", $send['http_method']);
+                $this->setSend("{$send['handler']}{$amp}v={$send['record_version']}", $send['http_method'], $this::DATA_JSON);
 
             } else {
-                $this->setSend($send['handler'], $send['http_method']);
+                $this->setSend($send['handler'], $send['http_method'], $this::DATA_JSON);
             }
         }
     }

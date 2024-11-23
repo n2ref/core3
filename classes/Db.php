@@ -1,6 +1,7 @@
 <?php
 namespace Core3\Classes;
 use Core3\Exceptions\DbException;
+use Core3\Mod\Admin;
 use \Laminas\Db\Adapter\Adapter;
 use Laminas\Cache\Exception\ExceptionInterface;
 
@@ -118,17 +119,14 @@ class Db extends System {
             }
 
             if ( ! isset($is_active)) {
-                $is_active = $this->db->fetchOne("
-                    SELECT is_active 
-                    FROM core_modules 
-                    WHERE name = ? 
-                ", $module_name);
+                $table  = new Admin\Tables\Modules();
+                $module = $table->getRowByName($module_name);
 
-                if ( ! empty($is_active)) {
-                    $this->cache->save($key, $is_active == '1', ['core3_mod']);
+                $is_active = $module->is_active == '1';
+
+                if ($module) {
+                    $this->cache->save($key, $is_active, ['core3_mod']);
                 }
-
-                $is_active = $is_active == '1';
             }
         }
 
@@ -144,7 +142,7 @@ class Db extends System {
     final protected function isModuleInstalled(string $module_name): bool {
 
 	    if ($module_name == 'admin') {
-	        return true;
+            $is_install = true;
 
         } else {
             $module_name = trim(strtolower($module_name));
@@ -157,19 +155,19 @@ class Db extends System {
             }
 
             if ( ! isset($is_install)) {
-                $is_install = (bool)$this->db->fetchOne("
-                    SELECT 1
-                    FROM core_modules 
-                    WHERE name = ?
-                ", $module_name);
+                $table  = new Admin\Tables\Modules();
+                $module = $table->getRowByName($module_name);
 
-                if ($is_install) {
+                $is_install = false;
+
+                if ($module) {
+                    $is_install = true;
                     $this->cache->save($key, $is_install, ['core3_mod']);
                 }
             }
-
-            return $is_install;
         }
+
+        return $is_install;
 	}
 
 
@@ -222,16 +220,13 @@ class Db extends System {
         $key     = "core3_mod_{$db_name}_{$module_name}";
 
         if ($this->cache->test($key)) {
-            $result     = $this->cache->load($key);
+            $result = $this->cache->load($key);
             $module = is_null($result) ? null : (bool)$result;
         }
 
         if ( ! isset($module)) {
-            $module = $this->db->fetchRow("
-                SELECT *
-                FROM core_modules
-                WHERE name = ?
-            ", $module_name);
+            $table = new Admin\Tables\Modules();
+            $module = $table->getRowByName($module_name)?->toArray();
 
             if ( ! empty($module)) {
                 $this->cache->save($key, $module, ['core3_mod']);
@@ -249,35 +244,22 @@ class Db extends System {
      * @param string $module_name
      * @return array
      * @throws DbException
-     * @throws ExceptionInterface
      */
     final protected function getModuleInfoFromFile(string $module_name): array {
 
-        $db_name = $this->config?->system?->db?->base?->params?->database;
-        $key     = "core3_mod_{$db_name}_{$module_name}_file";
+        $module_location = $this->getModuleLocation($module_name);
+        $module_file     = "{$module_location}/module.json";
 
-        if ($this->cache->test($key)) {
-            $result   = $this->cache->load($key);
-            $mod_info = is_null($result) ? null : (bool)$result;
-        }
+        if (file_exists($module_file)) {
+            $info_content = file_get_contents($module_file);
+            $info         = @json_decode($info_content, true);
 
-        if ( ! isset($mod_info)) {
-            $module_location = $this->getModuleLocation($module_name);
-            $module_file     = "{$module_location}/module.json";
-
-            if (file_exists($module_file)) {
-                $info_content = file_get_contents($module_file);
-                $info         = @json_decode($info_content, true);
-
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    $info = [];
-                }
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $info = [];
             }
-
-            $mod_info = $info ?? [];
         }
 
-        return $mod_info;
+        return $info ?? [];
     }
 
 

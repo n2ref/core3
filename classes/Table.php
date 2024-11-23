@@ -161,11 +161,16 @@ class Table extends \CoreUI\Table {
 
     /**
      * @param string $url
+     * @param string $position
      * @return $this
      */
-    public function addControlBtnAdd(string $url = ''): self {
+    public function addControlBtnAdd(string $url = '', string $position = 'in'): self {
 
-        $this->setHeaderIn($this::LAST)->right([
+        $position = $position == 'in'
+            ? $this->setHeaderIn($this::LAST)
+            : $this->setHeaderOut($this::LAST);
+
+        $position->right([
             $this->getBtnAdd($url)
         ]);
 
@@ -175,11 +180,16 @@ class Table extends \CoreUI\Table {
 
     /**
      * @param string $handler
+     * @param string $position
      * @return $this
      */
-    public function addControlBtnDelete(string $handler = ''): self {
+    public function addControlBtnDelete(string $handler = '', string $position = 'in'): self {
 
-        $this->setHeaderIn($this::LAST)->right([
+        $position = $position == 'in'
+            ? $this->setHeaderIn($this::LAST)
+            : $this->setHeaderOut($this::LAST);
+
+        $position->right([
             $this->getBtnDelete($handler)
         ]);
 
