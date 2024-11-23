@@ -73,7 +73,7 @@ class View extends Common {
             $record->users_count = 0;
 
             foreach ($users as $user) {
-                if ($user->role_id == $record->id) {
+                if ($user['role_id'] == $record->id) {
                     $record->users_count++;
                 }
             }
