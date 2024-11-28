@@ -85,6 +85,7 @@ class View extends Common {
             $record->title = [
                 'content' => $record->title,
                 'url'     => "#/{$this->base_url}/{$record->id}",
+                'attr'    => ['class' => 'fw-medium']
             ];
 
             if ($record->module) {

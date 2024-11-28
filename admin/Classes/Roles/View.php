@@ -63,6 +63,7 @@ class View extends Common {
             $record->title = [
                 'content' => $record->title,
                 'url'     => "#/{$this->base_url}/{$record->id}",
+                'attr'    => ['class' => 'fw-medium']
             ];
 
             $privileges = $record->privileges
@@ -188,39 +189,41 @@ class View extends Common {
 
 
             foreach ($sections as $section) {
-                $privileges     = $default_privileges;
-                $mod_privileges = ! empty($modules_info) &&
-                                  ! empty($modules_info['sections']) &&
-                                  ! empty($modules_info['sections'][$section->name]) &&
-                                  ! empty($modules_info['sections'][$section->name]) &&
-                                  ! empty($modules_info['sections'][$section->name]['privileges']) &&
-                                  is_array($modules_info['sections']['privileges'])
-                    ? $modules_info['sections'][$section->name]['privileges']
-                    : [];
+                if ($module->id == $section->module_id) {
+                    $privileges     = $default_privileges;
+                    $mod_privileges = ! empty($modules_info) &&
+                                      ! empty($modules_info['sections']) &&
+                                      ! empty($modules_info['sections'][$section->name]) &&
+                                      ! empty($modules_info['sections'][$section->name]) &&
+                                      ! empty($modules_info['sections'][$section->name]['privileges']) &&
+                                      is_array($modules_info['sections']['privileges'])
+                        ? $modules_info['sections'][$section->name]['privileges']
+                        : [];
 
-                foreach ($mod_privileges as $privilege_name => $privilege_title) {
-                    $privileges[$privilege_name] = $privilege_title;
-                }
-
-                foreach ($privileges as $privilege_name => $privilege_title) {
-                    $record = [
-                        'module_title' => "{$step}{$module->title} / {$section->title}",
-                        'module'       => $module->name,
-                        'section'      => $section->name,
-                        'name'         => $privilege_name,
-                        'title'        => "{$step}{$step}{$privilege_title}",
-                    ];
-
-                    foreach ($roles as $role) {
-                        $resource_name = "{$module->name}_{$section->name}";
-
-                        $record["role_{$role['id']}"] = ! empty($role['privileges'][$resource_name]) &&
-                                                        in_array($privilege_name, $role['privileges'][$resource_name])
-                            ? 1
-                            : 0;
+                    foreach ($mod_privileges as $privilege_name => $privilege_title) {
+                        $privileges[$privilege_name] = $privilege_title;
                     }
 
-                    $records[] = $record;
+                    foreach ($privileges as $privilege_name => $privilege_title) {
+                        $record = [
+                            'module_title' => "{$step}{$section->title}",
+                            'module'       => $module->name,
+                            'section'      => $section->name,
+                            'name'         => $privilege_name,
+                            'title'        => "{$step}{$step}{$privilege_title}",
+                        ];
+
+                        foreach ($roles as $role) {
+                            $resource_name = "{$module->name}_{$section->name}";
+
+                            $record["role_{$role['id']}"] = ! empty($role['privileges'][$resource_name]) &&
+                                                            in_array($privilege_name, $role['privileges'][$resource_name])
+                                ? 1
+                                : 0;
+                        }
+
+                        $records[] = $record;
+                    }
                 }
             }
         }
@@ -311,37 +314,39 @@ class View extends Common {
 
 
             foreach ($sections as $section) {
-                $privileges     = $default_privileges;
-                $mod_privileges = ! empty($modules_info) &&
-                                  ! empty($modules_info['sections']) &&
-                                  ! empty($modules_info['sections'][$section->name]) &&
-                                  ! empty($modules_info['sections'][$section->name]) &&
-                                  ! empty($modules_info['sections'][$section->name]['privileges']) &&
-                                  is_array($modules_info['sections']['privileges'])
-                    ? $modules_info['sections'][$section->name]['privileges']
-                    : [];
+                if ($module->id == $section->module_id) {
+                    $privileges     = $default_privileges;
+                    $mod_privileges = ! empty($modules_info) &&
+                                      ! empty($modules_info['sections']) &&
+                                      ! empty($modules_info['sections'][$section->name]) &&
+                                      ! empty($modules_info['sections'][$section->name]) &&
+                                      ! empty($modules_info['sections'][$section->name]['privileges']) &&
+                                      is_array($modules_info['sections']['privileges'])
+                        ? $modules_info['sections'][$section->name]['privileges']
+                        : [];
 
-                foreach ($mod_privileges as $privilege_name => $privilege_title) {
-                    $privileges[$privilege_name] = $privilege_title;
-                }
+                    foreach ($mod_privileges as $privilege_name => $privilege_title) {
+                        $privileges[$privilege_name] = $privilege_title;
+                    }
 
-                foreach ($privileges as $privilege_name => $privilege_title) {
-                    $record = [
-                        'module_title' => "{$step}{$module->title} / {$section->title}",
-                        'module'       => $module->name,
-                        'section'      => $section->name,
-                        'name'         => $privilege_name,
-                        'title'        => "{$step}{$step}{$privilege_title}",
-                    ];
+                    foreach ($privileges as $privilege_name => $privilege_title) {
+                        $record = [
+                            'module_title' => "{$step}{$section->title}",
+                            'module'       => $module->name,
+                            'section'      => $section->name,
+                            'name'         => $privilege_name,
+                            'title'        => "{$step}{$step}{$privilege_title}",
+                        ];
 
-                    $resource_name = "{$module->name}_{$section->name}";
+                        $resource_name = "{$module->name}_{$section->name}";
 
-                    $record["is_access"] = ! empty($role['privileges'][$resource_name]) &&
-                                           in_array($privilege_name, $role['privileges'][$resource_name])
-                        ? 1
-                        : 0;
+                        $record["is_access"] = ! empty($role['privileges'][$resource_name]) &&
+                                               in_array($privilege_name, $role['privileges'][$resource_name])
+                            ? 1
+                            : 0;
 
-                    $records[] = $record;
+                        $records[] = $record;
+                    }
                 }
             }
         }

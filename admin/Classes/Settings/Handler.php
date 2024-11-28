@@ -25,7 +25,7 @@ class Handler extends Classes\Handler {
     public function getSettings(Request $request): array {
 
         $content   = [];
-        $content[] = (new View())->getTable($this->base_url);
+        $content[] = (new View())->getTable();
 
         $panel = new \CoreUI\Panel();
         $panel->setContent($content);
