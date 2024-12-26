@@ -1,9 +1,10 @@
 <?php
 namespace Core3\Mod\Admin;
 use Core3\Classes\Response;
-use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
-use Core3\Exceptions\HttpException;
+use Core3\Exceptions\AppException;
+use Core3\Interfaces\Events;
+use Core3\Mod\Admin\Classes;
 use Core3\Mod\Admin\Classes\Modules;
 use Core3\Mod\Admin\Classes\Users;
 use Core3\Mod\Admin\Classes\Index;
@@ -12,7 +13,6 @@ use Core3\Mod\Admin\Classes\Settings;
 use Core3\Classes\Common;
 use Core3\Classes\Request;
 use Core3\Classes\Router;
-use Core3\Exceptions\AppException;
 use CoreUI\Panel\Control;
 use Monolog\Handler\MissingExtensionException;
 
@@ -32,13 +32,15 @@ require_once 'Classes/autoload.php';
  * @property Tables\Settings        $tableSettings
  * @property Models\Users           $modelUsers
  * @property Models\Settings        $modelSettings
+ * @property Models\Roles           $modelRoles
  */
-class Controller extends Common {
+class Controller extends Common implements Events {
 
     /**
      * @param Request $request
      * @return array|string|Response
      * @throws MissingExtensionException
+     * @throws Exception
      */
     public function sectionIndex(Request $request): array|string|Response {
 
@@ -52,32 +54,7 @@ class Controller extends Common {
         $router->route('/admin/index/db/connections/records')->get([  Index\Handler::class, 'getDbConnectionsRecords']);
         $router->route('/admin/index/db/variables')          ->get([  Index\Handler::class, 'getDbVariables']);
 
-        $route_method = $router->getRouteMethod($request->getMethod(), $request->getUri());
-
-        if ( ! $route_method) {
-            return Response::httpCode(404);
-        }
-
-        $route_method->prependParam($request);
-
-
-        try {
-            return $route_method->run();
-
-        } catch (AppException $e) {
-            $this->log->info($e->getMessage());
-            return \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'));
-
-        } catch (\Exception $e) {
-            $this->log->error($this->resource, $e);
-
-            return \CoreUI\Info::danger(
-                $this->config?->system->debug?->on
-                    ? $e->getMessage()
-                    : $this->_('Обновите страницу или попробуйте позже'),
-                $this->_('Ошибка')
-            );
-        }
+        return $this->runRouterMethod($router, $request);
     }
 
 
@@ -138,32 +115,10 @@ class Controller extends Common {
         $router->route('/admin/modules/{id:\d+}/versions')        ->get([Modules\Handler::class, 'getModuleVersions']);
         $router->route('/admin/modules/{id:\d+}/versions/content')->get([Modules\Handler::class, 'getModuleVersionsContent']);
 
-        $route_method = $router->getRouteMethod($request->getMethod(), $request->getUri());
-
-        if ( ! $route_method) {
-            return Response::httpCode(404);
-        }
+        return $this->runRouterMethod($router, $request);
 
 
-        $route_method->prependParam($request);
 
-        try {
-            return $route_method->run();
-
-        } catch (AppException $e) {
-            $this->log->info($e->getMessage());
-            return \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'));
-
-        } catch (\Exception $e) {
-            $this->log->error($this->resource, $e);
-
-            return \CoreUI\Info::danger(
-                $this->config?->system->debug?->on
-                    ? $e->getMessage()
-                    : $this->_('Обновите страницу или попробуйте позже'),
-                $this->_('Ошибка')
-            );
-        }
 
 
         $base_url    = "#/admin/modules";
@@ -275,35 +230,7 @@ class Controller extends Common {
 
         $router->route('/admin/users/{id:\d+}/avatar/download')->get([ Users\Handler::class, 'getAvatarDownload' ]);
 
-        $route_method = $router->getRouteMethod($request->getMethod(), $request->getUri());
-
-        if ( ! $route_method) {
-            return Response::httpCode(404);
-        }
-
-        $route_method->prependParam($request);
-
-
-        try {
-            return $route_method->run();
-
-        } catch (HttpException $e) {
-            $this->log->info($e->getMessage());
-            return Response::errorJson($e->getCode(), $e->getErrorCode(), $e->getMessage());
-
-        } catch (AppException $e) {
-            $this->log->info($e->getMessage());
-            return \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'));
-
-        } catch (\Exception $e) {
-            $this->log->error($this->resource, $e);
-
-            return Response::errorJson(500, 'error',
-                $this->config?->system->debug?->on
-                    ? $e->getMessage()
-                    : $this->_('Ошибка. Обновите страницу или попробуйте позже')
-            );
-        }
+        return $this->runRouterMethod($router, $request);
     }
 
 
@@ -328,47 +255,18 @@ class Controller extends Common {
             ->patch([Settings\Handler::class, 'switchActive']);
 
 
-        $route_method = $router->getRouteMethod($request->getMethod(), $request->getUri());
-
-        if ( ! $route_method) {
-            return Response::httpCode(404);
-        }
-
-        $route_method->prependParam($request);
-
-
-        try {
-            return $route_method->run();
-
-        } catch (HttpException $e) {
-            $this->log->info($e->getMessage());
-            return Response::errorJson($e->getCode(), $e->getErrorCode(), $e->getMessage());
-
-        } catch (AppException $e) {
-            $this->log->info($e->getMessage());
-            return \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'));
-
-        } catch (\Exception $e) {
-            $this->log->error($this->resource, $e);
-
-            return Response::errorJson(500, 'error',
-                $this->config?->system->debug?->on
-                    ? $e->getMessage()
-                    : $this->_('Ошибка. Обновите страницу или попробуйте позже')
-            );
-        }
+        return $this->runRouterMethod($router, $request);
     }
 
 
     /**
      * Роли и доступ
      * @param Request $request
-     * @return Response|array
-     * @throws MissingExtensionException
+     * @return Response|array|null
      * @throws Exception
-     * @throws \Exception
+     * @throws MissingExtensionException
      */
-    public function sectionRoles(Request $request): Response|array {
+    public function sectionRoles(Request $request): Response|array|null {
 
         $router = new Router();
         $router->route('/admin/roles(/|){tab:(|access)}')->get([Roles\Handler::class, 'getRoles']);
@@ -376,59 +274,42 @@ class Controller extends Common {
             ->get([Roles\Handler::class, 'getRolesTable'])
             ->delete([Roles\Handler::class, 'deleteRoles']);
 
-        $router->route('/admin/roles/access')
-            ->post([Roles\Handler::class, 'setAccess']);
-
-        $router->route('/admin/roles/access/table')
-            ->get([Roles\Handler::class, 'getAccessTable']);
-
+        $router->route('/admin/roles/access')         ->post([Roles\Handler::class, 'setAccess']);
+        $router->route('/admin/roles/access/all')     ->post([Roles\Handler::class, 'setAccessAllRole']);
+        $router->route('/admin/roles/access/table')   ->get([ Roles\Handler::class, 'getAccessTable']);
         $router->route('/admin/roles/{id:\d+}')
             ->get([ Roles\Handler::class, 'getRole' ])
             ->post([ Roles\Handler::class, 'saveRole' ]);
 
 
-        $route_method = $router->getRouteMethod($request->getMethod(), $request->getUri());
-
-        if ( ! $route_method) {
-            return Response::httpCode(404);
-        }
-
-        $route_method->prependParam($request);
-
-
-        try {
-            return $route_method->run();
-
-        } catch (HttpException $e) {
-            $this->log->info($e->getMessage());
-            return Response::errorJson($e->getCode(), $e->getErrorCode(), $e->getMessage());
-
-        } catch (AppException $e) {
-            $this->log->info($e->getMessage());
-            return \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'));
-
-        } catch (\Exception $e) {
-            $this->log->error($this->resource, $e);
-
-            return Response::errorJson(500, 'error',
-                $this->config?->system->debug?->on
-                    ? $e->getMessage()
-                    : $this->_('Ошибка. Обновите страницу или попробуйте позже')
-            );
-        }
+        return $this->runRouterMethod($router, $request);
     }
 
 
     /**
+     * Мониторинг системы
      * @throws \Exception
      * @return void
      */
     public function sectionMonitoring() {
-        try {
-            $app = "index.php?module=admin&action=monitoring&loc=core";
-            require_once $this->path . 'monitoring.php';
-        } catch (\Exception $e) {
-            Alert::danger($e->getMessage());
+
+    }
+
+
+    /**
+     * Обработка событий системы
+     * @param string $module
+     * @param string $event
+     * @param array $data
+     * @return void
+     * @throws \Laminas\Cache\Exception\ExceptionInterface
+     */
+    public function events(string $module, string $event, array $data): void {
+
+        if ($module == 'admin') {
+            switch ($event) {
+                case 'role_update': (new Classes\Events())->roleUpdate($data); break;
+            }
         }
     }
 }

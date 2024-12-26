@@ -38,8 +38,6 @@ class Roles extends Table {
     /**
      * @param Row $row
      * @return void
-     * @throws \Core3\Exceptions\DbException
-     * @throws \Core3\Exceptions\Exception
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
     public function postUpdate(Row $row): void {

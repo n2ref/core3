@@ -1,5 +1,6 @@
 <?php
 namespace Core3\Classes\Router;
+use Core3\Exceptions\Exception;
 
 /**
  *
@@ -13,7 +14,6 @@ class Route {
 
     /**
      * @param string $path
-     * @throws \Exception
      */
     public function __construct(string $path) {
         $this->path = $path;
@@ -23,7 +23,7 @@ class Route {
     /**
      * @param array|\Closure $action
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function get(array|\Closure $action): self {
 
@@ -34,7 +34,7 @@ class Route {
     /**
      * @param array|\Closure $action
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function post(array|\Closure $action): self {
 
@@ -45,7 +45,7 @@ class Route {
     /**
      * @param array|\Closure $action
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function put(array|\Closure $action): self {
 
@@ -56,7 +56,7 @@ class Route {
     /**
      * @param array|\Closure $action
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function delete(array|\Closure $action): self {
 
@@ -67,7 +67,7 @@ class Route {
     /**
      * @param array|\Closure $action
      * @return $this
-     * @throws \Exception
+     * @throws Exception
      */
     public function patch(array|\Closure $action): self {
 
@@ -78,7 +78,7 @@ class Route {
     /**
      * @param array|\Closure $action
      * @return self
-     * @throws \Exception
+     * @throws Exception
      */
     public function options(array|\Closure $action): self {
 
@@ -89,7 +89,7 @@ class Route {
     /**
      * @param array|\Closure $action
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function any(array|\Closure $action): void {
 
@@ -101,12 +101,12 @@ class Route {
      * @param string         $method
      * @param array|\Closure $action
      * @return self
-     * @throws \Exception
+     * @throws Exception
      */
     public function method(string $method, array|\Closure $action): self {
 
         if (empty($method)) {
-            throw new \Exception('Empty method name');
+            throw new Exception('Empty method name');
         }
 
         $this->validateAction($action);
@@ -120,7 +120,7 @@ class Route {
     /**
      * @param array|\Closure $callback
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     private function validateAction(array|\Closure $callback): void {
 
@@ -141,7 +141,7 @@ class Route {
             }
 
             if ( ! $correct) {
-                throw new \Exception('Error callback param');
+                throw new Exception('Error callback param');
             }
         }
     }

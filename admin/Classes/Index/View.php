@@ -249,7 +249,7 @@ class View extends Common {
 
         $table->addHeaderOut()
             ->left([
-                (new Table\Filter\Text('search'))->setAttr('placeholder', $this->_('Поиск')),
+                (new Table\Filter\Text('search'))->setAttr('placeholder', $this->_('Поиск'))->setAutoSearch(true),
                 (new Table\Control\FilterClear()),
             ]);
 

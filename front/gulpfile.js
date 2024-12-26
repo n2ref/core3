@@ -118,8 +118,8 @@ gulp.task('build_js_min', function() {
         context: "window",
         plugins: [
             nodeResolve(),
-            rollupCommonjs(),
             rollupSourcemaps(),
+            rollupCommonjs(),
             rollupBabel({babelHelpers: 'bundled'}),
         ]
     })
@@ -148,8 +148,8 @@ gulp.task('build_js_min_fast', function() {
         context: "window",
         plugins: [
             nodeResolve(),
-            rollupCommonjs(),
             rollupSourcemaps(),
+            rollupCommonjs(),
             rollupBabel({babelHelpers: 'bundled'}),
         ]
     })
@@ -175,8 +175,8 @@ gulp.task('build_js_coreui', function() {
         context: "window",
         plugins: [
             nodeResolve(),
-            rollupCommonjs(),
             rollupSourcemaps(),
+            rollupCommonjs(),
             rollupBabel({babelHelpers: 'bundled'}),
         ]
     })

@@ -175,7 +175,7 @@ class Handler extends Classes\Handler {
             'title'     => 'req,string(1-255): ' . $this->_('Название'),
             'value'     => 'string(0-65000): ' . $this->_('Значение'),
             'note'      => 'string(0-65000): ' . $this->_('Описание'),
-            'is_active' => 'string(1|0): ' . $this->_('Активно'),
+            'is_active' => 'int: ' . $this->_('Активно'),
         ];
 
         $controls = $request->getJsonContent() ?? [];

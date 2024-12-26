@@ -3,10 +3,12 @@ namespace Core3\Classes;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
+use Core3\Exceptions\HttpException;
 use Core3\Mod\Admin;
 use Core3\Sys\Auth;
 use Laminas\Cache\Exception\ExceptionInterface;
 use Laminas\Db\TableGateway\AbstractTableGateway;
+use Monolog\Handler\MissingExtensionException;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
@@ -99,6 +101,58 @@ class Common extends Db {
         }
 
         return $this->worker->startJob($this->module, $job_name, $arguments);
+    }
+
+
+    /**
+     * Запуск метода из роутера
+     * @param Router $router
+     * @param Request $request
+     * @return int|null
+     * @throws Exception
+     * @throws MissingExtensionException
+     * @throws \Exception
+     */
+    protected function runRouterMethod(Router $router, Request $request): mixed {
+
+        $route_method = $router->getRouteMethod($request->getMethod(), $request->getUri());
+
+        if ( ! $route_method) {
+            return Response::httpCode(404);
+        }
+
+        $route_method->prependParam($request);
+
+
+        try {
+            return $route_method->run();
+
+        } catch (HttpException $e) {
+            $this->log->info($e->getMessage());
+            return Response::errorJson($e->getCode(), $e->getErrorCode(), $e->getMessage());
+
+        } catch (AppException $e) {
+            $this->log->info($e->getMessage());
+            return \CoreUI\Info::danger($e->getMessage(), $this->_('Ошибка'));
+
+        } catch (DbException $e) {
+            $this->log->error("Database error - {$this->resource}", $e);
+
+            return Response::errorJson(500, 'error',
+                $this->config?->system->debug?->on || $this->auth?->isAdmin()
+                    ? $e->getMessage()
+                    : $this->_('Ошибка базы данных. Обновите страницу или попробуйте позже')
+            );
+
+        } catch (\Exception $e) {
+            $this->log->error("Fatal error - {$this->resource}", $e);
+
+            return Response::errorJson(500, 'error',
+                $this->config?->system->debug?->on || $this->auth?->isAdmin()
+                    ? $e->getMessage()
+                    : $this->_('Ошибка. Обновите страницу или попробуйте позже')
+            );
+        }
     }
 
 
@@ -223,49 +277,40 @@ class Common extends Db {
      * Вызов обработки события
      * @param string $event_name
      * @param array  $data
-     * @return array
-     * @throws DbException
+     * @return void
      * @throws ExceptionInterface
-     * @throws Exception
      */
-    public function event(string $event_name, array $data): array {
+    public function event(string $event_name, array $data): void {
 
-        $modules = $this->modAdmin->tableModules->getRowsByActive();
-        $results  = [];
+        $key            = 'modules_events';
+        $modules_events = [];
 
-        foreach ($modules as $module) {
-            $module_config = $this->getModuleConfig($module->name);
-
-            $subscribe_events   = $module_config?->mod?->events;
-            $is_subscribe_event = false;
-
-            if ( ! empty($subscribe_events)) {
-                foreach ($subscribe_events as $module_name => $subscribe_event_name) {
-                    if ($module_name == $this->module &&
-                        ($subscribe_event_name == '*' || $subscribe_event_name == $event_name)
-                    ) {
-                        $is_subscribe_event = true;
-                        break;
-                    }
-                }
-            }
-
-            if ($is_subscribe_event) {
-                $event = $this->getModuleEvent($module->name);
-
-                if ( ! $event || ! is_callable([$event, $this->module])) {
-                    continue;
-                }
-
-                $result = $event->{$this->module}($event_name, $data);
-
-                if ( ! is_null($result)) {
-                    $results[] = $result;
-                }
-            }
+        if ($this->hasStaticCache($key)) {
+            $modules_events = $this->getStaticCache($key);
         }
 
-        return $results;
+        if (empty($modules_events)) {
+            $modules_events   = [];
+            $modules_events[] = $this->getModuleController('admin');
+
+            $modules = $this->modAdmin->tableModules->getRowsByActive();
+
+            foreach ($modules as $module) {
+
+                $controller = $this->getModuleController($module->name);
+
+                if (in_array('\\Core3\\Interfaces\\Events', class_implements($controller))) {
+                    $modules_events[] = $controller;
+                }
+            }
+
+            $this->setStaticCache($key, $modules_events);
+        }
+
+
+        foreach ($modules_events as $module) {
+            $module->events($this->module, $event_name, $data);
+        }
     }
 
 
@@ -333,55 +378,6 @@ class Common extends Db {
                 }
 
                 $result = new $module_class_name();
-            }
-
-            $this->setStaticCache($key_name, $result);
-        }
-
-        return $result;
-    }
-
-
-    /**
-     * @param string $module_name
-     * @return mixed
-     * @throws \Laminas\Cache\Exception\ExceptionInterface
-     * @throws \Exception
-     */
-    private function getModuleEvent(string $module_name): mixed {
-
-        $key_name = "mod_event_{$module_name}";
-
-        if ($this->hasStaticCache($key_name)) {
-            $result = $this->getStaticCache($key_name);
-
-        } else {
-            $location = $this->getModuleLocation($module_name);
-
-            if ( ! $location) {
-                throw new Exception($this->_("Модуль \"%s\" не найден", [$module_name]));
-            }
-
-            $result = null;
-
-            if ($module_name !== 'admin') {
-                if ( ! $this->isModuleActive($module_name)) {
-                    throw new Exception($this->_("Модуль \"%s\" не активен", [$module_name]));
-                }
-
-                $event_file = "{$location}/Event.php";
-
-                if (file_exists($event_file)) {
-                    $this->loadVendorDir($location);
-
-                    require_once $event_file;
-
-                    $module_class_name = "\\Core3\\Mod\\" . ucfirst($module_name) . "\\Event";
-
-                    $result = class_exists($module_class_name)
-                        ? new $module_class_name()
-                        : null;
-                }
             }
 
             $this->setStaticCache($key_name, $result);

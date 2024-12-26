@@ -28,6 +28,7 @@ class View extends Common {
     public function getTable(): array {
 
         $table = new Table('admin', 'users');
+        $table->setClass('table-hover table-striped');
         $table->addControlsDefault();
         $table->addControlSearch();
         $table->addControlColumns();

@@ -148,13 +148,11 @@ abstract class TableAbstract extends AbstractTableGateway {
     /**
      * Вызов обработки события
      * @param string $event_name
-     * @param array  $data
-     * @return array
-     * @throws DbException
-     * @throws Exception
+     * @param array $data
+     * @return void
      * @throws ExceptionInterface
      */
-    protected function event(string $event_name, array $data): array {
+    protected function event(string $event_name, array $data): void {
 
         $key = '_common';
 
@@ -168,7 +166,7 @@ abstract class TableAbstract extends AbstractTableGateway {
         }
 
 
-        return $common->event($event_name, $data);
+        $common->event($event_name, $data);
     }
 
 

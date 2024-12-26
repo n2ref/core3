@@ -107,7 +107,7 @@ class Validator extends System {
      */
     public static function isInt(mixed $value): bool {
 
-        return is_numeric($value) && filter_var($value, FILTER_VALIDATE_INT);
+        return is_numeric($value) && filter_var($value, FILTER_VALIDATE_INT) !== false;
     }
 
 
@@ -139,7 +139,7 @@ class Validator extends System {
      */
     public static function isFloat(mixed $value): bool {
 
-        return is_numeric($value) && filter_var($value, FILTER_VALIDATE_FLOAT);
+        return is_numeric($value) && filter_var($value, FILTER_VALIDATE_FLOAT) !== false;
     }
 
 
@@ -171,7 +171,7 @@ class Validator extends System {
      */
     public static function isEmail(mixed $value): bool {
 
-        return is_string($value) && filter_var($value, FILTER_VALIDATE_EMAIL);
+        return is_string($value) && filter_var($value, FILTER_VALIDATE_EMAIL) !== false;
     }
 
 

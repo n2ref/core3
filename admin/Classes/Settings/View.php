@@ -49,7 +49,7 @@ class View extends Common {
 
         $table->setHeaderOut($table::LAST)
             ->left([
-                (new Filter\Text('title'))->setAttributes(['placeholder' => $this->_('Название')])->setWidth(200),
+                (new Filter\Text('title'))->setAttributes(['placeholder' => $this->_('Название')])->setWidth(200)->setAutoSearch(true),
                 (new Filter\Select('module', $this->_('Модули')))->setWidth(200)->setOptions($modules),
                 (new TableControl\FilterClear()),
             ]);

@@ -3,13 +3,9 @@ namespace Core3\Mod\Admin\Classes\Roles;
 use Core3\Classes;
 use Core3\Classes\Request;
 use Core3\Classes\Response;
-use Core3\Classes\Table;
-use Core3\Classes\Tools;
 use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
-use CoreUI\Table\Adapters\Mysql\Search;
 use Laminas\Cache\Exception\ExceptionInterface;
-use Laminas\Db\RowGateway\AbstractRowGateway;
 
 
 /**
@@ -86,11 +82,11 @@ class Handler extends Classes\Handler {
     /**
      * Сохранение доступов для роли
      * @param Request $request
-     * @return string[]
+     * @return void
      * @throws Exception
-     * @throws ExceptionInterface
+     * @throws HttpException
      */
-    public function setAccess(Request $request): array {
+    public function setAccess(Request $request): void {
 
         $data = $request->getJsonContent();
 
@@ -110,7 +106,7 @@ class Handler extends Classes\Handler {
                 ! is_string($rule['module']) ||
                 ! is_string($rule['name'])
             ) {
-                continue;
+                throw new HttpException('400', $this->_('Не переданы обязательные параметры для сохранения'));
             }
 
             $resource_name = $rule['module'];
@@ -127,16 +123,60 @@ class Handler extends Classes\Handler {
         foreach ($roles as $role_id => $access_role) {
 
             $role = $this->modAdmin->tableRoles->getRowById($role_id);
-            $role->privileges = json_encode(
-                $this->getRolePrivileges($access_role, $role)
-            );
 
-            $role->save();
+            if ($role) {
+                $role->author_modify = $this->auth?->getUserLogin();
+                $role->privileges    = json_encode(
+                    $this->getPrivilegesRole($role, $access_role)
+                );
+
+                $role->save();
+            }
+        };
+    }
+
+
+    /**
+     * Сохранение доступов для роли
+     * @param Request $request
+     * @return void
+     * @throws Exception
+     * @throws HttpException
+     */
+    public function setAccessAllRole(Request $request): void {
+
+        $data = $request->getJsonContent();
+
+        if ( ! isset($data['is_access']) || empty($data['role_id']) || ! is_numeric($data['role_id'])) {
+            throw new HttpException('400', $this->_('Не переданы обязательные параметры для сохранения'));
         }
 
-        return [
-            'status' => 'success'
-        ];
+        $role = $this->modAdmin->tableRoles->getRowById($data['role_id']);
+
+        if (empty($role)) {
+            throw new HttpException('400', $this->_('Указанная роль не найдена'));
+        }
+
+        $privileges = [];
+
+        if ($data['is_access']) {
+            $modules_privileges = $this->modAdmin->modelRoles->getModulesPrivileges();
+
+            foreach ($modules_privileges as $module_name => $module) {
+                $privileges[$module_name] = array_keys($module['privileges']);
+
+                if ( ! empty($module['sections'])) {
+                    foreach ($module['sections'] as $section_name => $section) {
+                        $privileges["{$module_name}_{$section_name}"] = array_keys($section['privileges']);
+                    }
+                }
+            }
+        }
+
+
+        $role->author_modify = $this->auth?->getUserLogin();
+        $role->privileges    = $privileges ? json_encode($privileges) : null;
+        $role->save();
     }
 
 
@@ -226,11 +266,9 @@ class Handler extends Classes\Handler {
         }
 
 
-        $role       = $role_id ? $this->modAdmin->tableRoles->getRowById($role_id) : null;
-        $privileges = $this->getRolePrivileges($controls['privileges'], $role);
-
-        $controls['privileges'] = $privileges
-            ? json_encode($privileges)
+        $controls['author_modify'] = $this->auth?->getUserLogin();
+        $controls['privileges']    = $controls['privileges']
+            ? json_encode($controls['privileges'])
             : null;
 
         $this->saveData($this->modAdmin->tableRoles, $controls, $role_id);
@@ -308,19 +346,15 @@ class Handler extends Classes\Handler {
 
 
     /**
+     * @param Classes\Db\Row $role
      * @param array $access_role
-     * @param Classes\Db\Row|null $role
      * @return array
      */
-    private function getRolePrivileges(array $access_role, Classes\Db\Row $role = null): array {
+    private function getPrivilegesRole(Classes\Db\Row $role, array $access_role): array {
 
-        if ($role) {
-            $privileges = $role->privileges ? json_decode($role->privileges, true) : [];
+        $privileges = $role->privileges ? json_decode($role->privileges, true) : [];
 
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                $privileges = [];
-            }
-        } else {
+        if (json_last_error() !== JSON_ERROR_NONE) {
             $privileges = [];
         }
 

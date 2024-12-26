@@ -18,7 +18,6 @@ class Router {
     /**
      * @param string $path
      * @return Route
-     * @throws \Exception
      */
     public function route(string $path): Route {
 

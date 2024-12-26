@@ -84,13 +84,13 @@ class View extends Common {
 
             foreach ($privileges as $access_rules) {
 
-                if (in_array('access', $access_rules)) {
+                if (is_array($access_rules) && in_array('access', $access_rules)) {
                     $record->modules_count++;
                 }
             }
         }
 
-        //$table->limitFields(['id', 'title', 'description', 'privileges']);
+        $table->limitFields(['id', 'title', 'description', 'users_count', 'modules_count']);
 
         return $table->toArray();
     }
@@ -107,76 +107,63 @@ class View extends Common {
         $table->setShowScrollShadow(true);
         $table->setOverflow(true);
         $table->setSaveState(true);
-        $table->setGroupBy('module_title', ['class' => 'fw-medium']);
         $table->addControlColumns();
 
         $table->setHeaderOut($table::LAST)
             ->left([
-                (new Filter\Text('title'))->setAttributes(['placeholder' => $this->_('Правило модуля')])->setWidth(200),
+                (new Filter\Text('title'))->setAttributes(['placeholder' => $this->_('Правило модуля')])->setWidth(200)->setAutoSearch(true),
                 (new TableControl\FilterClear()),
             ]);
 
         $table->addColumns([
-            (new Column\Text('title', $this->_('Правило модуля')))->setMinWidth(200)->setFixedLeft()->setSort(false),
+            (new Column\Html('title', $this->_('Правило модуля')))->setMinWidth(200)->setFixedLeft()->setSort(false),
         ]);
 
         $roles = $this->modAdmin->tableRoles->fetchAll()->toArray();
         $roles = Tools::arrayMultisort($roles, ['title' => 'asc',]);
+
+        $icon_on  = '<i class="bi bi-toggle-on"></i> ';
+        $icon_off = '<i class="bi bi-toggle-off"></i> ';
 
         foreach ($roles as $key => $role) {
             $roles[$key]['privileges'] = $role['privileges'] ? json_decode($role['privileges'], true) : [];
 
             $table->addColumns([
                 (new Column\Toggle("role_{$role['id']}", $role['title']))->setMinWidth(140)->setSort(false)
-                    ->setOnChange("adminRoles.switchAccess(record, '{$role['id']}', checked)")
-//                    ->showMenuAlways(true)
-//                    ->addMenuItem($this->_('Включить все'), "adminRoles.setAccessAll('{$role['id']}')", ['class' => 'text-danger-emphasis'])
-//                    ->addMenuItem($this->_('Выключить все'), "adminRoles.setRejectAll('{$role['id']}')")
+                    ->setOnChange("adminRoles.switchAccess(record, '{$role['id']}', input)")
+                    ->showMenuAlways(true)
+                    ->addMenuButton($icon_off . $this->_('Выкл. все'), "adminRoles.setRejectAll('{$role['id']}')")
+                    ->addMenuButton($icon_on . $this->_('Вкл. все'), "adminRoles.setAccessAll('{$role['id']}')", ['class' => 'text-danger-emphasis'])
             ]);
         }
 
-        $modules = $this->modAdmin->tableModules->fetchAll(function (Select $select) {
-            $select->order('seq');
-        });
-        $sections = $this->modAdmin->tableModulesSections->fetchAll(function (Select $select) {
-            $select->order('seq');
-        });
-
+        $modules_privileges = $this->modAdmin->modelRoles->getModulesPrivileges();
         $records            = [];
-        $default_privileges = [
-            'access' => $this->_('Доступ'),
-            'edit'   => $this->_('Редактирование'),
-            'delete' => $this->_('Удаление'),
-        ];
+        $step               = str_repeat('&nbsp;', 5);
 
+        foreach ($modules_privileges as $module_name => $module) {
+            foreach ($module['privileges'] as $privilege_name => $privilege_title) {
+                if ($privilege_name === 'access') {
+                    $title = $module['title'];
 
+                    if ($module['icon']) {
+                        $title = "<i class=\"{$module['icon']}\"></i> {$title}";
+                    }
 
-        $step = str_repeat('&nbsp;', 5);
+                } else {
+                    $title = "{$step}{$privilege_title}";
+                }
 
-        foreach ($modules as $module) {
-            $modules_info = $this->getModuleInfoFromFile($module->name);
-
-            $privileges     = $default_privileges;
-            $mod_privileges = ! empty($modules_info) && ! empty($modules_info['privileges']) && is_array($modules_info['privileges'])
-                ? $modules_info['privileges']
-                : [];
-
-            foreach ($mod_privileges as $privilege_name => $privilege_title) {
-                $privileges[$privilege_name] = $privilege_title;
-            }
-
-            foreach ($privileges as $privilege_name => $privilege_title) {
                 $record = [
-                    'module_title' => $module->title,
-                    'module'       => $module->name,
-                    'section'      => '',
-                    'name'         => $privilege_name,
-                    'title'        => "{$step}{$privilege_title}",
+                    'module'  => $module_name,
+                    'section' => '',
+                    'name'    => $privilege_name,
+                    'title'   => "{$title}",
                 ];
 
                 foreach ($roles as $role) {
-                    $record["role_{$role['id']}"] = ! empty($role['privileges'][$module->name]) &&
-                                                    in_array($privilege_name, $role['privileges'][$module->name])
+                    $record["role_{$role['id']}"] = ! empty($role['privileges'][$module_name]) &&
+                                                    in_array($privilege_name, $role['privileges'][$module_name])
                         ? 1
                         : 0;
                 }
@@ -184,51 +171,44 @@ class View extends Common {
                 $records[] = $record;
             }
 
+            foreach ($module['sections'] as $section_name => $section) {
+                foreach ($section['privileges'] as $privilege_name => $privilege_title) {
 
+                    $title = $privilege_name === 'access'
+                        ? "{$step}{$section['title']}"
+                        : "{$step}{$step}{$privilege_title}";
 
+                    $resource_name = "{$module_name}_{$section_name}";
 
+                    $record = [
+                        'module'  => $module_name,
+                        'section' => $section_name,
+                        'name'    => $privilege_name,
+                        'title'   => "{$title}",
+                    ];
 
-            foreach ($sections as $section) {
-                if ($module->id == $section->module_id) {
-                    $privileges     = $default_privileges;
-                    $mod_privileges = ! empty($modules_info) &&
-                                      ! empty($modules_info['sections']) &&
-                                      ! empty($modules_info['sections'][$section->name]) &&
-                                      ! empty($modules_info['sections'][$section->name]) &&
-                                      ! empty($modules_info['sections'][$section->name]['privileges']) &&
-                                      is_array($modules_info['sections']['privileges'])
-                        ? $modules_info['sections'][$section->name]['privileges']
-                        : [];
-
-                    foreach ($mod_privileges as $privilege_name => $privilege_title) {
-                        $privileges[$privilege_name] = $privilege_title;
+                    foreach ($roles as $role) {
+                        $record["role_{$role['id']}"] = ! empty($role['privileges'][$resource_name]) &&
+                                                        in_array($privilege_name, $role['privileges'][$resource_name])
+                            ? 1
+                            : 0;
                     }
 
-                    foreach ($privileges as $privilege_name => $privilege_title) {
-                        $record = [
-                            'module_title' => "{$step}{$section->title}",
-                            'module'       => $module->name,
-                            'section'      => $section->name,
-                            'name'         => $privilege_name,
-                            'title'        => "{$step}{$step}{$privilege_title}",
-                        ];
-
-                        foreach ($roles as $role) {
-                            $resource_name = "{$module->name}_{$section->name}";
-
-                            $record["role_{$role['id']}"] = ! empty($role['privileges'][$resource_name]) &&
-                                                            in_array($privilege_name, $role['privileges'][$resource_name])
-                                ? 1
-                                : 0;
-                        }
-
-                        $records[] = $record;
-                    }
+                    $records[] = $record;
                 }
             }
         }
 
+
+
         $table->setRecords($records);
+
+        foreach ($table->getRecords() as $record) {
+            if ($record->name === 'access') {
+                $record->setAttr('class', 'table-active');
+                $record->cell('title')->setAttr('class', 'fw-medium');
+            }
+        }
 
         return $table->toArray();
     }
@@ -245,113 +225,80 @@ class View extends Common {
         $table = new Table('admin', 'roles', 'role_access');
         $table->setClass('table-hover table-borderless table-striped table-sm');
         $table->setGroupBy('module_title', ['class' => 'fw-medium']);
-        $table->setShowHeader(false);
+        $table->setShowHeader(true);
         $table->setNoBorder(true);
 
+        $icon_on  = '<i class="bi bi-toggle-on"></i> ';
+        $icon_off = '<i class="bi bi-toggle-off"></i> ';
 
         $table->addColumns([
-            (new Column\Text('title'))->setMinWidth(250),
+            (new Column\Html('title', $this->_('Правила')))->setMinWidth(250)->setSort(false)
+                ->setAttrHeader('class', 'text-light-emphasis bg-white'),
+            (new Column\Toggle("is_access"))->setMinWidth(50)->setSort(false)
+                ->setAttrHeader('class', 'text-end bg-white')
+                ->showMenuAlways(true)
+                ->addMenuButton($icon_on . $this->_('Вкл. все'), "adminRoles.setAccessRoleAll()", ['class' => 'text-danger-emphasis'])
+                ->addMenuButton($icon_off . $this->_('Выкл. все'), "adminRoles.setRejectRoleAll()")
         ]);
+
+
 
         $role = $role?->toArray() ?: [];
-
         $role['privileges'] = ! empty($role['privileges']) ? json_decode($role['privileges'], true) : [];
 
-        $table->addColumns([
-            (new Column\Toggle("is_access"))->setMinWidth(50)->setSort(false)
-//                    ->showMenuAlways(true)
-//                    ->addMenuItem($this->_('Включить все'), "adminRoles.setAccessAll('{$role['id']}')", ['class' => 'text-danger-emphasis'])
-//                    ->addMenuItem($this->_('Выключить все'), "adminRoles.setRejectAll('{$role['id']}')")
-        ]);
-
-        $modules = $this->modAdmin->tableModules->fetchAll(function (Select $select) {
-            $select->order('seq');
-        });
-        $sections = $this->modAdmin->tableModulesSections->fetchAll(function (Select $select) {
-            $select->order('seq');
-        });
-
+        $modules_privileges = $this->modAdmin->modelRoles->getModulesPrivileges();
         $records            = [];
-        $default_privileges = [
-            'access' => $this->_('Доступ'),
-            'edit'   => $this->_('Редактирование'),
-            'delete' => $this->_('Удаление'),
-        ];
+        $step               = str_repeat('&nbsp;', 5);
 
+        foreach ($modules_privileges as $module_name => $module) {
+            foreach ($module['privileges'] as $privilege_name => $privilege_title) {
+                if ($privilege_name === 'access') {
+                    $title = $module['title'];
 
-        $step = str_repeat('&nbsp;', 5);
+                    if ($module['icon']) {
+                        $title = "<i class=\"{$module['icon']}\"></i> {$title}";
+                    }
 
-        foreach ($modules as $module) {
-            $modules_info = $this->getModuleInfoFromFile($module->name);
+                } else {
+                    $title = "{$step}{$privilege_title}";
+                }
 
-            $privileges     = $default_privileges;
-            $mod_privileges = ! empty($modules_info) && ! empty($modules_info['privileges']) && is_array($modules_info['privileges'])
-                ? $modules_info['privileges']
-                : [];
-
-            foreach ($mod_privileges as $privilege_name => $privilege_title) {
-                $privileges[$privilege_name] = $privilege_title;
-            }
-
-            foreach ($privileges as $privilege_name => $privilege_title) {
-                $record = [
-                    'module_title' => $module->title,
-                    'module'       => $module->name,
-                    'section'      => '',
-                    'name'         => $privilege_name,
-                    'title'        => "{$step}{$privilege_title}",
+                $records[] = [
+                    'module'    => $module_name,
+                    'section'   => '',
+                    'name'      => $privilege_name,
+                    'title'     => $title,
+                    'is_access' => ! empty($role['privileges'][$module_name]) && in_array($privilege_name, $role['privileges'][$module_name]) ? 1 : 0,
                 ];
-
-                $record["is_access"] = ! empty($role['privileges'][$module->name]) &&
-                                       in_array($privilege_name, $role['privileges'][$module->name])
-                    ? 1
-                    : 0;
-
-                $records[] = $record;
             }
 
+            foreach ($module['sections'] as $section_name => $section) {
+                foreach ($section['privileges'] as $privilege_name => $privilege_title) {
 
+                    $title = $privilege_name === 'access'
+                        ? "{$step}{$section['title']}"
+                        : "{$step}{$step}{$privilege_title}";
 
+                    $resource_name = "{$module_name}_{$section_name}";
 
-            foreach ($sections as $section) {
-                if ($module->id == $section->module_id) {
-                    $privileges     = $default_privileges;
-                    $mod_privileges = ! empty($modules_info) &&
-                                      ! empty($modules_info['sections']) &&
-                                      ! empty($modules_info['sections'][$section->name]) &&
-                                      ! empty($modules_info['sections'][$section->name]) &&
-                                      ! empty($modules_info['sections'][$section->name]['privileges']) &&
-                                      is_array($modules_info['sections']['privileges'])
-                        ? $modules_info['sections'][$section->name]['privileges']
-                        : [];
-
-                    foreach ($mod_privileges as $privilege_name => $privilege_title) {
-                        $privileges[$privilege_name] = $privilege_title;
-                    }
-
-                    foreach ($privileges as $privilege_name => $privilege_title) {
-                        $record = [
-                            'module_title' => "{$step}{$section->title}",
-                            'module'       => $module->name,
-                            'section'      => $section->name,
-                            'name'         => $privilege_name,
-                            'title'        => "{$step}{$step}{$privilege_title}",
-                        ];
-
-                        $resource_name = "{$module->name}_{$section->name}";
-
-                        $record["is_access"] = ! empty($role['privileges'][$resource_name]) &&
-                                               in_array($privilege_name, $role['privileges'][$resource_name])
-                            ? 1
-                            : 0;
-
-                        $records[] = $record;
-                    }
+                    $records[] = [
+                        'module'    => $module_name,
+                        'section'   => $section_name,
+                        'name'      => $privilege_name,
+                        'title'     => $title,
+                        'is_access' => ! empty($role['privileges'][$resource_name]) && in_array($privilege_name, $role['privileges'][$resource_name]) ? 1 : 0,
+                    ];
                 }
             }
         }
 
         $table->setRecords($records);
+
+        foreach ($table->getRecords() as $record) {
+            if ($record->name === 'access') {
+                $record->cell('title')->setAttr('class', 'fw-medium');
+            }
+        }
 
         return $table->toArray();
     }
@@ -370,7 +317,7 @@ class View extends Common {
         $form->setSuccessNotice();
         $form->setOnSubmit('adminRoles.onSaveRole(form, data)');
         $form->setWidthLabel(150);
-        $form->setHandler("{$this->base_url}/" . ($role?->id ?: 0), 'post');
+        $form->setHandler("{$this->base_url}/" . ($role?->id ?: 0));
         $form->setTable($this->modAdmin->tableRoles, $role?->id);
 
         $form->setRecord([

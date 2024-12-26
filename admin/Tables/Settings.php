@@ -66,8 +66,6 @@ class Settings extends Table {
     /**
      * @param Row $row
      * @return void
-     * @throws \Core3\Exceptions\DbException
-     * @throws \Core3\Exceptions\Exception
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
     protected function preUpdate(Row $row): void {
@@ -85,8 +83,6 @@ class Settings extends Table {
     /**
      * @param Row $row
      * @return void
-     * @throws \Core3\Exceptions\DbException
-     * @throws \Core3\Exceptions\Exception
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
     protected function postUpdate(Row $row): void {
@@ -102,8 +98,6 @@ class Settings extends Table {
     /**
      * @param Row $row
      * @return void
-     * @throws \Core3\Exceptions\DbException
-     * @throws \Core3\Exceptions\Exception
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
     protected function preDelete(Row $row): void {
@@ -117,8 +111,6 @@ class Settings extends Table {
     /**
      * @param Row $row
      * @return void
-     * @throws \Core3\Exceptions\DbException
-     * @throws \Core3\Exceptions\Exception
      * @throws \Laminas\Cache\Exception\ExceptionInterface
      */
     protected function postDelete(Row $row): void {

@@ -2,15 +2,15 @@
 namespace Core3\Interfaces;
 
 /**
- * Определяет возможность подписки на события, возникающие в других модулях
+ * Определяет возможность подписки на события, возникающие в модулях
  */
 interface Events {
 
     /**
      * Обработка событий
-     * @param string $module_name модуль, в котором произошло событие
-     * @param string $event_name  код события
-     * @param array  $data        данные события
+     * @param string $module модуль, в котором произошло событие
+     * @param string $event  код события
+     * @param array  $data   данные события
      */
-    public function listener(string $module_name, string $event_name, array $data);
+    public function events(string $module, string $event, array $data): void;
 }
