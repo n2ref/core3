@@ -315,6 +315,65 @@ class Common extends Db {
 
 
     /**
+     * Запрос для получения ответов от модулей
+     * @param string        $request_name
+     * @param array         $data
+     * @param \Closure|null $callback
+     * @return mixed
+     * @throws ExceptionInterface
+     */
+    public function ask(string $request_name, array $data = [], \Closure $callback = null): mixed {
+
+        $key            = 'modules_answer';
+        $modules_answer = [];
+
+        if ($this->hasStaticCache($key)) {
+            $modules_answer = $this->getStaticCache($key);
+        }
+
+        if (empty($modules_answer)) {
+            $modules_answer = [];
+
+            $modules = $this->modAdmin->tableModules->getRowsByActive();
+
+            foreach ($modules as $module) {
+                $controller = $this->getModuleController($module->name);
+
+                if (in_array('\\Core3\\Interfaces\\Answer', class_implements($controller))) {
+                    $modules_answer[] = $controller;
+                }
+            }
+
+            $this->setStaticCache($key, $modules_answer);
+        }
+
+
+        $result = null;
+
+        foreach ($modules_answer as $module) {
+            $response = $module->answer($this->module, $request_name, $data);
+
+            if ( ! is_null($response)) {
+                if ($callback) {
+                    $response_callback = $callback($response);
+
+                    if ( ! is_null($response_callback)) {
+                        $result = $response_callback;
+                        break;
+                    }
+
+                } else {
+                    $result = $response;
+                    break;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+
+    /**
      * Запуск cli метода
      * @param string     $module_name
      * @param string     $method_name
