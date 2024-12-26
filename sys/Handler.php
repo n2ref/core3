@@ -445,15 +445,15 @@ class Handler extends Common {
         if ($this->auth->isAdmin()) {
             $modules[] = [
                 'name'             => "admin",
-                'title'            => "Админ",
+                'title'            => $this->_("Админ"),
                 'icon'             => "",
                 'is_visible_index' => true,
                 'sections'         => [
-                    ["name" => "modules",  'title' => $this->_("Модули")],
-                    ["name" => "settings", 'title' => $this->_("Настройки")],
-                    ["name" => "users",    'title' => $this->_("Пользователи")],
-                    ["name" => "roles",    'title' => $this->_("Роли")],
-                    ["name" => "monitor",  'title' => $this->_("Мониторинг")],
+                    ["name" => "modules",    'title' => $this->_("Модули")],
+                    ["name" => "settings",   'title' => $this->_("Настройки")],
+                    ["name" => "users",      'title' => $this->_("Пользователи")],
+                    ["name" => "roles",      'title' => $this->_("Роли")],
+                    ["name" => "monitoring", 'title' => $this->_("Мониторинг")],
                 ],
             ];
         }
