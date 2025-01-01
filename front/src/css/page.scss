@@ -3,14 +3,24 @@
   --menu-header-text: #444;
   --menu-header-btn-hover: rgba(0, 0, 0, 0.15);
 
-  --menu-drawer: #244031;
-  --menu-drawer-mod-active: rgb(0 0 0 / 30%);
-  --menu-drawer-mod-active-item: rgb(0 0 0 / 30%);
+  --menu-drawer: #183926;
+  --menu-drawer-mod-active: rgb(255 255 255 / 10%);
+  --menu-drawer-mod-active-item: rgb(255 255 255 / 8%);
   --menu-drawer-mod-active-text: rgb(255 255 255 / 90%);
   --menu-drawer-text: rgb(255 255 255 / 70%);
   --menu-drawer-text-active: #fff;
 
-  --menu-bg: #fafafa;
+  //--menu-bg: #fafafa;
+  --menu-bg: linear-gradient(145deg, #d4dfd1, #f0eee6);
+  --mdc-theme-primary: #2a4397;
+  --mdc-theme-secondary: #36436e;
+}
+[data-bs-theme="dark"] {
+  --menu-header: var(--bs-body-bg);
+  --menu-header-text: #dee2e6;
+  --menu-header-btn-hover: rgba(0, 0, 0, 0.15);
+
+  --menu-bg: #212529;
   --mdc-theme-primary: #2a4397;
   --mdc-theme-secondary: #36436e;
 }

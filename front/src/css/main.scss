@@ -1,9 +1,5 @@
 
-@import '@material/ripple/dist/mdc.ripple.min';
-@import '@material/linear-progress/dist/mdc.linear-progress.min';
-@import '@material/top-app-bar/dist/mdc.top-app-bar.min';
-
-
+@import "external/material";
 @import "external/bootstrap";
 @import "external/fonts";
 @import "external/coreui";

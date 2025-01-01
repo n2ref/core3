@@ -143,7 +143,7 @@
             }
             > .menu-list-item .item-control a {
                 width: 100%;
-                height: 40px;
+                height: 36px;
                 border-radius: 10px;
                 text-decoration: none;
                 padding: 0 12px 0 13px;
@@ -183,7 +183,7 @@
         .menu-list.level-2 > .menu-list-item {
             margin: 0;
             border-radius: 0;
-            height: 32px;
+            height: 30px;
             flex-direction: column;
             align-content: flex-start;
             align-items: flex-start;
@@ -197,7 +197,7 @@
         }
         .menu-list.level-2 > .menu-list-item a {
             padding-left: 48px;
-            height: 32px;
+            height: 30px;
             text-decoration: none;
             display: flex;
             align-items: center;
@@ -211,7 +211,7 @@
         }
         .menu-list .menu-list-item.menu-item-nested-open.menu-item-nested .item-control:hover,
         .menu-list.level-2 > .menu-list-item a:hover {
-            background-color: rgb(0 0 0 / 10%);
+            background-color: var(--menu-drawer-mod-active);
         }
         .menu-list.level-2 > .menu-list-item:last-child a:hover {
             border-bottom-left-radius: 10px;
@@ -266,7 +266,7 @@
 
     .menu-drawer-app,
     .menu-drawer-app .main-content {
-        background-color: #f1f1f1;
+        background: var(--menu-bg);
         height: 100%;
         box-sizing: border-box;
         overflow: auto;
@@ -379,8 +379,9 @@
             position: absolute;
             width: calc(100% - 280px);
             height: 100%;
-            background-color: rgba(255,255,255,.5);
+            background-color: rgb(117 117 117 / 50%);
             transition: all 100ms cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: progress;
         }
 
         .loading-block {
@@ -388,8 +389,7 @@
             min-width: 200px;
             max-width: max-content;
             margin: 75px auto 0 auto;
-            background-color: #fff;
-            border: #ddd solid 1px;
+            border: var(--bs-body-bg) solid 1px;
             border-radius: 4px;
             padding: 8px 12px;
             display: flex;
@@ -397,7 +397,7 @@
             align-items: center;
             justify-content: flex-start;
             gap: 10px;
-            box-shadow: 0 0 5px 0 #e3e3e3;
+            // box-shadow: 0 0 5px 0 var(--bs-body-bg);
 
             .spinner-border {
                 --bs-spinner-width: 1.5rem;

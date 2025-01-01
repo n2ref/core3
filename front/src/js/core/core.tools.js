@@ -18,7 +18,7 @@ let coreTools = {
             url = location.hash.substring(1);
         }
 
-        let params = url.match(/^\/([a-z0-9_]*)(?:\/|)([a-z0-9_]*)(?:(\?[^?]*)|)/);
+        let params = url.match(/^(?:\/|)([a-z0-9_]*)(?:\/|)([a-z0-9_]*)(?:(\?[^?]*)|)/);
         let result = {
             module: params !== null && typeof params[1] === 'string' ? params[1] : '',
             section: params !== null && typeof params[2] === 'string' ? params[2] : '',

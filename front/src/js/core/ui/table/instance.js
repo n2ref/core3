@@ -86,15 +86,16 @@ class coreUiTableInstance {
     /**
      * Переключение состояния у записи
      * @param {string} url
-     * @param {string} checked
-     * @param {string} id
+     * @param {string} input
+     * @param {string} record
      * @param {string} questionY
      * @param {string} questionN
      */
-    switch(url, checked, id, questionY, questionN) {
+    switch(url, input, record, questionY, questionN) {
 
         let question;
-        let isChecked = $(checked).is(':checked');
+        let isChecked = $(input).is(':checked');
+        let id        = record.data && record.data.hasOwnProperty('id') ? record.data.id : 0;
 
         if (isChecked) {
             question = questionY || "Активировать запись?";
@@ -110,14 +111,14 @@ class coreUiTableInstance {
             title         : question,
             onHide: function () {
                 if ( ! isAccept) {
-                    $(checked).prop('checked', ! isChecked);
+                    $(input).prop('checked', ! isChecked);
                 }
             },
             buttons: [
                 {
                     text: Core._("Отмена"),
                     click: function () {
-                        $(checked).prop('checked', ! isChecked);
+                        $(input).prop('checked', ! isChecked);
                     }
                 },
                 {
@@ -138,12 +139,12 @@ class coreUiTableInstance {
                             }),
                             success    : function (response) {
                                 if (response.status !== 'success') {
-                                    $(checked).prop('checked', !isChecked);
+                                    $(input).prop('checked', !isChecked);
                                     CoreUI.notice.danger(response.error_message || Core._("Ошибка. Попробуйте обновить страницу и выполните это действие еще раз."));
                                 }
                             },
                             error      : function (response) {
-                                $(checked).prop('checked', !isChecked);
+                                $(input).prop('checked', !isChecked);
                                 CoreUI.notice.danger(Core._("Ошибка. Попробуйте обновить страницу и выполните это действие еще раз."));
                             },
                             complete   : function () {

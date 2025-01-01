@@ -6,6 +6,9 @@
     "build_all":  "gulp build_tpl && gulp build_js_coreui && gulp build_js && gulp build_js_min && gulp build_js_all_min && gulp build_css_min && npm run test_js",
     "build_fast": "gulp build_tpl && gulp build_js_min_fast && gulp build_js_all_min_fast && gulp build_css_min_fast",
 
+    "build_js": "gulp build_tpl && gulp build_js_coreui && gulp build_js && gulp build_js_min && gulp build_js_all_min",
+    "build_css": "gulp build_css_min",
+
     "build_watch": "gulp build_watch",
     "test_js": "eslint -c .eslintrc.json --max-warnings 100 --ext .js ./dist"
   },
@@ -31,7 +34,7 @@
     "coreui-layout": "1.0.9",
     "coreui-form": "1.0.41",
     "coreui-form-field-select2": "1.0.2",
-    "coreui-table": "1.1.40",
+    "coreui-table": "1.1.44",
     "coreui-chart": "1.0.9",
     "coreui-breadcrumb": "1.0.3"
   },

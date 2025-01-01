@@ -135,7 +135,7 @@ gulp.task('build_js_min_fast', function() {
     return rollup({
         input: conf.js.core.main,
         output: {
-            sourcemap: true,
+            sourcemap: false,
             format: 'umd',
             name: "Core"
         },
@@ -148,7 +148,6 @@ gulp.task('build_js_min_fast', function() {
         context: "window",
         plugins: [
             nodeResolve(),
-            rollupSourcemaps(),
             rollupCommonjs(),
             rollupBabel({babelHelpers: 'bundled'}),
         ]

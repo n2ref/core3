@@ -1,0 +1,10 @@
+
+@import '@material/ripple/dist/mdc.ripple.min';
+@import '@material/linear-progress/dist/mdc.linear-progress.min';
+@import '@material/top-app-bar/dist/mdc.top-app-bar.min';
+
+
+.mdc-ripple-surface::before,
+.mdc-ripple-surface::after {
+  --mdc-ripple-color:  rgb(255 255 255 / 30%);
+}
