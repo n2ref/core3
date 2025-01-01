@@ -26,7 +26,6 @@ class View extends Common {
     public function getTableRoles(): array {
 
         $table = new Table('admin', 'roles');
-        $table->setShowScrollShadow(true);
         $table->setSaveState(true);
         $table->addControlBtnAdd("#/{$this->base_url}/0", 'out');
         $table->addControlBtnDelete("{$this->base_url}/table", 'out');
@@ -104,10 +103,9 @@ class View extends Common {
 
         $table = new Table('admin', 'roles', 'access');
         $table->setClass('table-hover table-striped table-sm');
-        $table->setShowScrollShadow(true);
         $table->setOverflow(true);
         $table->setSaveState(true);
-        $table->addControlColumns();
+        $table->getControlColumns();
 
         $table->setHeaderOut($table::LAST)
             ->left([
@@ -226,7 +224,7 @@ class View extends Common {
         $table->setClass('table-hover table-borderless table-striped table-sm');
         $table->setGroupBy('module_title', ['class' => 'fw-medium']);
         $table->setShowHeader(true);
-        $table->setNoBorder(true);
+        $table->setTheme('no-border');
 
         $icon_on  = '<i class="bi bi-toggle-on"></i> ';
         $icon_off = '<i class="bi bi-toggle-off"></i> ';

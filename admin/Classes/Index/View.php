@@ -2,7 +2,10 @@
 namespace Core3\Mod\Admin\Classes\Index;
 use Core3\Classes\Common;
 use Core3\Classes\Tools;
-use CoreUI\Table;
+use Core3\Classes\Table;
+use CoreUI\Table\Column;
+use CoreUI\Table\Filter;
+use CoreUI\Table\Control;
 
 
 /**
@@ -24,14 +27,15 @@ class View extends Common {
         $count_active_now = $this->modAdmin->tableUsersSession->getCountActive(new \DateTime('-5 min'));
 
 
-        $table = new Table();
+        $table = new Table('admin', 'index', 'common');
+        $table->setTheme(null);
         $table->setOverflow(true);
         $table->setShowHeader(false);
         $table->setTheadTop(-30);
         $table->addColumns([
-            (new Table\Column\Text('title'))->setWidth(200)->setAttr('style', 'background-color:#f5f5f5;font-weight:600;border-right:1px solid #e0e0e0;'),
-            (new Table\Column\Html('value')),
-            (new Table\Column\Html('actions'))->setWidth('45%')
+            (new Column\Text('title'))->setWidth(200)->setAttr('class', 'bg-body-tertiary border-end fw-medium'),
+            (new Column\Html('value')),
+            (new Column\Html('actions'))->setWidth('45%')
         ]);
 
         $table->setRecords([
@@ -133,13 +137,14 @@ class View extends Common {
 
 
 
-        $table = new Table();
+        $table = new Table('admin', 'index', 'system');
+        $table->setTheme(null);
         $table->setOverflow(true);
         $table->setShowHeader(false);
 
         $table->addColumns([
-            (new Table\Column\Text('title'))->setWidth(200)->setAttr('style', 'background-color:#f5f5f5;font-weight:600;border-right:1px solid #e0e0e0;'),
-            (new Table\Column\Html('value'))
+            (new Column\Text('title'))->setWidth(200)->setAttr('class', 'bg-body-tertiary border-end fw-medium'),
+            (new Column\Html('value'))
         ]);
 
         $table->setRecords([
@@ -192,15 +197,16 @@ class View extends Common {
         }
 
 
-        $table = new Table();
+        $table = new Table('admin', 'index', 'disks');
+        $table->setTheme(null);
         $table->setOverflow(true);
         $table->addColumns([
-            (new Table\Column\Text('mount',     $this->_('Директория')))->setWidth(150),
-            (new Table\Column\Text('device',    $this->_('Устройство')))->setWidth(200),
-            (new Table\Column\Text('fs',        $this->_('Файловая система')))->setWidth(140),
-            (new Table\Column\Text('total',     $this->_('Всего')))->setWidth(120),
-            (new Table\Column\Html('used',      $this->_('Использовано')))->setWidth(120),
-            (new Table\Column\Html('available', $this->_('Свободно')))->setWidth(120),
+            (new Column\Text('mount',     $this->_('Директория')))->setWidth(150),
+            (new Column\Text('device',    $this->_('Устройство')))->setWidth(200),
+            (new Column\Text('fs',        $this->_('Файловая система')))->setWidth(140),
+            (new Column\Text('total',     $this->_('Всего')))->setWidth(120),
+            (new Column\Html('used',      $this->_('Использовано')))->setWidth(120),
+            (new Column\Html('available', $this->_('Свободно')))->setWidth(120),
         ]);
 
         $table->setRecords($records);
@@ -214,25 +220,26 @@ class View extends Common {
      */
     public function getTableDbConnections(): array {
 
-        $table = new Table();
+        $table = new Table('admin', 'index', 'bd_connections');
         $table->setOverflow(true);
         $table->setRecordsRequest('admin/index/db/connections/records');
-        $table->addHeaderIn()
+
+        $table->addHeaderOut()
             ->left([
-                (new Table\Control\Total)
+                (new Control\Total)
             ])
             ->right([
-                (new Table\Control\Button('<i class="bi bi-arrow-clockwise"></i>'))->setOnClick('table.reload()')
+                (new Control\Button('<i class="bi bi-arrow-clockwise"></i>'))->setOnClick('table.reload()')
             ]);
 
         $table->addColumns([
-            (new Table\Column\Text('Id',    'Id'))->setSort(true),
-            (new Table\Column\Text('User',  'User'))->setSort(true),
-            (new Table\Column\Text('Host',  'Host'))->setSort(true),
-            (new Table\Column\Text('db',    'db'))->setSort(true),
-            (new Table\Column\Text('Time',  'Time'))->setSort(true),
-            (new Table\Column\Text('State', 'State'))->setSort(true),
-            (new Table\Column\Text('Info',  'Info'))->setSort(true),
+            (new Column\Text('Id',    'Id'))->setSort(true),
+            (new Column\Text('User',  'User'))->setSort(true),
+            (new Column\Text('Host',  'Host'))->setSort(true),
+            (new Column\Text('db',    'db'))->setSort(true),
+            (new Column\Text('Time',  'Time'))->setSort(true),
+            (new Column\Text('State', 'State'))->setSort(true),
+            (new Column\Text('Info',  'Info'))->setSort(true),
         ]);
 
         return $table->toArray();
@@ -244,18 +251,18 @@ class View extends Common {
      */
     public function getTableDbVariables(): array {
 
-        $table = new Table();
+        $table = new Table('admin', 'index', 'db_variables');
         $table->setOverflow(true);
 
         $table->addHeaderOut()
             ->left([
-                (new Table\Filter\Text('search'))->setAttr('placeholder', $this->_('Поиск'))->setAutoSearch(true),
-                (new Table\Control\FilterClear()),
+                (new Filter\Text('search'))->setAttr('placeholder', $this->_('Поиск'))->setAutoSearch(true),
+                (new Control\FilterClear()),
             ]);
 
         $table->addColumns([
-            (new Table\Column\Text('name',  'Name', '50%'))->setAttr('style', 'word-break: break-all'),
-            (new Table\Column\Text('value', 'Value'))->setNoWrap(true)->setNoWrapToggle(true)->setMinWidth(150)->setAttr('style', 'word-break: break-all'),
+            (new Column\Text('name',  'Name', '50%'))->setAttr('style', 'word-break: break-all'),
+            (new Column\Text('value', 'Value'))->setNoWrap(true)->setNoWrapToggle(true)->setMinWidth(150)->setAttr('style', 'word-break: break-all'),
         ]);
 
         $variables = (new SysInfo\Database())->getVariables();
@@ -275,33 +282,35 @@ class View extends Common {
      */
     public function getTableProcess(): array {
 
-        $table = new Table();
+        $table = new Table('admin', 'index', 'system_process');
         $table->setOverflow(true);
         $table->setRecordsRequest('admin/index/system/process/records');
 
+//        $table->addHeaderOut()
+//            ->left([
+//
+//            ]);
+
         $table->addHeaderOut()
             ->left([
-                (new Table\Filter\Text('command'))->setAttr('placeholder', 'Command'),
-                (new Table\Control\FilterClear()),
-            ]);
-
-        $table->addHeaderIn()
-            ->left([
-                (new Table\Control\Total)
+                (new Control\Total),
+                (new Control\Divider())->setWidth(30),
+                (new Filter\Text('command'))->setAttr('placeholder', 'Command'),
+                (new Control\FilterClear()),
             ])
             ->right([
-                (new Table\Control\Button('<i class="bi bi-arrow-clockwise"></i>'))->setOnClick('table.reload()'),
+                (new Control\Button('<i class="bi bi-arrow-clockwise"></i>'))->setOnClick('table.reload()'),
             ]);
 
         $table->addColumns([
-            (new Table\Column\Text('pid',     'Pid',    80))->setSort(true),
-            (new Table\Column\Text('user',    'User',   90))->setSort(true),
-            (new Table\Column\Text('group',   'Group',  90))->setSort(true),
-            (new Table\Column\Text('start',   'Start',  200))->setSort(true),
-            (new Table\Column\Text('cpu',     'Cpu',    50))->setSort(true),
-            (new Table\Column\Text('mem',     'Mem',    50))->setSort(true),
-            (new Table\Column\Text('size',    'Size',   90))->setSort(true),
-            (new Table\Column\Text('command', 'Command'))->setSort(true)->setNoWrap(true)->setNoWrapToggle(true)->setMinWidth(150)->setAttr('style', 'word-break: break-all'),
+            (new Column\Text('pid',     'Pid',    80))->setSort(true),
+            (new Column\Text('user',    'User',   90))->setSort(true),
+            (new Column\Text('group',   'Group',  90))->setSort(true),
+            (new Column\Text('start',   'Start',  200))->setSort(true),
+            (new Column\Text('cpu',     'Cpu',    50))->setSort(true),
+            (new Column\Text('mem',     'Mem',    50))->setSort(true),
+            (new Column\Text('size',    'Size',   90))->setSort(true),
+            (new Column\Text('command', 'Command'))->setSort(true)->setNoWrap(true)->setNoWrapToggle(true)->setMinWidth(150)->setAttr('style', 'word-break: break-all'),
         ]);
 
         return $table->toArray();
@@ -336,15 +345,16 @@ class View extends Common {
         }
 
 
-        $table = new Table();
+        $table = new Table('admin', 'index', 'net');
+        $table->setTheme(null);
         $table->setOverflow(true);
         $table->addColumns([
-            (new Table\Column\Text('interface', 'Интерфейс'))->setWidth(150),
-            (new Table\Column\Text('ipv4',      'IPv4'))->setWidth(150),
-            (new Table\Column\Text('ipv6',      'IPv6'))->setWidth(200)->setMinWidth(200)->setAttr('style', 'word-break: break-all'),
-            (new Table\Column\Text('mac',       'Mac')),
-            (new Table\Column\Text('duplex',    'Duplex'))->setWidth(150),
-            (new Table\Column\Html('status',    'Status'))->setWidth(150),
+            (new Column\Text('interface', 'Интерфейс'))->setWidth(150),
+            (new Column\Text('ipv4',      'IPv4'))->setWidth(150),
+            (new Column\Text('ipv6',      'IPv6'))->setWidth(200)->setMinWidth(200)->setAttr('style', 'word-break: break-all'),
+            (new Column\Text('mac',       'Mac')),
+            (new Column\Text('duplex',    'Duplex'))->setWidth(150),
+            (new Column\Html('status',    'Status'))->setWidth(150),
         ]);
 
         $table->setRecords($records);

@@ -30,14 +30,10 @@ class View extends Common {
     public function getTable(): array {
 
         $table = new Table('admin', 'settings');
-        $table->setShowScrollShadow(true);
         $table->setSaveState(true);
         $table->setOverflow(true);
         $table->setClickUrl("#/{$this->base_url}/[id]");
-        $table->setGroupBy("module_title");
-
-        $table->addControlSearch();
-        $table->addControlColumns();
+        $table->setGroupBy("module_title")->setCollapsing(true);
         $table->addControlBtnAdd("#/{$this->base_url}/0");
         $table->addControlBtnDelete($this->base_url);
 

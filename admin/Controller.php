@@ -4,12 +4,12 @@ use Core3\Classes\Response;
 use Core3\Exceptions\Exception;
 use Core3\Exceptions\AppException;
 use Core3\Interfaces\Events;
-use Core3\Mod\Admin\Classes;
 use Core3\Mod\Admin\Classes\Modules;
 use Core3\Mod\Admin\Classes\Users;
 use Core3\Mod\Admin\Classes\Index;
 use Core3\Mod\Admin\Classes\Roles;
 use Core3\Mod\Admin\Classes\Settings;
+use Core3\Mod\Admin\Classes\Monitoring;
 use Core3\Classes\Common;
 use Core3\Classes\Request;
 use Core3\Classes\Router;
@@ -216,17 +216,22 @@ class Controller extends Common implements Events {
         $router = new Router();
         $router->route('/admin/users')->get([Users\Handler::class, 'getUsers']);
         $router->route('/admin/users/records')
-            ->get([Users\Handler::class, 'getUsersRecords'])
+            ->get([Users\Handler::class, 'getRecordsUsers'])
             ->delete([Users\Handler::class, 'deleteUsers']);
 
         $router->route('/admin/users/login')->post([Users\Handler::class, 'loginUser']);
         $router->route('/admin/users/avatar/upload')->post([Users\Handler::class, 'uploadFile']);
 
-        $router->route('/admin/users/{id:\d+}')
-            ->get([   Users\Handler::class, 'getUser' ])
+        $router->route('/admin/users/{id:\d+}(|/{tab})')
+            ->get([   Users\Handler::class, 'getUserPanel'])
             ->put([   Users\Handler::class, 'saveUser' ])
             ->post([  Users\Handler::class, 'saveUserNew' ])
             ->patch([ Users\Handler::class, 'switchUserActive' ]);
+
+        $router->route('/admin/users/{id:\d+}/user/form')             ->get([ Users\Handler::class, 'getUserForm']);
+        $router->route('/admin/users/{id:\d+}/sessions/{session_id:\d+}')->patch([ Users\Handler::class, 'switchUserSession' ]);
+        $router->route('/admin/users/{id:\d+}/sessions/table')        ->get([ Users\Handler::class, 'getUserSessions' ]);
+        $router->route('/admin/users/{id:\d+}/sessions/table/records')->get([ Users\Handler::class, 'getRecordsSessions' ]);
 
         $router->route('/admin/users/{id:\d+}/avatar/download')->get([ Users\Handler::class, 'getAvatarDownload' ]);
 
@@ -288,11 +293,20 @@ class Controller extends Common implements Events {
 
     /**
      * Мониторинг системы
-     * @throws \Exception
-     * @return void
+     * @param Request $request
+     * @return Response|array|null
+     * @throws Exception
+     * @throws MissingExtensionException
      */
-    public function sectionMonitoring() {
+    public function sectionMonitoring(Request $request): Response|array|null {
 
+        $router = new Router();
+        $router->route('/admin/monitoring(|/{tab})')->get([ Monitoring\Handler::class, 'getMonitoring' ]);
+        $router->route('/admin/monitoring/log(|/{file_hash})')      ->get([ Monitoring\Handler::class, 'getLogs']);
+        $router->route('/admin/monitoring/log/{file_hash}/records') ->get([ Monitoring\Handler::class, 'getRecordsLog']);
+        $router->route('/admin/monitoring/log/download/{file_hash}')->get([ Monitoring\Handler::class, 'downloadLog']);
+
+        return $this->runRouterMethod($router, $request);
     }
 
 

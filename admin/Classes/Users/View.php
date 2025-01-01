@@ -4,6 +4,7 @@ use Core3\Exceptions\Exception;
 use Core3\Classes\Common;
 use Core3\Classes\Form;
 use Core3\Classes\Table;
+use Core3\Classes\Db\Row;
 use CoreUI\Table\Filter;
 use CoreUI\Table\Search;
 use CoreUI\Table\Column;
@@ -30,8 +31,6 @@ class View extends Common {
         $table = new Table('admin', 'users');
         $table->setClass('table-hover table-striped');
         $table->addControlsDefault();
-        $table->addControlSearch();
-        $table->addControlColumns();
         $table->addControlBtnAdd("#/{$this->base_url}/0");
         $table->addControlBtnDelete("{$this->base_url}/records");
         $table->setRecordsRequest("{$this->base_url}/records");
@@ -42,6 +41,9 @@ class View extends Common {
 
         $table->setHeaderOut($table::LAST)
             ->left([
+                $table->getControlSearch(),
+                $table->getControlColumns(),
+                (new TableControl\Divider())->setWidth(30),
                 (new Filter\Text('login'))->setAttributes(['placeholder' => $this->_('Логин / Имя / Email')])->setWidth(200),
                 (new Filter\Select('role', $this->_('Роль')))->setWidth(200)->setOptions($roles),
                 (new TableControl\FilterClear()),
@@ -53,6 +55,7 @@ class View extends Common {
             (new Search\Text('email',                  $this->_('Email'))),
             (new Search\DatetimeRange('date_activity', $this->_('Последняя активность'))),
             (new Search\DatetimeRange('date_created',  $this->_('Дата регистрации'))),
+            (new Search\Number('active_sessions',      $this->_('Активных сессий'))),
             (new Search\CheckboxBtn('is_admin',        $this->_('Админ')))->setOptions(['1' => $this->_('Да'), '0' => $this->_('Нет')]),
             (new Search\CheckboxBtn('is_active',       $this->_('Активность')))->setOptions(['1' => $this->_('Да'), '0' => $this->_('Нет')]),
         ]);
@@ -66,7 +69,8 @@ class View extends Common {
             (new Column\Text('email',             $this->_('Email'),                  200))->setMinWidth(180)->setNoWrap(true),
             (new Column\Text('role_title',        $this->_('Роль'),                   200))->setMinWidth(150)->setNoWrap(true),
             (new Column\Datetime('date_activity', $this->_('Последняя активность'),   185))->setMinWidth(185),
-            (new Column\Datetime('date_created',  $this->_('Дата регистрации'),       155))->setMinWidth(155),
+            (new Column\Datetime('date_created',  $this->_('Дата регистрации'),       155))->setMinWidth(155)->setShow(false),
+            (new Column\Number('active_sessions', $this->_('Активных сессий'),        145))->setMinWidth(145),
             (new Column\Badge('is_admin',         $this->_('Админ'),                  80))->setMinWidth(80),
             (new Column\Button('login_user',      $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
         ]);
@@ -212,5 +216,63 @@ class View extends Common {
         ]);
 
         return $form->toArray();
+    }
+
+
+    /**
+     * @param Row $user
+     * @return array
+     */
+    public function getTableSessions(Row $user): array {
+
+        $table = new Table('admin', 'users', 'sessions');
+        $table->setClass('table-hover table-sm');
+        $table->setSaveState(true);
+        $table->setSearchLabelWidth(180);
+        $table->setTheadTop(-19);
+        $table->setRecordsRequest("{$this->base_url}/{$user->id}/sessions/table/records");
+
+        $table->addHeaderOut()
+            ->left([
+                $table->getControlSearch(),
+                $table->getControlColumns(),
+                (new TableControl\Divider())->setWidth(30),
+                (new Filter\Text('search'))->setAttributes(['placeholder' => $this->_('Устройство / Местоположение / ip')])->setWidth(260),
+                (new TableControl\Divider())->setWidth(30),
+                (new Filter\Toggle('is_active', $this->_('Только активные'))),
+                (new TableControl\FilterClear()),
+            ]);
+
+
+        $table->addFooterOut()
+            ->left([
+                new TableControl\Total,
+            ])
+            ->right([
+                (new TableControl\Pages(10))->showPrev(false)->showNext(false),
+                new TableControl\PageSize([ 25, 50, 100, 1000 ])
+            ]);
+
+        $table->addSearch([
+            (new Search\Text('place',                       $this->_('Местоположение'))),
+            (new Search\Text('agent',                       $this->_('Устройство'))),
+            (new Search\Text('client_ip',                   $this->_('ip'))),
+            (new Search\DatetimeRange('date_last_activity', $this->_('Последняя активность'))),
+            (new Search\DatetimeRange('date_expired',       $this->_('Окончание сессии'))),
+            (new Search\Number('count_requests',            $this->_('Количество запросов'))),
+            (new Search\CheckboxBtn('is_active',            $this->_('Активность')))->setOptions(['1' => $this->_('Да'), '0' => $this->_('Нет')]),
+        ]);
+
+        $table->addColumns([
+            $table->getColumnToggle('is_active',       $this->_('Активность'),           1, "/{$user->id}/sessions/[id]"),
+            (new Column\Text('agent',                  $this->_('Устройство')))->setMinWidth(200)->setNoWrap(true)->setNoWrapToggle(true),
+            (new Column\Text('place',                  $this->_('Местоположение')))->setMinWidth(200)->setNoWrap(true)->setNoWrapToggle(true),
+            (new Column\Text('client_ip',              $this->_('ip'),                   120)),
+            (new Column\Number('count_requests',       $this->_('Количество запросов'),  185)),
+            (new Column\Datetime('date_last_activity', $this->_('Последняя активность'), 185)),
+            (new Column\Html('date_expired',           $this->_('Окончание сессии'),     155)),
+        ]);
+
+        return $table->toArray();
     }
 }

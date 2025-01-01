@@ -2,5 +2,5 @@
     font-size: 14px;
 }
 .admin-list .fw-bold {
-    color: #444;
+    color: var(--bs-body-color);
 }

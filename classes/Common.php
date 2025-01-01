@@ -137,20 +137,20 @@ class Common extends Db {
 
         } catch (DbException $e) {
             $this->log->error("Database error - {$this->resource}", $e);
+            $is_access = $this->config?->system->debug?->on || $this->auth?->isAdmin();
 
             return Response::errorJson(500, 'error',
-                $this->config?->system->debug?->on || $this->auth?->isAdmin()
-                    ? $e->getMessage()
-                    : $this->_('Ошибка базы данных. Обновите страницу или попробуйте позже')
+                $is_access ? $e->getMessage() : $this->_('Ошибка базы данных. Обновите страницу или попробуйте позже'),
+                $is_access ? $e->getTrace() : null
             );
 
         } catch (\Exception $e) {
             $this->log->error("Fatal error - {$this->resource}", $e);
+            $is_access = $this->config?->system->debug?->on || $this->auth?->isAdmin();
 
             return Response::errorJson(500, 'error',
-                $this->config?->system->debug?->on || $this->auth?->isAdmin()
-                    ? $e->getMessage()
-                    : $this->_('Ошибка. Обновите страницу или попробуйте позже')
+                $is_access ? $e->getMessage() : $this->_('Ошибка. Обновите страницу или попробуйте позже'),
+                $is_access ? $e->getTrace() : null
             );
         }
     }

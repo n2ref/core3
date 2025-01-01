@@ -62,11 +62,23 @@ class Handler extends Common {
             throw new HttpException(400, $this->_('Неверный пароль') . Tools::passSalt($params['password']), 'pass_incorrect');
         }
 
+        $agent_title = null;
+
+        if ( ! empty($_SERVER['HTTP_USER_AGENT'])) {
+            $browser         = new \Wolfcast\BrowserDetection($_SERVER['HTTP_USER_AGENT']);
+            $platform        = $browser->getPlatformVersion();
+            $browser_name    = $browser->getName();
+            $browser_version = $browser->getVersion();
+
+            $agent_title = "{$platform} {$browser_name} {$browser_version}";
+        }
+
         $session = [
             'user_id'            => $user->id,
             'fingerprint'        => $params['fp'],
             'client_ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
             'agent_name'         => $_SERVER['HTTP_USER_AGENT'] ?? '',
+            'agent_title'        => $agent_title,
             'date_last_activity' => new Expression('NOW()'),
         ];
 

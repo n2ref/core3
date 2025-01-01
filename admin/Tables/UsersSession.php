@@ -26,7 +26,7 @@ class UsersSession extends Table {
 
             $select
                 ->columns([
-                    'id'    => 'id',
+                    'id'    => new Expression('0'),
                     'count' => new Expression('COUNT(DISTINCT user_id)')
                 ])
                 ->where(
@@ -35,23 +35,30 @@ class UsersSession extends Table {
                 ->limit(1);
         });
 
-        return (int)$results->current()->count;
+        return (int)$results->current()?->count;
     }
 
 
     /**
-     * Получаем информацию о сессии по токену
-     * @param string $refresh_token
-     * @return AbstractRowGateway|null
+     * Количество сессий у пользователя
+     * @param int $user_id
+     * @return int
      */
-    public function getRowByRefreshToken(string $refresh_token):? AbstractRowGateway {
+    public function getCountUser(int $user_id): int {
 
-        $results = $this->select(function (Select $select) use ($refresh_token) {
+        $results = $this->select(function (Select $select) use ($user_id) {
+
             $select
-                ->where('refresh_token = ?', $refresh_token)
+                ->columns([
+                    'id'    => new Expression('0'),
+                    'count' => new Expression('COUNT(1)')
+                ])
+                ->where(
+                    (new Where())->equalTo('user_id', $user_id)
+                )
                 ->limit(1);
         });
 
-        return $results->current();
+        return (int)$results->current()?->count;
     }
 }

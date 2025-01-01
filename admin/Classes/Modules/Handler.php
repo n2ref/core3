@@ -25,6 +25,7 @@ class Handler extends \Core3\Classes\Handler {
         $count_modules = $this->modAdmin->tableModules->getCount();
 
         $panel = new \CoreUI\Panel('module');
+        $panel->setTabsType($panel::TABS_TYPE_UNDERLINE);
         $panel->addTab($this->_("Установленные"), 'installed')->setUrlWindow("{$this->base_url}/installed")->setUrlContent("{$this->handler_url}/installed/content")->setCount($count_modules);
         $panel->addTab($this->_("Доступные"),     'available')->setUrlWindow("{$this->base_url}/available")->setUrlContent("{$this->handler_url}/available/content");
 

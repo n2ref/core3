@@ -38,6 +38,7 @@ class Table extends \CoreUI\Table {
         $this->system  = new System();
 
         $this->setClass('table-hover table-striped');
+        $this->setTheme('compact');
     }
 
 
@@ -112,7 +113,6 @@ class Table extends \CoreUI\Table {
 
         $this->setSearchLabelWidth(180);
         $this->setMaxHeight(800);
-        $this->setShowScrollShadow(true);
         $this->setSaveState(true);
 
         $this->setFooterOut($this::FIRST)
@@ -129,33 +129,23 @@ class Table extends \CoreUI\Table {
 
 
     /**
-     * @return $this
+     * @return Control\Search
      */
-    public function addControlSearch(): self {
+    public function getControlSearch(): Control\Search {
 
-        $this->setHeaderIn($this::LAST)
-            ->left([
-                (new Control\Search())
-                    ->setButton('<i class="bi bi-search"></i> ' . $this->system->_('Поиск'), ['class' => 'btn'])
-                    ->setButtonClear('<i class="bi bi-x bi-x-lg text-danger"></i>', ['class' => 'btn'])
-            ]);
-
-        return $this;
+        return (new Control\Search())
+            ->setButton('<i class="bi bi-search"></i> ' . $this->system->_('Поиск'), ['class' => 'btn'])
+            ->setButtonClear('<i class="bi bi-x bi-x-lg text-danger"></i>', ['class' => 'btn']);
     }
 
 
     /**
-     * @return $this
+     * @return Control\Columns
      */
-    public function addControlColumns(): self {
+    public function getControlColumns(): Control\Columns {
 
-        $this->setHeaderIn($this::LAST)
-            ->left([
-                (new Control\Columns())
-                    ->setButton('<i class="bi bi-layout-three-columns"></i> ' . $this->system->_('Колонки'), ['class' => 'btn'])
-            ]);
-
-        return $this;
+        return (new Control\Columns())
+            ->setButton('<i class="bi bi-layout-three-columns"></i> ' . $this->system->_('Колонки'), ['class' => 'btn']);
     }
 
 
@@ -164,7 +154,7 @@ class Table extends \CoreUI\Table {
      * @param string $position
      * @return $this
      */
-    public function addControlBtnAdd(string $url = '', string $position = 'in'): self {
+    public function addControlBtnAdd(string $url = '', string $position = 'out'): self {
 
         $position = $position == 'in'
             ? $this->setHeaderIn($this::LAST)
@@ -183,7 +173,7 @@ class Table extends \CoreUI\Table {
      * @param string $position
      * @return $this
      */
-    public function addControlBtnDelete(string $handler = '', string $position = 'in'): self {
+    public function addControlBtnDelete(string $handler = '', string $position = 'out'): self {
 
         $position = $position == 'in'
             ? $this->setHeaderIn($this::LAST)
@@ -245,7 +235,7 @@ class Table extends \CoreUI\Table {
         $table_id   = $this->getId();
 
         $column = new Column\Toggle($field, $label, $width);
-        $column->setOnChange("Core.ui.table.get('{$table_id}').switch('{$switch_url}', checked, id)")
+        $column->setOnChange("Core.ui.table.get('{$table_id}').switch('{$switch_url}', input, record)")
             ->setValueY(1)
             ->setValueN(0)
             ->setShowLabel(false);

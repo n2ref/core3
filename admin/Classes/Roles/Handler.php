@@ -26,6 +26,7 @@ class Handler extends Classes\Handler {
     public function getRoles(Request $request, string $tab): array {
 
         $panel = new \CoreUI\Panel();
+        $panel->setTabsType($panel::TABS_TYPE_UNDERLINE);
         $panel->addTab($this->_('Роли'), 'roles')
             ->setUrlContent("/{$this->base_url}/table")
             ->setUrlWindow("#/{$this->base_url}");
