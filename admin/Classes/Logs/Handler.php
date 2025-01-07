@@ -82,12 +82,7 @@ class Handler extends Classes\Handler {
             return [];
         }
 
-
-        $date_start = new \DateTime();
-        $date_start->modify('-30 days');
-
         $log_data = $log->getLogsData($files[$file_hash]['path'], 0, 100000);
-        $date_min = $date_start->format('Y-m-d');
         $datasets = [];
 
         foreach ($log_data['records'] as $record) {
@@ -125,6 +120,10 @@ class Handler extends Classes\Handler {
             }
         }
 
+
+
+        $date_start = new \DateTime();
+        $date_start->modify('-30 days');
 
         for ($i = 0; $i < 30; $i++) {
             $date_format = $date_start->format('Y-m-d');
