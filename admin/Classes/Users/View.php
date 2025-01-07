@@ -247,9 +247,9 @@ class View extends Common {
         $table->addFooterOut()
             ->left([
                 new TableControl\Total,
+                (new TableControl\Pages(10)),
             ])
             ->right([
-                (new TableControl\Pages(10))->showPrev(false)->showNext(false),
                 new TableControl\PageSize([ 25, 50, 100, 1000 ])
             ]);
 
