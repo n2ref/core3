@@ -9,7 +9,7 @@ use Core3\Mod\Admin\Classes\Users;
 use Core3\Mod\Admin\Classes\Index;
 use Core3\Mod\Admin\Classes\Roles;
 use Core3\Mod\Admin\Classes\Settings;
-use Core3\Mod\Admin\Classes\Monitoring;
+use Core3\Mod\Admin\Classes\Logs;
 use Core3\Classes\Common;
 use Core3\Classes\Request;
 use Core3\Classes\Router;
@@ -298,13 +298,13 @@ class Controller extends Common implements Events {
      * @throws Exception
      * @throws MissingExtensionException
      */
-    public function sectionMonitoring(Request $request): Response|array|null {
+    public function sectionLogs(Request $request): Response|array|null {
 
         $router = new Router();
-        $router->route('/admin/monitoring(|/{tab})')->get([ Monitoring\Handler::class, 'getMonitoring' ]);
-        $router->route('/admin/monitoring/log(|/{file_hash})')      ->get([ Monitoring\Handler::class, 'getLogs']);
-        $router->route('/admin/monitoring/log/{file_hash}/records') ->get([ Monitoring\Handler::class, 'getRecordsLog']);
-        $router->route('/admin/monitoring/log/download/{file_hash}')->get([ Monitoring\Handler::class, 'downloadLog']);
+        $router->route('/admin/logs(|/{file_hash})')      ->get([ Logs\Handler::class, 'getPanelLogs' ]);
+        $router->route('/admin/logs/{file_hash}/records') ->get([ Logs\Handler::class, 'getRecordsLog' ]);
+        $router->route('/admin/logs/{file_hash}/chart')   ->get([ Logs\Handler::class, 'getChartLogs' ]);
+        $router->route('/admin/logs/{file_hash}/download')->get([ Logs\Handler::class, 'downloadLog' ]);
 
         return $this->runRouterMethod($router, $request);
     }

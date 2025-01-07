@@ -465,7 +465,7 @@ class Handler extends Common {
                     ["name" => "settings",   'title' => $this->_("Настройки")],
                     ["name" => "users",      'title' => $this->_("Пользователи")],
                     ["name" => "roles",      'title' => $this->_("Роли")],
-                    ["name" => "monitoring", 'title' => $this->_("Мониторинг")],
+                    ["name" => "logs",       'title' => $this->_("Логи")],
                 ],
             ];
         }

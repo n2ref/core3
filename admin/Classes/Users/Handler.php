@@ -9,7 +9,6 @@ use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
 use CoreUI\Table\Adapters\Mysql\Search;
 use Laminas\Cache\Exception\ExceptionInterface;
-use Laminas\Db\RowGateway\AbstractRowGateway;
 
 
 /**
@@ -459,6 +458,7 @@ class Handler extends Classes\Handler {
                    us.count_requests,
                    us.date_last_activity,
                    us.date_expired,
+                   us.date_created,
                    us.is_active,
                    CONCAT_WS(' ', us.country_name, us.country_code, us.region, us.city) AS place
             FROM core_users_sessions AS us

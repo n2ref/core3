@@ -164,6 +164,11 @@ let coreMenu = {
 
         url = url || '/home';
 
+        if (url !== location.hash.substring(1)) {
+            let windowUrl = window.location.search + '#' + url;
+            window.history.pushState({ path: windowUrl }, '', windowUrl);
+        }
+
         coreMenu.preloader.show();
 
         if (coreTokens.getDateAccessToken() <= new Date()) {

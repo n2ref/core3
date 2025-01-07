@@ -8,9 +8,10 @@ use Core3\Exceptions\Exception;
  */
 class Response {
 
-    private $http_code = 200;
-    private $headers   = [];
-    private $content;
+    private int     $http_code = 200;
+    private array   $headers   = [];
+    private mixed   $content;
+    private ?string $file_path = null;
 
 
     /**
@@ -58,6 +59,24 @@ class Response {
     public function getContentType():? string {
 
         return $this->getHeader('Content-Type');
+    }
+
+
+    /**
+     * @return string|null
+     */
+    public function getContentFile():? string {
+
+        return $this->file_path;
+    }
+
+
+    /**
+     * @return bool
+     */
+    public function isContentFile(): bool {
+
+        return (bool)$this->file_path;
     }
 
 
@@ -136,6 +155,23 @@ class Response {
     public function setContentJson(mixed $content): self {
 
         $this->content = json_encode($content, JSON_UNESCAPED_UNICODE);
+
+        return $this;
+    }
+
+
+    /**
+     * @param string $file_path
+     * @return $this
+     * @throws Exception
+     */
+    public function setContentFile(string $file_path): self {
+
+        if ( ! file_exists($file_path)) {
+            throw new Exception('File not found: ' . $file_path);
+        }
+
+        $this->file_path = $file_path;
 
         return $this;
     }

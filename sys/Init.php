@@ -329,7 +329,14 @@ class Init extends Common {
         $this->logResponse($response);
 
         $response->printHeaders();
-        return (string)$response->getContent();
+
+        if ($response->isContentFile()) {
+            readfile($response->getContentFile());
+            return '';
+
+        } else {
+            return (string)$response->getContent();
+        }
     }
 
 
@@ -464,9 +471,13 @@ class Init extends Common {
         if ($this->config?->system?->log?->on &&
             $this->config?->system?->log?->output_file
         ) {
-            $this->log
-                ->file($this->config?->system?->log?->output_file)
-                ->info($response->getContent());
+            $log = $this->log->file($this->config?->system?->log?->output_file);
+
+            if ($response->isContentFile()) {
+                $log->info('download file: ' . $response->getContentFile());
+            } else {
+                $log->info($response->getContent());
+            }
         }
     }
 

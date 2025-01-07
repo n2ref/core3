@@ -269,7 +269,8 @@ class View extends Common {
             (new Column\Text('place',                  $this->_('Местоположение')))->setMinWidth(200)->setNoWrap(true)->setNoWrapToggle(true),
             (new Column\Text('client_ip',              $this->_('ip'),                   120)),
             (new Column\Number('count_requests',       $this->_('Количество запросов'),  185)),
-            (new Column\Datetime('date_last_activity', $this->_('Последняя активность'), 185)),
+            (new Column\Datetime('date_last_activity', $this->_('Последняя активность'), 180)),
+            (new Column\Datetime('date_created',       $this->_('Дата авторизации'),     150)),
             (new Column\Html('date_expired',           $this->_('Окончание сессии'),     155)),
         ]);
 

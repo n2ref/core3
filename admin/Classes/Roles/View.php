@@ -47,7 +47,7 @@ class View extends Common {
             (new Column\Link('title',           $this->_('Название')))->setMinWidth(100),
             (new Column\Text('description',     $this->_('Примечание')))->setMinWidth(150),
             (new Column\Number('users_count',   $this->_('Пользователей')))->setWidth(170),
-            (new Column\Number('modules_count', $this->_('Доступно разделов')))->setWidth(170),
+            (new Column\Number('modules_count', $this->_('Доступно модулей')))->setWidth(170),
         ]);
 
 
