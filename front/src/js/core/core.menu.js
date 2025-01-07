@@ -100,11 +100,7 @@ let coreMenu = {
                     coreMenu._system  = response.system;
                     coreMenu._modules = response.modules;
 
-                    if (coreMenu._system.hasOwnProperty('reg_errors') &&
-                        coreMenu._system.reg_errors
-                    ) {
-                        window.addEventListener('error', coreMenu._onError, true);
-                    }
+                    window.addEventListener('error', coreMenu._onError, true);
 
                     coreMenu._renderMenu();
                     coreMenu._initComponents(response.system.conf);

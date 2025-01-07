@@ -361,9 +361,9 @@ class Handler extends Common {
 
         $this->checkAuth();
 
-        if ($this->config?->system?->log?->error_clients_file &&
+        if ($this->config?->system?->log?->file &&
             $this->config?->system?->log?->dir &&
-            is_string($this->config?->system?->log?->error_clients_file) &&
+            is_string($this->config?->system?->log?->file) &&
             is_string($this->config?->system?->log?->dir)
         ) {
             $errors = $request->getJsonContent();
@@ -379,9 +379,6 @@ class Handler extends Common {
                     if ( ! empty($error['url']) && is_string($error['url']) && mb_strlen($error['url']) > 255) {
                         $error['url'] = mb_substr($error['url'], 0, 255);
                     }
-                    if ( ! empty($error['client']) && is_string($error['client']) && mb_strlen($error['client']) > 19) {
-                        $error['client'] = mb_substr($error['client'], 0, 19);
-                    }
 
                     $level = 'error';
 
@@ -389,12 +386,12 @@ class Handler extends Common {
                         $level = match ($error['level']) {
                             'warning' => 'warning',
                             'info'    => 'info',
-                            'error'   => 'error',
                             default   => 'error',
                         };
                     }
 
-                    $this->log->file($this->config->system->log->error_clients_file)->{$level}($this->auth->getUserLogin(), [
+                    $this->log->file($this->config->system->log->file)->{$level}('js error', [
+                        'login'  => $this->auth->getUserLogin(),
                         'url'    => $error['url'] ?? null,
                         'error'  => $error['error'] ?? null,
                         'client' => $error['client'] ?? null,
@@ -472,9 +469,6 @@ class Handler extends Common {
 
         $user_id = $this->auth->getUserId();
 
-        $is_reg_errors = $this->config?->system?->log?->on &&
-                         $this->config?->system?->log?->error_clients_file;
-
         return [
             'user'    => [
                 'id'     => $user_id,
@@ -483,9 +477,8 @@ class Handler extends Common {
                 'avatar' => "sys/user/{$user_id}/avatar",
             ],
             'system'  => [
-                'name'       => $this->config?->system?->name ?: '',
-                'conf'       => $this->getConf(),
-                'reg_errors' => $is_reg_errors,
+                'name' => $this->config?->system?->name ?: '',
+                'conf' => $this->getConf(),
             ],
             'modules' => $modules
         ];
