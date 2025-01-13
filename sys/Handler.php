@@ -567,11 +567,11 @@ class Handler extends Common {
         $this->checkAuth();
 
         if ( ! $this->auth->isAllowed($module_name)) {
-            throw new HttpException(403, $this->_("У вас нет доступа к модулю %s!", [$module_name]), 'forbidden');
+            throw new HttpException(403, $this->_("У вас нет доступа к модулю %s", [$module_name]), 'forbidden');
         }
 
         if ( ! $this->auth->isAllowed("{$module_name}_{$section_name}")) {
-            throw new HttpException(403, $this->_("У вас нет доступа к разделу %s!", [$section_name]), 'forbidden');
+            throw new HttpException(403, $this->_("У вас нет доступа к разделу %s", [$section_name]), 'forbidden');
         }
 
 
@@ -579,7 +579,7 @@ class Handler extends Common {
         $controller   = $this->getModuleController($module_name);
 
         if ( ! is_callable([$controller, "section{$section_name}"])) {
-            throw new HttpException(404, $this->_("Ошибка. Не найден метод управления разделом %s!", [$section_name]), 'broken_section');
+            throw new HttpException(404, $this->_("Не найден метод раздела section%s", [$section_name]), 'broken_section');
         }
 
         Registry::set('section', strtolower($section_name));

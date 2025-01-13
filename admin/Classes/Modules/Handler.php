@@ -5,6 +5,7 @@ use Core3\Classes\Response;
 use Core3\Exceptions\AppException;
 use Core3\Exceptions\HttpException;
 use CoreUI\Form\Control;
+use CoreUI\Panel;
 
 
 /**
@@ -20,7 +21,7 @@ class Handler extends \Core3\Classes\Handler {
      * @param Request $request
      * @return array
      */
-    public function getModules(Request $request): array {
+    public function getPanelModules(Request $request): array {
 
         $count_modules = $this->modAdmin->tableModules->getCount();
 
@@ -67,7 +68,7 @@ class Handler extends \Core3\Classes\Handler {
      * @return array
      * @throws AppException
      */
-    public function getModule(Request $request, int $module_id): array {
+    public function getPanelModule(Request $request, int $module_id): array {
 
         $result = [];
 
@@ -85,6 +86,75 @@ class Handler extends \Core3\Classes\Handler {
         $panel->setActiveTab($tab);
 
         $panel->setUrlContent($panel->getTabById($tab)->getUrlContent());
+        $result[] = $panel->toArray();
+
+        return $result;
+    }
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getPanelInstallHand(Request $request): array {
+
+        $result = [];
+
+        $breadcrumb = new \CoreUI\Breadcrumb();
+        $breadcrumb->addItem($this->_('Модули'), $this->base_url);
+        $breadcrumb->addItem($this->_('Ручная установка'));
+        $result[] = $breadcrumb->toArray();
+
+        $panel = new Panel();
+        $panel->setTitle($this->_('Ручная установка модуля'));
+        $panel->setContent((new View())->getFormInstallHand());
+        $result[] = $panel->toArray();
+
+        return $result;
+    }
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getPanelInstallFile(Request $request): array {
+
+        $result = [];
+
+        $breadcrumb = new \CoreUI\Breadcrumb();
+        $breadcrumb->addItem($this->_('Модули'), $this->base_url);
+        $breadcrumb->addItem($this->_('Установка модуля из файла'));
+        $result[] = $breadcrumb->toArray();
+
+        $panel = new Panel();
+        $panel->setTitle($this->_('Установка модуля из файла'));
+        $panel->setContent((new View())->getFormInstallFile());
+        $result[] = $panel->toArray();
+
+        return $result;
+    }
+
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     */
+    public function getPanelInstallLink(Request $request): array {
+
+        $result = [];
+
+        $breadcrumb = new \CoreUI\Breadcrumb();
+        $breadcrumb->addItem($this->_('Модули'), $this->base_url);
+        $breadcrumb->addItem($this->_('Установка модуля по ссылке'));
+        $result[] = $breadcrumb->toArray();
+
+        $panel = new Panel();
+        $panel->setTitle($this->_('Установка модуля по ссылке'));
+        $panel->setContent((new View())->getFormInstallLink());
         $result[] = $panel->toArray();
 
         return $result;
@@ -242,6 +312,7 @@ class Handler extends \Core3\Classes\Handler {
         $panel = new \CoreUI\Panel('module');
         $panel->setTitle($module->title, "{$module->name} / {$module->version}");
         $panel->setContentFit($panel::FIT);
+        $panel->setTabsType($panel::TABS_TYPE_UNDERLINE);
         $panel->addControls([
             (new Control\Button('<i class="bi bi-arrow-clockwise"></i> ' . $this->_('Проверить обновления')))->setAttr('class', 'btn btn-outline-secondary'),
             (new Control\Button('<i class="bi bi-trash"></i> ' . $this->_('Удалить')))->setAttr('class', 'btn btn-outline-danger'),

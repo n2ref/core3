@@ -27,9 +27,10 @@ let Core = {
     /**
      * Перевод
      * @param  {string} text
+     * @param  {Array} items
      * @return {string}
      */
-    _: function (text) {
+    _: function (text, items) {
 
         let lang = {};
 
@@ -41,9 +42,17 @@ let Core = {
             lang = this.lang[this._settings.lang];
         }
 
-        return lang.hasOwnProperty(text)
+        let result = lang.hasOwnProperty(text)
             ? lang[text]
             : text;
+
+        if (items && Array.isArray(items)) {
+            result = items.reduce(function (p, c) {
+                return p.replace(/%s/, c)
+            }, result)
+        }
+
+        return result;
     },
 
 

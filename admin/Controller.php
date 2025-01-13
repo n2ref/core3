@@ -68,35 +68,37 @@ class Controller extends Common implements Events {
     public function sectionModules(Request $request): array|Response {
 
         $router = new Router();
-        $router->route('/admin/modules')                  ->get([Modules\Handler::class, 'getModules']);
-        $router->route('/admin/modules/installed')        ->get([Modules\Handler::class, 'getModules']);
+        $router->route('/admin/modules(|/installed)')     ->get([Modules\Handler::class, 'getPanelModules']);
         $router->route('/admin/modules/installed/content')->get([Modules\Handler::class, 'getInstalledContent']);
         $router->route('/admin/modules/installed/table')  ->get([Modules\Handler::class, 'getInstalledTable']);
 
         $router->route('/admin/modules/installed/hand')
-            ->get([Modules\Handler::class, 'getInstalled'])
+            ->get([Modules\Handler::class, 'getPanelInstallHand'])
             ->post([Modules\Handler::class, 'saveInstalledHand']);
 
         $router->route('/admin/modules/installed/file')
-            ->get([Modules\Handler::class, 'getInstalledFile'])
+            ->get([Modules\Handler::class, 'getPanelInstallFile'])
             ->post([Modules\Handler::class, 'saveInstalledFile']);
 
+        $router->route('/admin/modules/installed/file/upload')
+            ->post([Modules\Handler::class, 'uploadInstallFile']);
+
         $router->route('/admin/modules/installed/link')
-            ->get([Modules\Handler::class, 'getInstalledLink'])
+            ->get([Modules\Handler::class, 'getPanelInstallLink'])
             ->post([Modules\Handler::class, 'saveInstalledLink']);
 
-        $router->route('/admin/modules/available')         ->get([Modules\Handler::class, 'getModules']);
+        $router->route('/admin/modules/available')         ->get([Modules\Handler::class, 'getPanelModules']);
         $router->route('/admin/modules/available/content') ->get([Modules\Handler::class, 'getAvailableContent']);
         $router->route('/admin/modules/available/table')   ->get([Modules\Handler::class, 'getAvailableTable']);
         $router->route('/admin/modules/available/{id:\d+}')->get([Modules\Handler::class, 'getAvailableModule']);
 
         $router->route('/admin/modules/{id:\d+}')
-            ->get([   Modules\Handler::class, 'getModule'])
+            ->get([Modules\Handler::class, 'getPanelModule'])
             ->post([  Modules\Handler::class, 'saveModule'])
             ->patch([ Modules\Handler::class, 'switchActiveModule'])
             ->delete([Modules\Handler::class, 'deleteModule']);
 
-        $router->route('/admin/modules/{id:\d+}/module')        ->get([Modules\Handler::class, 'getModule']);
+        $router->route('/admin/modules/{id:\d+}/module')        ->get([Modules\Handler::class, 'getPanelModule']);
         $router->route('/admin/modules/{id:\d+}/module/content')->get([Modules\Handler::class, 'getModuleContent']);
 
         $router->route('/admin/modules/{id:\d+}/sections')        ->get([Modules\Handler::class, 'getModuleSections']);

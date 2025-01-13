@@ -8,6 +8,7 @@ import coreAuth    from './core.auth';
 import 'ejs/ejs.min';
 import {MDCRipple}         from '@material/ripple';
 import {MDCLinearProgress} from '@material/linear-progress';
+import Core from "../core";
 
 
 let coreMenu = {
@@ -93,7 +94,7 @@ let coreMenu = {
                     typeof response.modules !== 'object'
                 ) {
                     console.warn(response);
-                    CoreUI.alert.danger('Ошибка', 'Попробуйте обновить страницу или обратитесь к администратору');
+                    CoreUI.alert.danger(Core._('Ошибка'), Core._('Обновите страницу или обратитесь к администратору'));
 
                 } else {
                     coreMenu._user    = response.user;
@@ -119,10 +120,10 @@ let coreMenu = {
                     coreMain.viewPage('auth');
 
                 } else if (response.status === 0) {
-                    CoreUI.alert.danger('Ошибка', 'Проверьте подключение к интернету');
+                    CoreUI.alert.danger(Core._('Ошибка'), Core._('Проверьте подключение к интернету'));
 
                 } else {
-                    CoreUI.alert.danger('Ошибка', 'Обновите приложение или обратитесь к администратору');
+                    CoreUI.alert.danger(Core._('Ошибка'), Core._('Обновите страницу или обратитесь к администратору'));
                 }
             }
         });
@@ -253,16 +254,48 @@ let coreMenu = {
                 error: function (response) {
                     coreMenu.preloader.hide();
 
+                    let errorMessage = '';
+                    let errorTrace   = '';
+
                     if (response.status === 403) {
                         coreTokens.clearTokens();
                         coreMain.viewPage('auth');
 
                     } else if (response.status === 0) {
-                        CoreUI.alert.danger('Ошибка', 'Проверьте подключение к интернету');
+                        errorMessage = Core._('Проверьте подключение к интернету');
 
                     } else {
-                        CoreUI.alert.danger('Ошибка', 'Обновите страницу или обратитесь к администратору');
+                        try {
+                            let json = JSON.parse(response.responseText)
+
+                            errorMessage = json.error_message;
+
+                            if (json.hasOwnProperty('error_trace') && Array.isArray(json.error_trace) && json.error_trace.length > 0) {
+                                errorTrace =
+                                    '<ol class="list-group list-group-flush list-group-numbered fs-6 text-nowrap overflow-auto">' +
+                                        json.error_trace.map(function (item) {
+                                            let file   = item.hasOwnProperty('file') ? '<b class="fw-semibold">' + item.file + ':' + item.line + '</b><br>' : '';
+                                            let method = item.hasOwnProperty('class') ? item.class + ' ' + item.type + ' ' + item.function : item.function;
+                                            return '<li class="list-group-item px-0 py-1">' + file + method + '</li>';
+                                        }).join('') +
+                                    '</ol>';
+                            }
+
+                        } catch (e) {
+                            errorMessage = response.responseText;
+                        }
                     }
+
+                    errorMessage = errorMessage || Core._('Попробуйте позже, либо обратитесь к администратору');
+
+
+                    CoreUI.alert.create({
+                        type: 'danger',
+                        title: Core._('Ошибка'),
+                        message: errorMessage,
+                        expandText: Core._('Подробнее'),
+                        html: errorTrace
+                    });
                 }
             });
         }
@@ -320,7 +353,7 @@ let coreMenu = {
             options = typeof options === 'object' ? options : {};
 
             $('.page-menu').prepend(ejs.render(coreTpl['menu/preloader.html'], {
-                text: options.text || 'Загрузка...'
+                text: options.text || Core._('Загрузка...')
             }));
         },
 
@@ -474,7 +507,7 @@ let coreMenu = {
                 if (typeof module.name !== 'string' || ! module.name ||
                     typeof module.title !== 'string' || ! module.title
                 ) {
-                    CoreUI.notice.danger('Не удалось показать некоторые модули из за ошибок!');
+                    CoreUI.notice.danger(Core._('Не удалось показать некоторые модули из за ошибок!'));
                     return true;
                 }
 
@@ -590,6 +623,7 @@ let coreMenu = {
      */
     _initComponents: function (conf) {
 
+        Core.setSettings({ lang: conf.lang });
         CoreUI.table.setSettings({ lang: conf.lang });
         CoreUI.form.setSettings({ lang: conf.lang });
         CoreUI.notice.setSettings({ position: 'bottom-right', bottom: 25 });

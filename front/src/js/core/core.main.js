@@ -51,7 +51,7 @@ let coreMain = {
             }
 
         } else {
-            CoreUI.alert.danger('Ошибка', 'Страница ' + pageName + ' не найдена');
+            CoreUI.alert.danger(Core._('Ошибка'), Core._('Страница %s не найдена', [pageName]));
         }
     },
 

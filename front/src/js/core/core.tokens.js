@@ -1,6 +1,7 @@
 
 import coreTools from './core.tools';
 import coreMain  from './core.main';
+import Core from "../core";
 
 
 let coreTokens = {
@@ -66,7 +67,7 @@ let coreTokens = {
                     ! response.access_token ||
                     ! response.refresh_token
                 ) {
-                    let errorMessage = response.error_message || "Ошибка. Попробуйте позже, либо обратитесь к администратору";
+                    let errorMessage = response.error_message || Core._("Ошибка. Попробуйте позже, либо обратитесь к администратору");
                     CoreUI.notice.danger(errorMessage);
 
                     if (typeof fail === 'function') {
@@ -92,7 +93,7 @@ let coreTokens = {
                     errorMessage = $("<div>" + response.responseText + "</div>").text();
                 }
 
-                errorMessage = errorMessage || 'Ошибка. Попробуйте позже, либо обратитесь к администратору';
+                errorMessage = errorMessage || Core._('Ошибка. Попробуйте позже, либо обратитесь к администратору');
 
                 CoreUI.notice.danger(errorMessage);
 

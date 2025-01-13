@@ -5,6 +5,7 @@ import coreTokens  from './core.tokens';
 import coreTpl     from './core.templates';
 import MD5         from 'blueimp-md5-es6/js/md5';
 import {MDCRipple} from '@material/ripple';
+import Core from "../core";
 
 let coreAuth = {
 
@@ -193,7 +194,7 @@ let coreAuth = {
 
         if ( ! fp) {
             coreAuth.preloader('hide');
-            $('.page-auth form .text-danger').text('Не удалось получить отпечаток');
+            $('.page-auth form .text-danger').text(Core._('Не удалось получить отпечаток'));
             return false;
         }
 
@@ -213,7 +214,7 @@ let coreAuth = {
                     ! response.access_token ||
                     ! response.refresh_token
                 ) {
-                    let errorMessage = response.error_message || "Ошибка. Попробуйте позже, либо обратитесь к администратору";
+                    let errorMessage = response.error_message || Core._("Ошибка. Попробуйте позже, либо обратитесь к администратору");
                     $('.page-auth form .text-danger').text(errorMessage);
 
                 } else {
@@ -235,7 +236,7 @@ let coreAuth = {
                 let errorMessage = '';
 
                 if (response.status === 0) {
-                    errorMessage = 'Проверьте подключение к интернету';
+                    errorMessage = Core._('Проверьте подключение к интернету');
 
                 } else if (response.responseJSON && response.responseJSON.error_message) {
                     errorMessage = response.responseJSON.error_message;
@@ -244,7 +245,7 @@ let coreAuth = {
                     errorMessage = $("<div>" + response.responseText + "</div>").text();
                 }
 
-                errorMessage = errorMessage || 'Ошибка. Попробуйте позже, либо обратитесь к администратору';
+                errorMessage = errorMessage || Core._("Ошибка. Попробуйте позже, либо обратитесь к администратору");
 
                 $('.container-login .text-danger').text(errorMessage);
             },
@@ -277,10 +278,10 @@ let coreAuth = {
             },
             error: function (response) {
                 if (response.status === 0) {
-                    CoreUI.alert.danger('Ошибка', 'Проверьте подключение к интернету');
+                    CoreUI.alert.danger(Core._('Ошибка'), Core._('Проверьте подключение к интернету'));
 
                 } else {
-                    CoreUI.alert.danger('Ошибка', 'Обновите приложение или обратитесь к администратору');
+                    CoreUI.alert.danger(Core._('Ошибка'), Core._('Обновите страницу или обратитесь к администратору'));
                 }
             }
         });
@@ -315,7 +316,7 @@ let coreAuth = {
                     ! response.access_token ||
                     ! response.refresh_token
                 ) {
-                    let errorMessage = response.error_message || "Ошибка. Попробуйте позже, либо обратитесь к администратору";
+                    let errorMessage = response.error_message || Core._("Ошибка. Попробуйте позже, либо обратитесь к администратору");
                     $('.container-registration .text-danger').text(errorMessage);
 
                 } else {
@@ -337,7 +338,7 @@ let coreAuth = {
                 let errorMessage = '';
 
                 if (response.status === 0) {
-                    errorMessage = 'Проверьте подключение к интернету';
+                    errorMessage = Core._('Проверьте подключение к интернету');
 
                 } else if (response.responseJSON && response.responseJSON.error_message) {
                     errorMessage = response.responseJSON.error_message;
@@ -346,7 +347,7 @@ let coreAuth = {
                     errorMessage = $(response.responseText).text();
                 }
 
-                errorMessage = errorMessage || 'Ошибка. Попробуйте позже, либо обратитесь к администратору';
+                errorMessage = errorMessage || Core._('Ошибка. Попробуйте позже, либо обратитесь к администратору');
 
                 $('.container-registration .text-danger').text(errorMessage);
             },
@@ -367,12 +368,12 @@ let coreAuth = {
         let pass2 = $("[name=password2]", form).val();
 
         if ( ! pass1 || ! pass2) {
-            $('.container-registration_complete .text-danger').text('Введите пароль');
+            $('.container-registration_complete .text-danger').text(Core._('Введите пароль'));
             return false;
         }
 
         if (pass1 !== pass2) {
-            $('.container-registration_complete .text-danger').text('Пароли не совпадают').show();
+            $('.container-registration_complete .text-danger').text(Core._('Пароли не совпадают')).show();
             return false;
         }
 
@@ -406,10 +407,10 @@ let coreAuth = {
                 let errorMessage = '';
 
                 if (response.status === 0) {
-                    errorMessage = 'Ошибка. Проверьте подключение к интернету'
+                    errorMessage = Core._('Ошибка. Проверьте подключение к интернету');
 
                 } else {
-                    errorMessage = 'Ошибка. Попробуйте позже, либо обратитесь к администратору';
+                    errorMessage = Core._('Ошибка. Попробуйте позже, либо обратитесь к администратору');
                 }
 
                 $('.container-registration_complete .text-danger').text(errorMessage);

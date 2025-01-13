@@ -43,11 +43,11 @@ class View extends Common {
             ]);
 
         $table->addColumns([
-            (new Column\Select()),
             (new Column\Link('title',           $this->_('Название')))->setMinWidth(100),
             (new Column\Text('description',     $this->_('Примечание')))->setMinWidth(150),
             (new Column\Number('users_count',   $this->_('Пользователей')))->setWidth(170),
             (new Column\Number('modules_count', $this->_('Доступно модулей')))->setWidth(170),
+            (new Column\Select()),
         ]);
 
 
@@ -81,9 +81,9 @@ class View extends Common {
 
             $record->modules_count = 0;
 
-            foreach ($privileges as $access_rules) {
+            foreach ($privileges as $name => $access_rules) {
 
-                if (is_array($access_rules) && in_array('access', $access_rules)) {
+                if (is_array($access_rules) && in_array('access', $access_rules) && strpos($name, '_') === false) {
                     $record->modules_count++;
                 }
             }

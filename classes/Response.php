@@ -10,7 +10,7 @@ class Response {
 
     private int     $http_code = 200;
     private array   $headers   = [];
-    private mixed   $content;
+    private mixed   $content   = '';
     private ?string $file_path = null;
 
 

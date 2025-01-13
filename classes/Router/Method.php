@@ -1,5 +1,7 @@
 <?php
 namespace Core3\Classes\Router;
+use Core3\Exceptions\Exception;
+
 
 /**
  *
@@ -64,14 +66,26 @@ class Method {
 
     /**
      * @return mixed
+     * @throws Exception
      */
     public function run(): mixed {
 
         if (is_array($this->action)) {
             if (is_object($this->action[0])) {
+                if ( ! is_callable([$this->action[0], $this->action[1]])) {
+                    throw new Exception('Method not found: ' . $this->action[1]);
+                }
+
                 return call_user_func_array([$this->action[0], $this->action[1]], $this->params);
+
             } else {
-                return call_user_func_array([new $this->action[0](), $this->action[1]], $this->params);
+                $class = new $this->action[0]();
+
+                if ( ! is_callable([$class, $this->action[1]])) {
+                    throw new Exception('Method not found: ' . $this->action[1]);
+                }
+
+                return call_user_func_array([$class, $this->action[1]], $this->params);
             }
 
         } else {

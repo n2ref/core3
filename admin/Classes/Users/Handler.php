@@ -57,8 +57,8 @@ class Handler extends Classes\Handler {
             'fname'       => 'string(0-255): ' . $this->_('Имя'),
             'lname'       => 'string(0-255): ' . $this->_('Фамилия'),
             'mname'       => 'string(0-255): ' . $this->_('Отчество'),
-            'is_admin'    => 'string(1|0): ' . $this->_('Администратор безопасности'),
-            'is_active'   => 'string(1|0): ' . $this->_('Активен'),
+            'is_admin'    => 'int: ' . $this->_('Администратор безопасности'),
+            'is_active'   => 'int: ' . $this->_('Активен'),
             'avatar_type' => 'string(none|generate|upload): ' . $this->_('Аватар'),
         ];
 

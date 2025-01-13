@@ -61,7 +61,6 @@ class View extends Common {
         ]);
 
         $table->addColumns([
-            (new Column\Select()),
             $table->getColumnToggle('is_active',  $this->_('Активность'),             45),
             (new Column\Image('avatar',           $this->_('Аватар'),                 40))->setShowLabel(false)->setStyle('circle')->setBorder(true)->setImgSize(20, 20),
             (new Column\Link('login',             $this->_('Логин')))->setMinWidth(100),
@@ -73,6 +72,7 @@ class View extends Common {
             (new Column\Number('active_sessions', $this->_('Активных сессий'),        145))->setMinWidth(145),
             (new Column\Badge('is_admin',         $this->_('Админ'),                  80))->setMinWidth(80),
             (new Column\Button('login_user',      $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
+            (new Column\Select()),
         ]);
 
         return $table->toArray();

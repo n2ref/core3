@@ -57,7 +57,6 @@ class View extends Common {
         ]);
 
         $table->addColumns([
-            (new Column\Select()),
             $table->getColumnToggle('is_active',  $this->_('Активность'),             45),
             (new Column\Link('title',             $this->_('Название')))->setMinWidth(150),
             (new Column\Text('code',              $this->_('Код'),                    100))->setMinWidth(180)->setNoWrap(true)->setShow(false),
@@ -65,6 +64,7 @@ class View extends Common {
             (new Column\Text('note',              $this->_('Описание')))->setMinWidth(180)->setNoWrap(true),
             (new Column\Datetime('date_modify',   $this->_('Дата изменения'),         155))->setMinWidth(155),
             (new Column\Text('author_modify',     $this->_('Автор изменения'),        155))->setMinWidth(155)->setShow(false),
+            (new Column\Select()),
         ]);
 
 
@@ -87,7 +87,7 @@ class View extends Common {
             if ($record->module) {
                 $record->module_title = $modules[$record->module] ?? $record->module;
             } else {
-                $record->module_title = '--';
+                $record->module_title = '';
             }
         }
 

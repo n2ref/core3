@@ -17,7 +17,7 @@ use Laminas\Db\Sql\Select;
  */
 class View extends Common {
 
-    private string $base_url = "#/admin/modules";
+    private string $base_url = "admin/modules";
 
     /**
      * Таблица с модулями
@@ -28,20 +28,23 @@ class View extends Common {
         $table = new Table('admin', 'modules', 'modules_installed');
         $table->setSaveState(true);
         $table->setOverflow(true);
-        $table->setShowScrollShadow(true);
         $table->setClickUrl("{$base_url}/[id]");
-        $table->setKit(['columns']);
+
+        $dropdown = (new TableControl\Dropdown('<i class="bi bi-plus"></i> ' . $this->_('Добавить')))->setAttr('class', 'btn btn-success');
+        $dropdown->addLink('<i class="bi bi-file-earmark-zip"></i> ' . $this->_('Загрузить файл'), "{$base_url}/installed/file");
+        $dropdown->addLink('<i class="bi bi-link-45deg"></i> ' . $this->_('Установка по ссылке'),   "{$base_url}/installed/link");
+        $dropdown->addLink('<i class="bi bi-person-fill-gear"></i> ' . $this->_('Ручная установка'),    "{$base_url}/installed/hand");
 
         $table->setHeaderOut()
             ->left([
-                (new Filter\Text('title'))->setAttributes(['placeholder' => $this->_('Название / Описание')])->setWidth(250),
+                $table->getControlColumns(),
+                (new TableControl\Divider())->setWidth(30),
+                (new Filter\Text('title'))->setAttributes(['placeholder' => $this->_('Название / Описание')])->setWidth(250)->setAutoSearch(true),
                 (new TableControl\FilterClear()),
-            ]);
-
-        $table->setHeaderIn()
+            ])
             ->right([
                 (new TableControl\Button('<i class="bi bi-arrow-clockwise"></i> ' . $this->_('Проверить обновления')))->setAttr('class', 'btn btn-outline-secondary'),
-                $table->getBtnAdd("{$base_url}/0")
+                $dropdown,
             ]);
 
         $table->setFooterOut()->left([
@@ -50,10 +53,9 @@ class View extends Common {
 
 
         $table->addColumns([
-            (new Column\Numbers()),
             $table->getColumnToggle('is_active', $this->_('Активность'),   45),
             (new Column\Link('title',            $this->_('Название')))->setMinWidth(200),
-            (new Column\Text('Описание',         $this->_('Описание'),     300))->setMinWidth(100),
+            (new Column\Text('description',      $this->_('Описание'),     300))->setMinWidth(100),
             (new Column\Text('name',             $this->_('Идентификатор')))->setWidth(200)->setShow(false),
             (new Column\Text('version',          $this->_('Версия'),       100))->setNoWrap(true)->setMinWidth(100),
             (new Column\Badge('is_visible',      $this->_('Отображаемый'), 150)),
@@ -70,7 +72,11 @@ class View extends Common {
 
         foreach ($records as $record) {
 
-            $record->title      = ['url' => "{$base_url}/{$record->id}", 'content' => $record->title];
+            $icon = $record->icon
+                ? "<i class=\"{$record->icon}\"></i> "
+                : '';
+
+            $record->title      = ['url' => "{$base_url}/{$record->id}", 'content' => $icon . $record->title];
             $record->is_visible = $record->is_visible
                 ? ['type' => 'none', 'text' => 'Да']
                 : ['type' => 'warning', 'text' => 'Нет'];
@@ -103,6 +109,9 @@ class View extends Common {
                     ],
                 ],
             ];
+
+
+            $record->cell('actions')->setAttr('onclick', 'event.cancelBubble = true;');
         }
 
         return $table->toArray();
@@ -134,13 +143,12 @@ class View extends Common {
         $table = new Table('admin', 'modules', 'modules_sections');
         $table->setSaveState(true);
         $table->setOverflow(true);
-        $table->setShowScrollShadow(true);
         //$table->setClickUrl("{$base_url}/{$module->id}/sections/[id]");
         $table->setClick("CoreUI.panel.get('module').loadContent('{$content_url}/' + record.data.id, '{$window_url}/' + record.data.id);");
 
         $table->setHeaderOut()
             ->left([
-                (new Filter\Text('title'))->setAttributes(['placeholder' => $this->_('Название / Идентификатор')])->setWidth(250),
+                (new Filter\Text('title'))->setAttributes(['placeholder' => $this->_('Название / Идентификатор')])->setWidth(250)->setAutoSearch(true),
                 (new TableControl\FilterClear()),
             ]);
 
@@ -150,10 +158,9 @@ class View extends Common {
 
 
         $table->addColumns([
-            (new Column\Numbers()),
             $table->getColumnToggle('is_active', $this->_('Активность'),   45),
             (new Column\Link('title',            $this->_('Название')))->setMinWidth(200),
-            (new Column\Text('name',             $this->_('Идентификатор'))),
+            (new Column\Text('name',             $this->_('Идентификатор'), 140)),
         ]);
 
 
@@ -192,11 +199,11 @@ class View extends Common {
      * Форма добавление модуля
      * @throws \Exception
      */
-    public function getFormInstallHand(string $base_url): array {
+    public function getFormInstallHand(): array {
 
         $form = new Form('admin', 'modules', 'module');
         $form->setHandler('saveHand');
-        $form->setSuccessLoadUrl($this->base_url);
+        $form->setSuccessLoadUrl("#/{$this->base_url}");
         $form->setSuccessNotice();
 
         $form->setRecord([
@@ -232,7 +239,7 @@ class View extends Common {
 
         $form->addControls([
             $form->getBtnSubmit(),
-            (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+            (new Control\Link('Отмена'))->setUrl("#/{$this->base_url}")->setAttr('class', 'btn btn-secondary'),
         ]);
 
         return $form->toArray();
@@ -243,11 +250,11 @@ class View extends Common {
      * Форма добавление модуля
      * @throws \Exception
      */
-    public function getFormInstallFile(string $base_url): array {
+    public function getFormInstallFile(): array {
 
         $form = new Form('admin', 'modules', 'module');
         $form->setHandler('saveFile');
-        $form->setSuccessLoadUrl($this->base_url);
+        $form->setSuccessLoadUrl("#/{$this->base_url}");
         $form->setSuccessNotice();
 
         $form->setRecord([
@@ -258,7 +265,7 @@ class View extends Common {
 
 
         $form->addFields([
-            (new Field\FileUpload('file',  $this->_('Файл модуля (.zip)')))->setAcceptZip()->setFilesLimit(1)->setRequired(),
+            (new Field\FileUpload('file',  $this->_('Файл модуля (.zip)')))->setAcceptZip()->setFilesLimit(1)->setUrl("/{$this->base_url}/installed/file/upload")->setRequired(),
             (new Field\Text('group_name',  $this->_('Название группы')))->setWidth(350)
                 ->setHelp($this->_('Указанное название будет добавлено в меню для группировки модулей')),
             (new Field\Toggle('is_active', $this->_('Активен'))),
@@ -267,7 +274,7 @@ class View extends Common {
 
         $form->addControls([
             $form->getBtnSubmit(),
-            (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+            (new Control\Link('Отмена'))->setUrl("#/{$this->base_url}")->setAttr('class', 'btn btn-secondary'),
         ]);
 
         return $form->toArray();
@@ -279,11 +286,11 @@ class View extends Common {
      * Форма добавление модуля
      * @throws \Exception
      */
-    public function getFormInstallLink(string $base_url): array {
+    public function getFormInstallLink(): array {
 
         $form = new Form('admin', 'modules', 'module');
         $form->setHandler('saveLink');
-        $form->setSuccessLoadUrl($this->base_url);
+        $form->setSuccessLoadUrl("#/{$this->base_url}");
         $form->setSuccessNotice();
 
         $form->setRecord([
@@ -303,7 +310,7 @@ class View extends Common {
 
         $form->addControls([
             $form->getBtnSubmit(),
-            (new Control\Link('Отмена'))->setUrl($base_url)->setAttr('class', 'btn btn-secondary'),
+            (new Control\Link('Отмена'))->setUrl("#/{$this->base_url}")->setAttr('class', 'btn btn-secondary'),
         ]);
 
         return $form->toArray();
@@ -369,7 +376,7 @@ class View extends Common {
         $form = new Form('admin', 'modules', 'module');
         $form->setHandler('saveSection');
         $form->setTitle($module_section ? $this->_('Изменение раздела') : $this->_('Добавление раздела'));
-        $form->setSuccessLoadUrl($this->base_url);
+        $form->setSuccessLoadUrl("#/{$this->base_url}");
         $form->setSuccessNotice();
         $form->setWidthLabel(160);
 
