@@ -61,17 +61,17 @@ class View extends Common {
         ]);
 
         $table->addColumns([
-            $table->getColumnToggle('is_active',  $this->_('Активность'),             45),
-            (new Column\Image('avatar',           $this->_('Аватар'),                 40))->setShowLabel(false)->setStyle('circle')->setBorder(true)->setImgSize(20, 20),
-            (new Column\Link('login',             $this->_('Логин')))->setMinWidth(100),
-            (new Column\Text('name',              $this->_('Имя')))->setMinWidth(150)->setNoWrap(true),
-            (new Column\Text('email',             $this->_('Email'),                  200))->setMinWidth(180)->setNoWrap(true),
-            (new Column\Text('role_title',        $this->_('Роль'),                   200))->setMinWidth(150)->setNoWrap(true),
-            (new Column\Datetime('date_activity', $this->_('Последняя активность'),   185))->setMinWidth(185),
-            (new Column\Datetime('date_created',  $this->_('Дата регистрации'),       155))->setMinWidth(155)->setShow(false),
-            (new Column\Number('active_sessions', $this->_('Активных сессий'),        145))->setMinWidth(145),
-            (new Column\Badge('is_admin',         $this->_('Админ'),                  80))->setMinWidth(80),
-            (new Column\Button('login_user',      $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
+            $table->getColumnToggle('is_active',   $this->_('Активность'),             45),
+            (new Column\Image('avatar',            $this->_('Аватар'),                 40))->setShowLabel(false)->setStyle('circle')->setBorder(true)->setImgSize(20, 20),
+            (new Column\Link('login',              $this->_('Логин')))->setMinWidth(100),
+            (new Column\Text('name',               $this->_('Имя')))->setMinWidth(150)->setNoWrap(true),
+            (new Column\Text('email',              $this->_('Email'),                  200))->setMinWidth(180)->setNoWrap(true),
+            (new Column\Text('role_title',         $this->_('Роль'),                   200))->setMinWidth(150)->setNoWrap(true),
+            (new Column\DateHuman('date_activity', $this->_('Последняя активность'),   185))->setMinWidth(185),
+            (new Column\Datetime('date_created',   $this->_('Дата регистрации'),       155))->setMinWidth(155)->setShow(false),
+            (new Column\Number('active_sessions',  $this->_('Активных сессий'),        145))->setMinWidth(145),
+            (new Column\Badge('is_admin',          $this->_('Админ'),                  80))->setMinWidth(80),
+            (new Column\Button('login_user',       $this->_('Вход под пользователем'), 1))->setAttr('onclick', 'event.stopPropagation()')->setShowLabel(false),
             (new Column\Select()),
         ]);
 

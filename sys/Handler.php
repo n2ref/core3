@@ -665,7 +665,7 @@ class Handler extends Common {
             $modules[] = [
                 'name'             => $module_row->name,
                 'title'            => $module_row->title,
-                'icon'             => 'fa-solid fa-file-lines',
+                'icon'             => $module_row->icon,
                 'is_visible_index' => (bool)$module_row->is_visible_index,
                 'sections'         => $sections,
             ];
@@ -673,6 +673,8 @@ class Handler extends Common {
 
         return $modules;
     }
+
+
     /**
      * @param string $user_login
      * @param int    $session_id
