@@ -12,7 +12,6 @@ var langEn = {
     'Проверьте подключение к интернету' : 'Check your internet connection',
     'Ошибка. Проверьте подключение к интернету' : 'Error. Check your internet connection',
     'Загрузка...' : 'Loading...',
-    'Не удалось показать некоторые модули из за ошибок!' : 'Some modules could not be shown due to errors!',
     'Уверены, что хотите выйти?' : 'Are you sure you want to log out?',
     'Страница %s не найдена' : 'Page %s not found',
     'Не удалось получить отпечаток' : 'Failed to get fingerprint',

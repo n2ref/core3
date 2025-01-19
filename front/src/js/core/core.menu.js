@@ -507,7 +507,6 @@ let coreMenu = {
                 if (typeof module.name !== 'string' || ! module.name ||
                     typeof module.title !== 'string' || ! module.title
                 ) {
-                    CoreUI.notice.danger(Core._('Не удалось показать некоторые модули из за ошибок!'));
                     return true;
                 }
 
