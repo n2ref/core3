@@ -16,11 +16,12 @@ class Response {
 
     /**
      * @param int $http_code
-     * @return void
+     * @return self
      */
-    public function setHttpCode(int $http_code): void {
+    public function setHttpCode(int $http_code): self {
 
         $this->http_code = $http_code;
+        return $this;
     }
 
 

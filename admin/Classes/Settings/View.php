@@ -123,7 +123,8 @@ class View extends Common {
             case 'date':     $value_type = (new Field\Date('value', $this->_('Значение'))); break;
             case 'number':   $value_type = (new Field\Number('value', $this->_('Значение')))->setWidth(300); break;
             case 'email':    $value_type = (new Field\Email('value', $this->_('Значение')))->setWidth(300)->setInvalidText($this->_('Обязательное поле. Только email')); break;
-            case 'textarea': $value_type = (new Field\Textarea('value', $this->_('Значение')))->setWidth(300)->setHeight(50); break;
+            case 'textarea': $value_type = (new Field\Textarea('value', $this->_('Значение')))->setWidth(300)->setHeight(80); break;
+            case 'switch':   $value_type = (new Field\Toggle('value', $this->_('Значение'))); break;
             case 'text':
             default:         $value_type = (new Field\Text('value', $this->_('Значение')))->setWidth(300); break;
         }
@@ -169,7 +170,7 @@ class View extends Common {
         ]);
 
 
-        $modules = $this->modAdmin->tableModules->fetchPairs('name', 'title');
+        $modules = ['admin' => $this->_('Админ')] + $this->modAdmin->tableModules->fetchPairs('name', 'title');
         $types   = [
             'text'     => $this->_('Текстовое'),
             'textarea' => $this->_('Текстовое расширенное'),

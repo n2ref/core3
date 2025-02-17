@@ -121,11 +121,8 @@ class Common extends Db {
             return Response::httpCode(404);
         }
 
-        $route_method->prependParam($request);
-
-
         try {
-            return $route_method->run();
+            return $route_method->run($request);
 
         } catch (HttpException $e) {
             $this->log->info($e->getMessage());

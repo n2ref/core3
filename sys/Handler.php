@@ -23,20 +23,26 @@ use Psr\Container\NotFoundExceptionInterface;
  */
 class Handler extends Common {
 
+    private Request $request;
+
+    /**
+     * @param Request $request
+     */
+    public function __construct(Request $request) {
+        parent::__construct();
+        $this->request = $request;
+    }
+
 
     /**
      * Авторизация по логину или email
-     * @param Request $request
      * @return array
-     * @throws ContainerExceptionInterface
-     * @throws HttpException
-     * @throws NotFoundExceptionInterface
      * @throws Exception
-     * @throws \Exception
+     * @throws HttpException
      */
-    public function login(Request $request): array {
+    public function login(): array {
 
-        $params = $request->getBody('json');
+        $params = $this->request->getJsonContent();
 
         $fields = [
             'login'    => 'req,string',
@@ -131,16 +137,15 @@ class Handler extends Common {
 
     /**
      * Обновление токенов
-     * @param Request $request
      * @return array
      * @throws ContainerExceptionInterface
      * @throws HttpException
      * @throws NotFoundExceptionInterface
      * @throws Exception
      */
-    public function refreshToken(Request $request): array {
+    public function refreshToken(): array {
 
-        $params = $request->getBody('json');
+        $params = $this->request->getJsonContent();
         $fields = [
             'refresh_token' => 'req,string',
             'fp'            => 'req,string',
@@ -228,10 +233,11 @@ class Handler extends Common {
      * @throws HttpException
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws Exception
      */
-    public function registrationEmail(Request $request) : array {
+    public function registrationEmail() : array {
 
-        $params = $request->getBody('json');
+        $params = $this->request->getJsonContent();
         // TODO Доделать
         $fields = [
             'email'    => 'req,string(1-255),email',
@@ -309,13 +315,12 @@ class Handler extends Common {
 
     /**
      * Отправка проверочного кода на email
-     * @param Request $request
      * @return array
      * @throws Exception
      */
-    public function registrationEmailCheck(Request $request): array {
+    public function registrationEmailCheck(): array {
 
-        $params = $request->getBody('json');
+        $params = $this->request->getJsonContent();
 
         // TODO Доделать
         return [];
@@ -324,13 +329,12 @@ class Handler extends Common {
 
     /**
      * Восстановление пароля при помощи email
-     * @param Request $request
      * @return array
      * @throws Exception
      */
-    public function restorePass(Request $request): array {
+    public function restorePass(): array {
 
-        $params = $request->getBody('json');
+        $params = $this->request->getJsonContent();
         // TODO Доделать
         return [];
     }
@@ -338,13 +342,12 @@ class Handler extends Common {
 
     /**
      * Отправка проверочного кода на email для восстановления пароля
-     * @param Request $request
      * @return Response
      * @throws Exception
      */
-    public function restorePassCheck(Request $request): Response {
+    public function restorePassCheck(): Response {
 
-        $params = $request->getBody('json');
+        $params = $this->request->getJsonContent();
 
         // TODO Доделать
         return [];
@@ -353,11 +356,10 @@ class Handler extends Common {
 
     /**
      * Получение ошибок от пользовательского клиента
-     * @param Request $request
      * @return Response
      * @throws Exception|\Monolog\Handler\MissingExtensionException
      */
-    public function logError(Request $request): Response {
+    public function logError(): Response {
 
         $this->checkAuth();
 
@@ -366,7 +368,7 @@ class Handler extends Common {
             is_string($this->config?->system?->log?->file) &&
             is_string($this->config?->system?->log?->dir)
         ) {
-            $errors = $request->getJsonContent();
+            $errors = $this->request->getJsonContent();
 
             if ($errors) {
                 $i     = 1;
@@ -410,14 +412,13 @@ class Handler extends Common {
 
     /**
      * Получение файла аватара
-     * @param Request $request
      * @param int     $user_id
      * @return Response
      * @throws Exception
      * @throws HttpException
      * @throws ImageResizeException
      */
-    public function getUserAvatar(Request $request, int $user_id): Response {
+    public function getUserAvatar(int $user_id): Response {
 
         if ( ! $user_id) {
             throw new HttpException(400, $this->_('Не указан id пользователя'), 'empty_user_id');
@@ -555,14 +556,38 @@ class Handler extends Common {
 
     /**
      * Данные о разделе модуля
-     * @param Request $request
+     * @param string  $module_name
+     * @return mixed
+     * @throws ExceptionInterface
+     * @throws HttpException
+     */
+    public function getModInit(string $module_name): mixed {
+
+        $this->checkAuth();
+
+        if ( ! $this->auth->isAllowed($module_name)) {
+            throw new HttpException(403, $this->_("У вас нет доступа к модулю %s", [$module_name]), 'forbidden');
+        }
+
+        $controller = $this->getModuleController($module_name);
+
+        if ( ! is_callable([$controller, "init"])) {
+            throw new HttpException(404, $this->_("Не найден метод init"), 'broken_section');
+        }
+
+        return $controller->init($this->request);
+    }
+
+
+    /**
+     * Данные о разделе модуля
      * @param string  $module_name
      * @param string  $section_name
      * @return mixed
      * @throws ExceptionInterface
      * @throws HttpException
      */
-    public function getModSection(Request $request, string $module_name, string $section_name): mixed {
+    public function getModSection(string $module_name, string $section_name): mixed {
 
         $this->checkAuth();
 
@@ -584,13 +609,12 @@ class Handler extends Common {
 
         Registry::set('section', strtolower($section_name));
 
-        return $controller->{"section{$section_name}"}($request);
+        return $controller->{"section{$section_name}"}($this->request);
     }
 
 
     /**
      * Вызов метода для обработки данных
-     * @param Request $request
      * @param string  $module_name
      * @param string  $section_name
      * @param string  $method_name
@@ -601,8 +625,9 @@ class Handler extends Common {
      * @throws ExceptionInterface
      * @throws HttpException
      * @throws NotFoundExceptionInterface
+     * @deprecated
      */
-    public function getModHandler(Request $request, string $module_name, string $section_name, string $method_name): mixed {
+    public function getModHandler(string $module_name, string $section_name, string $method_name): mixed {
 
         $this->checkAuth();
 
@@ -628,7 +653,7 @@ class Handler extends Common {
             throw new HttpException(403, $this->_("Ошибка. Не найден метод обработчика: %s", [$method_name]), 'incorrect_handler_method');
         }
 
-        return $handler->$method_name($request);
+        return $handler->$method_name($this->request);
     }
 
 

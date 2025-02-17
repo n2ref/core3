@@ -17,7 +17,7 @@ const conf = {
     dist: "./dist",
     css: {
         fileMin: 'all.min.css',
-        main: 'src/css/main.scss',
+        main: 'src/main.scss',
         src: [
             'src/css/**/*.scss',
         ]
@@ -25,12 +25,12 @@ const conf = {
     js: {
         coreui: {
             file: 'coreui.min.js',
-            main: 'src/js/main.coreui.js',
+            main: 'src/main.coreui.js',
         },
         core: {
             fileMin: 'core.min.js',
             file: 'core.js',
-            main: 'src/js/main.js',
+            main: 'src/main.js',
             src: [
                 'src/js/**/*.js',
                 'src/js/*.js',
@@ -182,7 +182,14 @@ gulp.task('build_js_coreui', function() {
         .pipe(source(conf.js.coreui.file))
         .pipe(buffer())
         .pipe(sourcemaps.init())
-        .pipe(uglify())
+        .pipe(uglify({
+            mangle: {
+                reserved: [
+                    'PanelInstance', 'FormInstance', 'TableInstance', 'LayoutInstance', 'InfoInstance',
+                    'BreadcrumbInstance', 'ChartInstance',
+                ]
+            }
+        }))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest(conf.dist));
 });

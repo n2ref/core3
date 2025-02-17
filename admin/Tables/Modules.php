@@ -63,7 +63,7 @@ class Modules extends Table {
 
         $result = $this->select(function (Select $select) {
             $select->columns([
-                'id'    => 'id',
+                'id'    => new Expression('1'),
                 'count' => new Expression('COUNT(1)'),
             ]);
         });
@@ -107,15 +107,20 @@ class Modules extends Table {
 
     /**
      * Проверка повторения названия
-     * @param string $name
+     * @param string   $name
+     * @param int|null $exclude_id
      * @return bool
      */
-    public function isUniqueName(string $name): bool {
+    public function isUniqueName(string $name, int $exclude_id = null): bool {
 
-        $results = $this->select(function (Select $select) use ($name) {
+        $results = $this->select(function (Select $select) use ($name, $exclude_id) {
             $select
                 ->where([ 'name' => $name ])
                 ->limit(1);
+
+            if ($exclude_id) {
+                $select->where->notEqualTo('id',  $exclude_id);
+            }
         });
 
         return $results->count() == 0;

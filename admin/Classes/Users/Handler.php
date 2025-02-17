@@ -5,6 +5,7 @@ use Core3\Classes\Request;
 use Core3\Classes\Response;
 use Core3\Classes\Table;
 use Core3\Classes\Tools;
+use Core3\Classes\Validator;
 use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
 use CoreUI\Table\Adapters\Mysql\Search;
@@ -19,11 +20,10 @@ class Handler extends Classes\Handler {
     private string $base_url = "admin/users";
 
     /**
-     * @param Request $request
      * @return array
      * @throws \Exception
      */
-    public function getUsers(Request $request): array {
+    public function getPanelUsers(): array {
 
         $content   = [];
         $content[] = $this->getJsModule('admin', 'assets/users/js/admin.users.js');
@@ -38,31 +38,30 @@ class Handler extends Classes\Handler {
 
     /**
      * Сохранение пользователя
-     * @param Request $request
      * @param int     $user_id
      * @return Response
      * @throws HttpException
      * @throws Exception
-     * @throws ExceptionInterface
      */
-	public function saveUser(Request $request, int $user_id): Response {
+	public function saveUser(int $user_id): Response {
 
-        $this->checkHttpMethod($request, 'put');
-        $this->checkVersion($this->modAdmin->tableUsers, $request);
+        $this->checkHttpMethod('put');
+        $this->checkVersion($this->modAdmin->tableUsers, $user_id);
 
-        $fields = [
-            'email'       => 'email: ' . $this->_('Email'),
-            'role_id'     => 'req,int(1-): ' . $this->_('Роль'),
-            'pass'        => 'string(4-): ' . $this->_('Пароль'),
-            'fname'       => 'string(0-255): ' . $this->_('Имя'),
-            'lname'       => 'string(0-255): ' . $this->_('Фамилия'),
-            'mname'       => 'string(0-255): ' . $this->_('Отчество'),
-            'is_admin'    => 'int: ' . $this->_('Администратор безопасности'),
-            'is_active'   => 'int: ' . $this->_('Активен'),
-            'avatar_type' => 'string(none|generate|upload): ' . $this->_('Аватар'),
-        ];
+        $validator = new Validator([
+            'email'       => ['email',                        $this->_('Email')],
+            'role_id'     => ['req,int(1-)',                  $this->_('Роль')],
+            'pass'        => ['string(4-)',                   $this->_('Пароль')],
+            'fname'       => ['string(0-255)',                $this->_('Имя')],
+            'lname'       => ['string(0-255)',                $this->_('Фамилия')],
+            'mname'       => ['string(0-255)',                $this->_('Отчество')],
+            'is_admin'    => ['int',                          $this->_('Администратор безопасности')],
+            'is_active'   => ['int',                          $this->_('Активен')],
+            'avatar_type' => ['string(none|generate|upload)', $this->_('Аватар')],
+        ]);
 
-        $controls = $request->getJsonContent() ?? [];
+
+        $controls = $this->request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
         $files = null;
@@ -72,7 +71,7 @@ class Handler extends Classes\Handler {
             unset($controls['avatar']);
         }
 
-        if ($errors = $this->validateFields($fields, $controls)) {
+        if ($errors = $validator->validate($controls)) {
             return $this->getResponseError($errors);
         }
 
@@ -120,30 +119,28 @@ class Handler extends Classes\Handler {
 
     /**
      * Сохранение пользователя
-     * @param Request $request
      * @return Response
      * @throws HttpException
      * @throws Exception
      */
-	public function saveUserNew(Request $request): Response {
+	public function saveUserNew(): Response {
 
-        $this->checkHttpMethod($request, ['post', 'put']);
-        $this->checkVersion($this->modAdmin->tableUsers, $request);
+        $this->checkHttpMethod(['post', 'put']);
 
-        $fields = [
-            'login'        => 'req,string(1-255),chars(alphanumeric|_|\\): Логин',
-            'email'        => 'email: Email',
-            'role_id'      => 'req,int(1-): Роль',
-            'pass'         => 'req,string(4-): Пароль',
-            'fname'        => 'string(0-255): Имя',
-            'lname'        => 'string(0-255): Фамилия',
-            'mname'        => 'string(0-255): Отчество',
-            'is_admin'     => 'string(1|0): Администратор безопасности',
-            'is_active'    => 'string(1|0): Активен',
-            'avatar_type'  => 'string(none|generate|upload): Аватар',
-        ];
+        $validator = new Classes\Validator([
+            'login'        => ['req,string(1-255),chars(alphanumeric|_|\\)', $this->_('Логин')],
+            'email'        => ['email',                                      $this->_('Email')],
+            'role_id'      => ['req,int(1-)',                                $this->_('Роль')],
+            'pass'         => ['req,string(4-)',                             $this->_('Пароль')],
+            'fname'        => ['string(0-255)',                              $this->_('Имя')],
+            'lname'        => ['string(0-255)',                              $this->_('Фамилия')],
+            'mname'        => ['string(0-255)',                              $this->_('Отчество')],
+            'is_admin'     => ['string(1|0)',                                $this->_('Администратор безопасности')],
+            'is_active'    => ['string(1|0)',                                $this->_('Активен')],
+            'avatar_type'  => ['string(none|generate|upload)',               $this->_('Аватар')],
+        ]);
 
-        $controls = $request->getJsonContent() ?? [];
+        $controls = $this->request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
 
@@ -154,7 +151,7 @@ class Handler extends Classes\Handler {
             unset($controls['avatar']);
         }
 
-        if ($errors = $this->validateFields($fields, $controls)) {
+        if ($errors = $validator->validate($controls)) {
             return $this->getResponseError($errors);
         }
 
@@ -197,17 +194,16 @@ class Handler extends Classes\Handler {
 
     /**
      * Изменение активности для пользователя
-     * @param Request $request
      * @param int     $user_id
      * @return Response
      * @throws Exception
      * @throws \Core3\Exceptions\DbException
      * @throws HttpException
      */
-    public function switchUserActive(Request $request, int $user_id): Response {
+    public function switchUserActive(int $user_id): Response {
 
-        $this->checkHttpMethod($request, 'patch');
-        $controls = $request->getJsonContent();
+        $this->checkHttpMethod('patch');
+        $controls = $this->request->getJsonContent();
 
         if ( ! in_array($controls['checked'], ['1', '0'])) {
             throw new HttpException(400, $this->_("Некорректные данные запроса"));
@@ -230,17 +226,16 @@ class Handler extends Classes\Handler {
 
     /**
      * Изменение активности для сессии пользователя
-     * @param Request $request
      * @param int     $user_id
      * @param int     $session_id
      * @return Response
      * @throws Exception
      * @throws HttpException
      */
-    public function switchUserSession(Request $request, int $user_id, int $session_id): Response {
+    public function switchUserSession(int $user_id, int $session_id): Response {
 
-        $this->checkHttpMethod($request, 'patch');
-        $controls = $request->getJsonContent();
+        $this->checkHttpMethod('patch');
+        $controls = $this->request->getJsonContent();
 
         if ( ! in_array($controls['checked'], ['1', '0'])) {
             throw new HttpException(400, $this->_("Некорректные данные запроса"));
@@ -263,14 +258,13 @@ class Handler extends Classes\Handler {
 
     /**
      * Изменение активности для пользователя
-     * @param Request $request
      * @param int     $user_id
      * @return Response
      * @throws Exception
      * @throws \Core3\Exceptions\DbException
      * @throws HttpException
      */
-    public function getAvatarDownload(Request $request, int $user_id): Response {
+    public function getAvatarDownload(int $user_id): Response {
 
         $file = $this->modAdmin->tableUsersFiles->getRowsByUser($user_id);
 
@@ -284,16 +278,15 @@ class Handler extends Classes\Handler {
 
     /**
      * Удаление пользователей
-     * @param Request $request
      * @return Response
      * @throws Exception
      * @throws HttpException
      */
-    public function deleteUsers(Request $request): Response {
+    public function deleteUsers(): Response {
 
-        $this->checkHttpMethod($request, 'delete');
+        $this->checkHttpMethod('delete');
 
-        $controls = $request->getJsonContent();
+        $controls = $this->request->getJsonContent();
 
         if (empty($controls['id'])) {
             throw new HttpException(400, $this->_("Не указаны пользователи"));
@@ -317,15 +310,14 @@ class Handler extends Classes\Handler {
 
     /**
      * Данные для таблицы
-     * @param Request $request
      * @return Response
      * @throws \CoreUI\Table\Exception
      */
-    public function getRecordsUsers(Request $request): Response {
+    public function getRecordsUsers(): Response {
 
-        $table = new Table\Db($request);
+        $table = new Table\Db($this->request);
 
-        $sort = $request->getQuery('sort');
+        $sort = $this->request->getQuery('sort');
 
         if ($sort && is_array($sort)) {
             $table->setSort($sort, [
@@ -343,7 +335,7 @@ class Handler extends Classes\Handler {
         }
 
 
-        $search = $request->getQuery('search');
+        $search = $this->request->getQuery('search');
 
         if ($search && is_array($search)) {
             $table->setSearch($search, [
@@ -411,16 +403,15 @@ class Handler extends Classes\Handler {
 
     /**
      * Данные для таблицы сессий
-     * @param Request $request
      * @param int $user_id
      * @return Response
      * @throws \CoreUI\Table\Exception
      */
-    public function getRecordsSessions(Request $request, int $user_id): Response {
+    public function getRecordsSessions(int $user_id): Response {
 
-        $table = new Table\Db($request);
+        $table = new Table\Db($this->request);
 
-        $sort = $request->getQuery('sort');
+        $sort = $this->request->getQuery('sort');
 
         if ($sort && is_array($sort)) {
             $table->setSort($sort, [
@@ -435,7 +426,7 @@ class Handler extends Classes\Handler {
         }
 
 
-        $search = $request->getQuery('search');
+        $search = $this->request->getQuery('search');
 
         if ($search && is_array($search)) {
             $table->setSearch($search, [
@@ -489,7 +480,6 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request $request
      * @param int $user_id
      * @param string|null $tab
      * @return array
@@ -497,7 +487,7 @@ class Handler extends Classes\Handler {
      * @throws HttpException
      * @throws \Exception
      */
-    public function getUserPanel(Request $request, int $user_id, string $tab = null): array {
+    public function getPanelUser(int $user_id, string $tab = null): array {
 
         $breadcrumb = new \CoreUI\Breadcrumb();
         $breadcrumb->addItem($this->_('Пользователи'), "#/{$this->base_url}");
@@ -527,6 +517,7 @@ class Handler extends Classes\Handler {
             $panel->addTab($this->_('Пользователь'), 'user')
                 ->setUrlWindow("#/{$this->base_url}/{$user_id}/user")
                 ->setUrlContent("{$this->base_url}/{$user_id}/user/form");
+
             $panel->addTab($this->_('Сессии'), 'sessions')
                 ->setUrlWindow("#/{$this->base_url}/{$user_id}/sessions")
                 ->setUrlContent("{$this->base_url}/{$user_id}/sessions/table")
@@ -537,11 +528,11 @@ class Handler extends Classes\Handler {
             switch ($tab) {
                 case 'user':
                 default:
-                    $content[] = $this->getUserForm($request, $user_id);
+                    $content[] = $this->getUserForm($user_id);
                     break;
 
                 case 'sessions':
-                    $content[] = $this->getUserSessions($request, $user_id);
+                    $content[] = $this->getUserSessions($user_id);
                     break;
             }
 
@@ -558,13 +549,12 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request $request
      * @param int $user_id
      * @return array
      * @throws HttpException
      * @throws Exception
      */
-    public function getUserForm(Request $request, int $user_id): array {
+    public function getUserForm(int $user_id): array {
 
         $user = $this->modAdmin->tableUsers->getRowById($user_id);
 
@@ -577,13 +567,12 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request $request
      * @param int $user_id
      * @return array
      * @throws HttpException
      * @throws Exception
      */
-    public function getUserSessions(Request $request, int $user_id): array {
+    public function getUserSessions(int $user_id): array {
 
         $user = $this->modAdmin->tableUsers->getRowById($user_id);
 
@@ -597,13 +586,12 @@ class Handler extends Classes\Handler {
 
     /**
      * Вход под другим пользователем
-     * @param Request $request
      * @return Response
      * @throws HttpException
      */
-    public function loginUser(Request $request): Response {
+    public function loginUser(): Response {
 
-        $user_id = $request->getPost()['user_id'] ?? '';
+        $user_id = $this->request->getPost()['user_id'] ?? '';
 
         if (empty($user_id)) {
             throw new HttpException(400, $this->_('Не задан id пользователя'), 'user_id_not_found');

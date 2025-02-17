@@ -380,7 +380,7 @@
             position: absolute;
             width: calc(100% - 280px);
             height: 100%;
-            background-color: rgb(117 117 117 / 50%);
+            background-color: var(--menu-lock-bg);
             transition: all 100ms cubic-bezier(0.4, 0, 0.2, 1);
             cursor: progress;
         }
@@ -398,7 +398,7 @@
             align-items: center;
             justify-content: flex-start;
             gap: 10px;
-            // box-shadow: 0 0 5px 0 var(--bs-body-bg);
+            box-shadow: 0 0 5px 0 var(--menu-lock-shadow-color);
 
             .spinner-border {
                 --bs-spinner-width: 1.5rem;

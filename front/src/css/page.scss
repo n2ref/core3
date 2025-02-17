@@ -10,8 +10,9 @@
   --menu-drawer-text: rgb(255 255 255 / 70%);
   --menu-drawer-text-active: #fff;
 
-  //--menu-bg: #fafafa;
   --menu-bg: linear-gradient(145deg, #d4dfd1, #f0eee6);
+  --menu-lock-bg: rgb(255 255 255 / 30%);
+  --menu-lock-shadow-color: #979797;
   --mdc-theme-primary: #2a4397;
   --mdc-theme-secondary: #36436e;
 }
@@ -21,6 +22,8 @@
   --menu-header-btn-hover: rgba(0, 0, 0, 0.15);
 
   --menu-bg: #212529;
+  --menu-lock-bg: rgb(99 99 99 / 30%);
+  --menu-lock-shadow-color: #000000;
   --mdc-theme-primary: #2a4397;
   --mdc-theme-secondary: #36436e;
 }

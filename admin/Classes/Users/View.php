@@ -92,6 +92,7 @@ class View extends Common {
         $form->setHandler("{$this->base_url}/{$user->id}", 'put');
         $form->setSuccessLoadUrl("#/{$this->base_url}");
         $form->setSuccessNotice();
+        $form->setWidthLabel(160);
 
         $avatar = [];
 
@@ -143,8 +144,8 @@ class View extends Common {
             (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
             (new Field\RadioBtn('avatar_type',   $this->_('Аватар')))->setOptions($avatar_types),
             (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow($user->avatar_type == 'upload')->setUrl("/{$this->base_url}/avatar/upload"),
-            (new Field\Toggle('is_admin',        $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
-            (new Field\Toggle('is_active',       $this->_('Активен'))),
+            (new Field\Toggle('is_admin',        $this->_('Администратор')))->setDescription($this->_('Пользователь получит полный доступ к системе. Активируйте с умом.')),
+            (new Field\Toggle('is_active',       $this->_('Активен')))->setDescription($this->_('Дает возможность входить и пользоваться системой')),
         ]);
 
         $form->addControls([
@@ -166,6 +167,7 @@ class View extends Common {
         $form->setHandler("{$this->base_url}/0");
         $form->setSuccessLoadUrl("#/{$this->base_url}");
         $form->setSuccessNotice();
+        $form->setWidthLabel(160);
 
         $form->setRecord([
             'login'        => '',
@@ -206,8 +208,8 @@ class View extends Common {
             (new Field\Text('mname',             $this->_('Отчество')))->setWidth(200),
             (new Field\RadioBtn('avatar_type',   $this->_('Аватар')))->setOptions($avatar_types),
             (new Field\FileUpload('avatar'))->setAccept('image/*')->setFilesLimit(1)->setSizeLimitServer()->setShow(false)->setUrl("/{$this->base_url}/avatar/upload"),
-            (new Field\Toggle('is_admin',        $this->_('Администратор безопасности')))->setDescription($this->_('полный доступ')),
-            (new Field\Toggle('is_active',       $this->_('Активен'))),
+            (new Field\Toggle('is_admin',        $this->_('Администратор')))->setDescription($this->_('Пользователь получит полный доступ к системе. Активируйте с умом.')),
+            (new Field\Toggle('is_active',       $this->_('Активен')))->setDescription($this->_('Дает возможность входить и пользоваться системой')),
         ]);
 
         $form->addControls([

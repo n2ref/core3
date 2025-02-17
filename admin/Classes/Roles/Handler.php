@@ -3,6 +3,7 @@ namespace Core3\Mod\Admin\Classes\Roles;
 use Core3\Classes;
 use Core3\Classes\Request;
 use Core3\Classes\Response;
+use Core3\Classes\Validator;
 use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
 use Laminas\Cache\Exception\ExceptionInterface;
@@ -17,13 +18,12 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request $request
      * @param string $tab
      * @return array
      * @throws \Exception
      * @throws ExceptionInterface
      */
-    public function getRoles(Request $request, string $tab): array {
+    public function getRoles(string $tab): array {
 
         $panel = new \CoreUI\Panel();
         $panel->setTabsType($panel::TABS_TYPE_UNDERLINE);
@@ -57,21 +57,19 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request $request
      * @return array
      */
-    public function getRolesTable(Request $request): array {
+    public function getRolesTable(): array {
 
         return (new View())->getTableRoles();
     }
 
 
     /**
-     * @param Request $request
      * @return array
      * @throws \Core3\Exceptions\DbException
      */
-    public function getAccessTable(Request $request): array {
+    public function getAccessTable(): array {
 
         $content = [];
         $content[] = $this->getJsModule('admin', 'assets/roles/js/admin.roles.js');
@@ -82,14 +80,13 @@ class Handler extends Classes\Handler {
 
     /**
      * Сохранение доступов для роли
-     * @param Request $request
      * @return void
      * @throws Exception
      * @throws HttpException
      */
-    public function setAccess(Request $request): void {
+    public function setAccess(): void {
 
-        $data = $request->getJsonContent();
+        $data = $this->request->getJsonContent();
 
         if (empty($data['rules']) || ! is_array($data['rules'])) {
             throw new HttpException('400', $this->_('Не переданы роли для сохранения'));
@@ -139,14 +136,13 @@ class Handler extends Classes\Handler {
 
     /**
      * Сохранение доступов для роли
-     * @param Request $request
      * @return void
      * @throws Exception
      * @throws HttpException
      */
-    public function setAccessAllRole(Request $request): void {
+    public function setAccessAllRole(): void {
 
-        $data = $request->getJsonContent();
+        $data = $this->request->getJsonContent();
 
         if ( ! isset($data['is_access']) || empty($data['role_id']) || ! is_numeric($data['role_id'])) {
             throw new HttpException('400', $this->_('Не переданы обязательные параметры для сохранения'));
@@ -182,14 +178,13 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request $request
      * @param int     $role_id
      * @return array
      * @throws HttpException
      * @throws Exception
      * @throws \Exception
      */
-    public function getRole(Request $request, int $role_id): array {
+    public function getRole(int $role_id): array {
 
         $breadcrumb = new \CoreUI\Breadcrumb();
         $breadcrumb->addItem($this->_('Роли'), "#/{$this->base_url}");
@@ -231,34 +226,27 @@ class Handler extends Classes\Handler {
 
     /**
      * Сохранение роли
-     * @param Request $request
      * @param int     $role_id
      * @return Response
      * @throws HttpException
      * @throws Exception
      */
-	public function saveRole(Request $request, int $role_id): Response {
+	public function saveRole(int $role_id): Response {
 
-        $this->checkHttpMethod($request, 'post');
-        $this->checkVersion($this->modAdmin->tableUsers, $request);
+        $this->checkHttpMethod('post');
+        $this->checkVersion($this->modAdmin->tableUsers, $role_id);
 
-        $fields = [
-            'title'       => 'req,string(1-255): ' . $this->_('Название'),
-            'description' => 'string(0-5000): ' . $this->_('Описание'),
-            'privileges'  => 'array: ' . $this->_('Доступ к модулям'),
-        ];
 
-//        $fields = [
-//            'title'       => Validate::req()->string(1, 255)->title($this->_('Название')),
-//            'description' => Validate::string(0, 5000)->title($this->_('Описание')),
-//            'privileges'  => Validate::arrayItems()->title($this->_('Доступ')),
-//        ];
+        $validator = new Validator([
+            'title'       => ['req,string(1-255)', $this->_('Название')],
+            'name'        => ['string(0-5000)',    $this->_('Описание')],
+            'is_active'   => ['array',             $this->_('Доступ к модулям')],
+        ]);
 
-        $controls = $request->getJsonContent() ?? [];
+        $controls = $this->request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
-
-        if ($errors = $this->validateFields($fields, $controls)) {
+        if ($errors = $validator->validate($controls)) {
             return $this->getResponseError($errors);
         }
 
@@ -282,17 +270,16 @@ class Handler extends Classes\Handler {
 
     /**
      * Изменение активности для пользователя
-     * @param Request $request
      * @param int     $user_id
      * @return Response
      * @throws Exception
      * @throws \Core3\Exceptions\DbException
      * @throws HttpException
      */
-    public function switchUserActive(Request $request, int $user_id): Response {
+    public function switchUserActive(int $user_id): Response {
 
-        $this->checkHttpMethod($request, 'patch');
-        $controls = $request->getJsonContent();
+        $this->checkHttpMethod('patch');
+        $controls = $this->request->getJsonContent();
 
         if ( ! in_array($controls['checked'], ['1', '0'])) {
             throw new HttpException(400, $this->_("Некорректные данные запроса"));
@@ -315,16 +302,15 @@ class Handler extends Classes\Handler {
 
     /**
      * Удаление ролей
-     * @param Request $request
      * @return Response
      * @throws Exception
      * @throws HttpException
      */
-    public function deleteRoles(Request $request): Response {
+    public function deleteRoles(): Response {
 
-        $this->checkHttpMethod($request, 'delete');
+        $this->checkHttpMethod('delete');
 
-        $controls = $request->getJsonContent();
+        $controls = $this->request->getJsonContent();
 
         if (empty($controls['id'])) {
             throw new HttpException(400, $this->_("Не указаны роли"));

@@ -1,0 +1,36 @@
+{
+  "name": "core3-admin",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "build":      "gulp build_tpl && gulp build_js && gulp build_js_min && gulp build_css_min",
+    "build_fast": "gulp build_tpl && gulp build_js_min_fast && gulp build_css_min_fast",
+    "watch":      "gulp build_watch"
+  },
+  "dependencies": {
+    "ejs": "3.1.10"
+  },
+  "devDependencies": {
+    "gulp": "5.0.0",
+    "gulp-concat": "2.6.1",
+    "gulp-sourcemaps": "3.0.0",
+    "gulp-uglify": "3.0.2",
+    "gulp-sass": "5.1.0",
+    "gulp-wrap-file": "0.1.2",
+    "gulp-html-to-js": "0.0.7",
+    "@rollup/stream": "3.0.1",
+    "rollup-plugin-sourcemaps": "0.6.3",
+    "@rollup/plugin-babel": "6.0.4",
+    "@rollup/plugin-node-resolve": "15.2.3",
+    "@rollup/plugin-commonjs": "25.0.7",
+    "vinyl-source-stream": "2.0.0",
+    "vinyl-buffer": "1.0.1",
+    "sass": "1.76.0",
+    "eslint": "8.57.0",
+    "@babel/plugin-transform-template-literals": "7.24.1",
+    "@babel/preset-env": "7.24.5"
+  },
+  "keywords": [],
+  "author": "n2ref",
+  "license": "GPL-3.0-or-later"
+}

@@ -17,13 +17,12 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request     $request
      * @param string|null $file_hash
      * @return array
      * @throws \Core3\Exceptions\DbException
      * @throws \Exception
      */
-    public function getPanelLogs(Request $request, string $file_hash = null): array {
+    public function getPanelLogs(string $file_hash = null): array {
 
         if (empty($file_hash)) {
             $files = (new Log())->getFiles();
@@ -64,12 +63,11 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request     $request
      * @param string|null $file_hash
      * @return array
      * @throws Exception
      */
-    public function getChartLogs(Request $request, string $file_hash = null): array {
+    public function getChartLogs(string $file_hash = null): array {
 
         if (empty($file_hash)) {
             return [];
@@ -151,12 +149,11 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request     $request
      * @param string|null $file_hash
      * @return array
      * @throws Exception
      */
-    public function getRecordsLog(Request $request, string $file_hash = null): array {
+    public function getRecordsLog(string $file_hash = null): array {
 
         if (empty($file_hash)) {
             return [];
@@ -169,14 +166,14 @@ class Handler extends Classes\Handler {
             return [];
         }
 
-        $page_count = $request->getQuery('count') ?? 25;
+        $page_count = $this->request->getQuery('count') ?? 25;
         $page_count = is_numeric($page_count) ? max($page_count, 1) : 25;
 
-        $page         = $request->getQuery('page') ?? 1;
+        $page         = $this->request->getQuery('page') ?? 1;
         $page         = is_numeric($page) ? max($page, 1) : 1;
         $offset_count = $page > 1 ? ($page - 1) * $page_count : 0;
 
-        $search = $request->getQuery('search');
+        $search = $this->request->getQuery('search');
         $search = is_array($search) ? $search : [];
 
         $log_data = $log->getLogsData($files[$file_hash]['path'], $offset_count, $page_count, $search);
@@ -220,13 +217,12 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request $request
      * @param string  $file_hash
      * @return Classes\Response
      * @throws HttpException
      * @throws Exception
      */
-    public function downloadLog(Request $request, string $file_hash): Classes\Response {
+    public function downloadLog(string $file_hash): Classes\Response {
 
         $log = new Log();
         $files = $log->getFiles();

@@ -22,7 +22,6 @@ class Form extends \CoreUI\Form {
     private System $system;
 
     private array $send_props = [
-        'record_id'      => null,
         'record_version' => null,
         'handler'        => null,
         'http_method'    => 'post',
@@ -74,7 +73,6 @@ class Form extends \CoreUI\Form {
             $admin   = new Admin\Controller();
             $control = $admin->tableControls->createRow($table->getTable(), $record_id);
 
-            $this->send_props['record_id']      = $record_id;
             $this->send_props['record_version'] = $control->version;
         }
 
@@ -197,7 +195,7 @@ class Form extends \CoreUI\Form {
         $send = $this->send_props;
 
         if ($send['handler']) {
-            if ($send['record_id'] && $send['record_version']) {
+            if ($send['record_version']) {
                 $amp = strpos($send['handler'], '?') === false ? '?' : '&';
                 $this->setSend("{$send['handler']}{$amp}v={$send['record_version']}", $send['http_method'], $this::DATA_JSON);
 

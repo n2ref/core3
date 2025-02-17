@@ -3,6 +3,7 @@ namespace Core3\Mod\Admin\Classes\Settings;
 use Core3\Classes\Request;
 use Core3\Classes\Response;
 use Core3\Classes;
+use Core3\Classes\Validator;
 use Core3\Exceptions\DbException;
 use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
@@ -18,11 +19,10 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request $request
      * @return array
      * @throws \Exception
      */
-    public function getSettings(Request $request): array {
+    public function getSettings(): array {
 
         $content   = [];
         $content[] = (new View())->getTable();
@@ -35,13 +35,12 @@ class Handler extends Classes\Handler {
 
 
     /**
-     * @param Request $request
      * @param int     $setting_id
      * @return array
      * @throws HttpException
      * @throws \Core3\Exceptions\Exception
      */
-    public function getSetting(Request $request, int $setting_id): array {
+    public function getSetting(int $setting_id): array {
 
         $breadcrumb = new \CoreUI\Breadcrumb();
         $breadcrumb->addItem($this->_('Настройки'), $this->base_url);
@@ -93,17 +92,16 @@ class Handler extends Classes\Handler {
 
     /**
      * Изменение активности
-     * @param Request $request
      * @param int     $setting_id
      * @return Response
      * @throws Exception
      * @throws \Core3\Exceptions\DbException
      * @throws HttpException
      */
-    public function switchActive(Request $request, int $setting_id): Response {
+    public function switchActive(int $setting_id): Response {
 
-        $this->checkHttpMethod($request, 'patch');
-        $controls = $request->getJsonContent();
+        $this->checkHttpMethod('patch');
+        $controls = $this->request->getJsonContent();
 
         if ( ! in_array($controls['checked'], ['1', '0'])) {
             throw new HttpException(400, $this->_("Некорректные данные запроса"));
@@ -126,16 +124,15 @@ class Handler extends Classes\Handler {
 
     /**
      * Удаление
-     * @param Request $request
      * @return Response
      * @throws Exception
      * @throws HttpException
      */
-    public function deleteSettings(Request $request): Response {
+    public function deleteSettings(): Response {
 
-        $this->checkHttpMethod($request, 'delete');
+        $this->checkHttpMethod('delete');
 
-        $controls = $request->getJsonContent();
+        $controls = $this->request->getJsonContent();
 
         if (empty($controls['id'])) {
             throw new HttpException(400, $this->_("Не указаны настройки, которые требуется удалить"));
@@ -159,29 +156,28 @@ class Handler extends Classes\Handler {
 
     /**
      * Сохранение системных настроек
-     * @param Request $request
      * @param int     $setting_id
      * @return Response
      * @throws HttpException
      * @throws DbException
      * @throws Exception
      */
-	public function saveSetting(Request $request, int $setting_id): Response {
+	public function saveSetting(int $setting_id): Response {
 
-        $this->checkHttpMethod($request, 'put');
-        $this->checkVersion($this->modAdmin->tableSettings, $request);
+        $this->checkHttpMethod('put');
+        $this->checkVersion($this->modAdmin->tableSettings, $setting_id);
 
-        $fields = [
-            'title'     => 'req,string(1-255): ' . $this->_('Название'),
-            'value'     => 'string(0-65000): ' . $this->_('Значение'),
-            'note'      => 'string(0-65000): ' . $this->_('Описание'),
-            'is_active' => 'int: ' . $this->_('Активно'),
-        ];
+        $validator = new Validator([
+            'title'     => ['req,string(1-255)', $this->_('Название')],
+            'value'     => ['string(0-65000)',   $this->_('Значение')],
+            'note'      => ['string(0-65000)',   $this->_('Описание')],
+            'is_active' => ['int',               $this->_('Активно')],
+        ]);
 
-        $controls = $request->getJsonContent() ?? [];
+        $controls = $this->request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
-        if ($errors = $this->validateFields($fields, $controls)) {
+        if ($errors = $validator->validate($controls)) {
             return $this->getResponseError($errors);
         }
 
@@ -195,49 +191,29 @@ class Handler extends Classes\Handler {
 
     /**
      * Сохранение системных настроек
-     * @param Request $request
      * @return Response
      * @throws HttpException
      * @throws DbException
      * @throws Exception
      */
-	public function saveSettingNew(Request $request): Response {
+	public function saveSettingNew(): Response {
 
-        $this->checkHttpMethod($request, 'post');
-        $this->checkVersion($this->modAdmin->tableSettings, $request);
+        $this->checkHttpMethod('post');
 
-        $fields = [
-            'title'      => 'req,string(1-255): ' . $this->_('Название'),
-            'value'      => 'string(0-65000): ' . $this->_('Значение'),
-            'code'       => 'req,string(1-255),chars(a-z|A-Z|0-9|_): ' . $this->_('Код'),
-            'field_type' => 'string(1-255): ' . $this->_('Модуль'),
-            'module'     => 'string(0-255): ' . $this->_('Тип значения'),
-            'note'       => 'string(0-65000): ' . $this->_('Описание'),
-            'is_active'  => 'string(1|0): ' . $this->_('Активно'),
-        ];
+        $validator = new Classes\Validator([
+            'title'      => ['req,string(1-255)',                      $this->_('Название')],
+            'value'      => ['string(0-65000)',                        $this->_('Значение')],
+            'code'       => ['req,string(1-255),chars(a-z|A-Z|0-9|_)', $this->_('Код')],
+            'field_type' => ['string(1-255)',                          $this->_('Модуль')],
+            'module'     => ['string(0-255)',                          $this->_('Тип значения')],
+            'note'       => ['string(0-10000)',                        $this->_('Описание')],
+            'is_active'  => ['string(1|0)',                            $this->_('Активно')],
+        ]);
 
-//        $fields = [
-//            'title'      => ['rules' => 'req,string(1-255)',                      'title' => $this->_('Название')],
-//            'value'      => ['rules' => 'string(0-65000)',                        'title' => $this->_('Значение')],
-//            'code'       => ['rules' => 'req,string(1-255),chars(a-z|A-Z|0-9|_)', 'title' => $this->_('Код')],
-//            'field_type' => ['rules' => 'string(1-255)',                          'title' => $this->_('Модуль')],
-//            'module'     => ['rules' => 'string(0-255)',                          'title' => $this->_('Тип значения')],
-//            'note'       => ['rules' => 'string(0-65000)',                        'title' => $this->_('Описание')],
-//            'is_active'  => ['rules' => 'string(1|0)',                            'title' => $this->_('Активно')],
-//        ];
-//
-//        $this->addField('title',      $this->_('Название'))->req()->string(1, 255);
-//        $this->addField('value',      $this->_('Название'))->string(0, 65000);
-//        $this->addField('code',       $this->_('Название'))->req()->string(1, 255)->chars('a-z|A-Z|0-9|_');
-//        $this->addField('field_type', $this->_('Название'))->string(1, 255);
-//        $this->addField('module',     $this->_('Название'))->string(0, 255);
-//        $this->addField('note',       $this->_('Название'))->string(0, 65000);
-//        $this->addField('is_active',  $this->_('Название'))->string('1|0');
-
-        $controls = $request->getJsonContent() ?? [];
+        $controls = $this->request->getJsonContent() ?? [];
         $controls = $this->clearData($controls);
 
-        if ($errors = $this->validateFields($fields, $controls)) {
+        if ($errors = $validator->validate($controls)) {
             return $this->getResponseError($errors);
         }
 

@@ -55,19 +55,27 @@ class Server {
 
 
     /**
-     * @return string
+     * @return float
      */
-    public function getCpuLoad(): string {
+    public function getCpuLoad(): float {
         return $this->os->getCpuLoad();
     }
 
 
     /**
-     * @return array|false
+     * @return array|null
      */
-    public function getLoadAvg(): bool|array {
+    public function getLoadAvg():? array {
 
-        return sys_getloadavg();
+        $load_avg = sys_getloadavg();
+
+        if ($load_avg) {
+            $load_avg[0] = round($load_avg[0], 2);
+            $load_avg[1] = round($load_avg[1], 2);
+            $load_avg[2] = round($load_avg[2], 2);
+        }
+
+        return $load_avg ?: null;
     }
 
 

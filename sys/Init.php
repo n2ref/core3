@@ -328,7 +328,9 @@ class Init extends Common {
 
         $this->logResponse($response);
 
-        $response->printHeaders();
+        if ( ! headers_sent()) {
+            $response->printHeaders();
+        }
 
         if ($response->isContentFile()) {
             readfile($response->getContentFile());
@@ -526,7 +528,8 @@ class Init extends Common {
             $router->route('/sys/error')                                                                 ->post([Handler::class, 'logError']);
             $router->route('/sys/home')                                                                  ->get([Handler::class, 'getHome']);
             $router->route('/sys/user/{id:\d+}/avatar')                                                  ->get([Handler::class, 'getUserAvatar']);
-            $router->route('/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}{mod_query:(?:/[a-zA-Z0-9_/\-]+|)}')->any([Handler::class, 'getModSection']);
+            $router->route('/{module:[a-z0-9_]+}')                                                       ->get([Handler::class, 'getModInit']);
+            $router->route('/{module:[a-z0-9_]+}/{section:[a-z0-9_]+}{mod_query:(?:/[a-zA-Z0-9_/\-]*|)}')->any([Handler::class, 'getModSection']);
         }
 
         $uri          = mb_substr($_SERVER['REQUEST_URI'], mb_strlen(rtrim(DOC_PATH, '/')));
@@ -542,8 +545,7 @@ class Init extends Common {
             $_FILES   = [];
             $_COOKIE  = [];
 
-            $route_method->prependParam($request);
-            return $route_method->run();
+            return $route_method->run($request);
 
         } elseif ($uri !== DOC_PATH) {
             $response = new Response();

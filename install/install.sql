@@ -17,7 +17,6 @@ CREATE TABLE `core_modules` (
     `version` varchar(100) NOT NULL DEFAULT '1.0.0',
     `version_hash` varchar(255) DEFAULT NULL,
     `icon` varchar(255) DEFAULT NULL,
-    `group_name` varchar(255) DEFAULT NULL,
     `description` text,
     `is_active` tinyint(1) NOT NULL DEFAULT '1',
     `is_visible` tinyint(1) NOT NULL DEFAULT '1',

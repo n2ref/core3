@@ -1,0 +1,22 @@
+<ul class="admin-list p-0 m-0">
+    <li class="list-group-item p-0 mb-3">
+        <div class="fw-bold"><%= _('Версия') %></div>
+        <%= version %>
+    </li>
+    <li class="list-group-item p-0 mb-3">
+        <div class="fw-bold"><%= _('Лимит памяти') %></div>
+        <%= memLimit %> Mb
+    </li>
+    <li class="list-group-item p-0 mb-3">
+        <div class="fw-bold"><%= _('Максимальный размер для отправки') %></div>
+        <%= uploadMaxFilesize %> Mb
+    </li>
+    <li class="list-group-item p-0 mb-3">
+        <div class="fw-bold"><%= _('Максимальное время выполнения') %></div>
+        <%= maxExecutionTime %> <%= _('сек') %>
+    </li>
+    <li class="list-group-item p-0 mb-3">
+        <div class="fw-bold"><%= _('Расширения') %></div>
+        <span class="text-muted"><%= extensions.join(', ') %></span>
+    </li>
+</ul>

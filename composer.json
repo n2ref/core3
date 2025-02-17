@@ -58,7 +58,8 @@
     "guzzlehttp/guzzle": "7.9.2",
     "phpseclib/phpseclib": "2.0.48",
     "firebase/php-jwt": "v6.10.2",
-    "wolfcast/browser-detection": "2.9.8"
+    "wolfcast/browser-detection": "2.9.8",
+    "ratchet/rfc6455": "v0.3.1"
   },
   "replace": {
     "laminas/laminas-cache-storage-adapter-apc": "*",

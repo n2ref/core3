@@ -62,6 +62,40 @@ let coreTools = {
 
 
     /**
+     * Проверка на объект
+     * @param value
+     */
+    isObject: function (value) {
+
+        return typeof value === 'object' &&
+            ! Array.isArray(value) &&
+            value !== null;
+    },
+
+
+    /**
+     * Проверка на строку
+     * @param value
+     * @return {boolean}
+     */
+    isString(value) {
+
+        return typeof value === 'string';
+    },
+
+
+    /**
+     * Проверка на число
+     * @param value
+     * @return {boolean}
+     */
+    isNumber(value) {
+
+        return ! isNaN(Number(value));
+    },
+
+
+    /**
      *
      */
     toggleFullscreen: function () {
@@ -243,6 +277,51 @@ let coreTools = {
             divider = divider || ' ';
             numb = Number(numb).toFixed(2).toString();
             return numb.replace(/(\d)(?=(\d\d\d)+([^\d]|$))/g, '$1' + divider);
+        }
+    },
+
+
+    /**
+     * Перевод размера
+     * @param bytes
+     * @param unit
+     * @return {*}
+     */
+    convertBytes: function (bytes, unit) {
+
+        let result = 0;
+
+        switch (unit.toUpperCase()) {
+            case 'KB': result = this.round(bytes / 1024, 2); break;
+            case 'MB': result = this.round(bytes / 1024 / 1024, 2); break;
+            case 'GB': result = this.round(bytes / 1024 / 1024 / 1024, 2); break;
+            case 'TB': result = this.round(bytes / 1024 / 1024 / 1024 / 1024, 2); break;
+        }
+
+        return result;
+    },
+
+
+    /**
+     * Округление
+     * @param number
+     * @param precision
+     * @returns {number}
+     */
+    round: function (number, precision) {
+
+        precision = typeof precision !== 'undefined' ? parseInt(precision) : 0;
+
+        if (precision === 0) {
+            return Math.round(number);
+
+        } else if (precision > 0) {
+            let pow = Math.pow(10, precision);
+            return Math.round(number * pow) / pow;
+
+        } else {
+            let pow = Math.pow(10, precision);
+            return Math.round(number / pow) * pow;
         }
     },
 

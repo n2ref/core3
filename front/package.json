@@ -9,7 +9,7 @@
     "build_js": "gulp build_tpl && gulp build_js_coreui && gulp build_js && gulp build_js_min && gulp build_js_all_min",
     "build_css": "gulp build_css_min",
 
-    "build_watch": "gulp build_watch",
+    "watch": "gulp build_watch",
     "test_js": "eslint -c .eslintrc.json --max-warnings 100 --ext .js ./dist"
   },
   "dependencies": {
@@ -26,17 +26,17 @@
     "blueimp-md5-es6": "2.7.4",
     "ejs": "3.1.10",
     "clientjs": "0.2.1",
-    "coreui-panel": "1.0.24",
-    "coreui-modal": "1.0.6",
+    "coreui-panel": "1.0.28",
+    "coreui-modal": "1.1.1",
     "coreui-alert": "1.1.5",
-    "coreui-info": "1.0.2",
+    "coreui-info": "1.0.3",
     "coreui-notice": "1.2.0",
-    "coreui-layout": "1.0.9",
-    "coreui-form": "1.0.41",
+    "coreui-layout": "1.1.0",
+    "coreui-form": "1.0.42",
     "coreui-form-field-select2": "1.0.2",
-    "coreui-table": "1.1.51",
-    "coreui-chart": "1.0.9",
-    "coreui-breadcrumb": "1.0.3"
+    "coreui-table": "1.1.55",
+    "coreui-chart": "1.0.10",
+    "coreui-breadcrumb": "1.0.4"
   },
   "devDependencies": {
     "gulp": "5.0.0",

@@ -542,12 +542,12 @@ class Tools {
 
         if (strpos($src, '?')) {
             $explode_src = explode('?', $src, 2);
-            $src .= file_exists(DOC_ROOT . $explode_src[0])
-                ? '&_=' . crc32(md5_file(DOC_ROOT . $explode_src[0]))
+            $src .= file_exists(DOC_ROOT . "/{$explode_src[0]}")
+                ? '&_=' . crc32(md5_file(DOC_ROOT . "/{$explode_src[0]}"))
                 : '';
         } else {
-            $src .= file_exists(DOC_ROOT . $src)
-                ? '?_=' . crc32(md5_file(DOC_ROOT . $src))
+            $src .= file_exists(DOC_ROOT . "/{$src}")
+                ? '?_=' . crc32(md5_file(DOC_ROOT . "/{$src}"))
                 : '';
         }
 

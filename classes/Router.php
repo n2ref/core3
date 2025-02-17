@@ -2,6 +2,7 @@
 namespace Core3\Classes;
 use Core3\Classes\Router\Route;
 use Core3\Classes\Router\Method;
+use Core3\Exceptions\Exception;
 
 
 /**
@@ -13,6 +14,26 @@ class Router {
      * @var Route[]
      */
     private array $routes = [];
+
+
+    /**
+     * @param string $base_url
+     * @param array  $map
+     * @throws Exception
+     */
+    public function __construct(string $base_url = '', array $map = []) {
+
+        foreach ($map as $path => $methods) {
+
+            if (is_array($methods) && ! empty($methods)) {
+                $route = $this->route("{$base_url}{$path}");
+
+                foreach ($methods as $method => $action) {
+                    $route->method($method, $action);
+                }
+            }
+        }
+    }
 
 
     /**

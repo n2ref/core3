@@ -19,6 +19,7 @@ let coreMenu = {
     _events: {},
     _errors: [],
     _errorSend: false,
+    _module: '',
 
 
     /**
@@ -166,6 +167,26 @@ let coreMenu = {
             window.history.pushState({ path: windowUrl }, '', windowUrl);
         }
 
+        let match = url.match(/^(|\/)([a-z][\w]*)/);
+
+
+        if (match) {
+            if (this._module === match[2]) {
+                return;
+            }
+
+            this._module = match[2];
+            url = match[2];
+
+        } else {
+            this._module = 'home';
+            url = '/home';
+        }
+
+        if (url === '/home') {
+            url = 'sys/home';
+        }
+
         coreMenu.preloader.show();
 
         if (coreTokens.getDateAccessToken() <= new Date()) {
@@ -210,7 +231,18 @@ let coreMenu = {
                                 responseObj._buffer !== ''
                             ) {
                                 contents.push(responseObj._buffer);
-                                delete responseObj._buffer
+                                delete responseObj._buffer;
+
+                                let isArray = true;
+                                Object.keys(responseObj).map(function (key) {
+                                    if (isNaN(Number(key))) {
+                                        isArray = false;
+                                    }
+                                })
+
+                                if (isArray) {
+                                    responseObj = Object.values(responseObj);
+                                }
                             }
 
                             let renderContents = coreMenu._renderContent(responseObj);
@@ -234,19 +266,6 @@ let coreMenu = {
                     $.each(contents, function (key, content) {
                         mainContainer.append(content);
                     });
-
-                    mainContainer
-                        .css({ 'opacity': '0', 'margin-top': '15px' })
-                        .animate(
-                            { marginTop: 0, opacity: 1, },
-                            {
-                                duration: 235,
-                                specialEasing: { width: "linear", height: "easeOutBounce" },
-                                complete: function() {
-                                    $(this).css({ 'opacity': '', 'margin-top': '' })
-                                }
-                            }
-                        );
 
 
                     coreMenu._trigger('shown.load.core3', this, [ url ]);
@@ -342,19 +361,24 @@ let coreMenu = {
     preloader: {
 
         /**
-         * @param options
+         * @param {Object|string} options
          * @returns {boolean}
          */
         show: function (options) {
+
+            options = typeof options === 'string'
+                ? { text: options }
+                : (typeof options === 'object' ? options : {})
+
+
             if ($('#preloader')[0]) {
-                this.hide();
+                $('#preloader .loading-text').text(options.text || Core._('Загрузка...'));
+
+            } else {
+                $('.page-menu').prepend(ejs.render(coreTpl['menu/preloader.html'], {
+                    text: options.text || Core._('Загрузка...')
+                }));
             }
-
-            options = typeof options === 'object' ? options : {};
-
-            $('.page-menu').prepend(ejs.render(coreTpl['menu/preloader.html'], {
-                text: options.text || Core._('Загрузка...')
-            }));
         },
 
 
@@ -385,6 +409,109 @@ let coreMenu = {
             callback : callback,
             singleExec : singleExec
         });
+    },
+
+
+    /**
+     * Скачивание файла
+     * @param {string} url
+     * @param {string} contentType
+     */
+    downloadFile: function (url, contentType) {
+
+        this.preloader.show(Core._('Подготовка...'));
+
+        let xhr = new XMLHttpRequest();
+        xhr.open('GET', url);
+        xhr.responseType = 'blob';
+
+
+        xhr.onprogress = function (event) {
+            if (event.lengthComputable) {
+                let percentComplete = Math.round((event.loaded / event.total) * 100);
+                coreMenu.preloader.show(Core._('Скачивание %s%', [percentComplete]));
+            }
+        };
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 2) {
+                coreMenu.preloader.show(Core._('Скачивание...'));
+                xhr.responseType = xhr.getResponseHeader('Content-Type') === contentType
+                    ? "blob"
+                    : "text";
+
+            } else if (xhr.readyState === 4) {
+                coreMenu.preloader.hide();
+
+                if (xhr.status === 200) {
+                    if (xhr.getResponseHeader('Content-Type') !== contentType) {
+                        try {
+                            let jsonData     = JSON.parse(xhr.responseText);
+                            let errorMessage = jsonData.error_message || Core._("Не удалось скачать файл");
+                            CoreUI.alert.warning(Core._('Ошибка'), errorMessage);
+                            return false;
+
+                        } catch (e) {
+                            CoreUI.alert.danger(Core._('Ошибка'), Core._("Не удалось скачать файл"));
+                            return false;
+                        }
+                    }
+
+                    let blob     = xhr.response;
+                    let filename = "";
+                    let disposition = xhr.getResponseHeader('Content-Disposition');
+                    if (disposition) {
+                        let matchesUtf8 = /filename\*=utf-8''((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                        if (matchesUtf8 != null && matchesUtf8[1]) {
+                            filename = matchesUtf8[1].replace(/['"]/g, '');
+                            filename = decodeURIComponent(filename);
+                            filename = filename.replace(/\+/g, ' ');
+
+                        } else {
+                            let matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                            if (matches != null && matches[1]) {
+                                filename = matches[1].replace(/['"]/g, '');
+                                filename = decodeURIComponent(filename);
+                                filename = filename.replace(/\+/g, ' ');
+                            }
+                        }
+                    }
+
+                    if (typeof window.navigator.msSaveBlob !== 'undefined') {
+                        // IE workaround for "HTML7007: One or more blob URLs were revoked by closing the blob for
+                        // which they were created. These URLs will no longer resolve as the data backing the URL
+                        // has been freed."
+                        window.navigator.msSaveBlob(blob, filename);
+                    } else {
+                        let URL = window.URL || window.webkitURL;
+                        let downloadUrl = URL.createObjectURL(blob);
+
+                        if (filename) {
+                            // use HTML5 a[download] attribute to specify filename
+                            let a = document.createElement("a");
+                            // safari doesn't support this yet
+                            if (typeof a.download === 'undefined') {
+                                window.location.href = downloadUrl;
+                            } else {
+                                a.href = downloadUrl;
+                                a.download = filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                $(a).remove();
+                            }
+                        } else {
+                            window.location.href = downloadUrl;
+                        }
+
+                        setTimeout(function () {
+                            URL.revokeObjectURL(downloadUrl);
+                        }, 100); // cleanup
+                    }
+                }
+            }
+        }
+
+        xhr.send();
     },
 
 
@@ -423,7 +550,7 @@ let coreMenu = {
                         let name = data[i].component.split('.')[1];
 
                         if (CoreUI.hasOwnProperty(name) &&
-                            that.isObject(CoreUI[name])
+                            coreTools.isObject(CoreUI[name])
                         ) {
                             let instance = CoreUI[name].create(data[i]);
                             result.push(instance.render());
@@ -442,18 +569,6 @@ let coreMenu = {
         }
 
         return result;
-    },
-
-
-    /**
-     * Проверка на объект
-     * @param value
-     */
-    isObject: function (value) {
-
-        return typeof value === 'object' &&
-            ! Array.isArray(value) &&
-            value !== null;
     },
 
 

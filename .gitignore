@@ -1,4 +1,5 @@
 
-!mod/admin/*
+admin/assets/node_modules
+admin/assets/package-lock.json
 vendor/
 *.lock

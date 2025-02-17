@@ -113,8 +113,9 @@ class Request {
     public function isPath(string $path): bool {
 
         $preparePath = $this->preparePath($path);
+        $uri         = preg_replace('~\?.*$~u', '', $this->getUri());
 
-        return (bool)preg_match("~{$preparePath}~u", $this->getUri());
+        return (bool)preg_match("~{$preparePath}~u", $uri);
     }
 
 
@@ -127,8 +128,9 @@ class Request {
 
         $result      = null;
         $preparePath = $this->preparePath($path);
+        $uri         = preg_replace('~\?.*$~u', '', $this->getUri());
 
-        if (preg_match("~{$preparePath}~u", $this->getUri(), $matches)) {
+        if (preg_match("~{$preparePath}~u", $uri, $matches)) {
             foreach ($matches as $key => $match) {
                 if (is_numeric($key)) {
                     unset($matches[$key]);

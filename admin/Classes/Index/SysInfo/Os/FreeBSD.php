@@ -27,8 +27,8 @@ class FreeBSD implements OperatingSystem {
 
 		$result = preg_match_all($pattern, $swapinfo, $matches);
 		if ($result === 1) {
-			$data['swap_total'] = (int)((int)$matches['Avail'][0] / 1024);
-            $data['swap_free']  = $data['swap_total'] - (int)((int)$matches['Used'][0] / 1024);
+			$data['swap_total'] = round((int)((int)$matches['Avail'][0] / 1024), 2);
+            $data['swap_free']  = round($data['swap_total'] - (int)((int)$matches['Used'][0] / 1024), 2);
 		}
 
 		unset($matches, $result);
@@ -41,16 +41,16 @@ class FreeBSD implements OperatingSystem {
 
 		$lines = array_map('intval', explode("\n", $meminfo));
 		if (count($lines) > 4) {
-			$data['mem_total']     = (int)($lines[0] / 1024 / 1024);
-            $data['mem_available'] = (int)(($lines[1] * ($lines[2] + $lines[3] + $lines[4])) / 1024 / 1024);
+			$data['mem_total']     = round((int)($lines[0] / 1024 / 1024), 2);
+            $data['mem_available'] = round((int)(($lines[1] * ($lines[2] + $lines[3] + $lines[4])) / 1024 / 1024), 2);
 		}
 		unset($lines);
 
 
-        $data['mem_used']     = $data['mem_total'] - $data['mem_available'];
-        $data['mem_percent']  = $data['mem_available'] / $data['mem_total'] * 100;
-        $data['swap_percent'] = ($data['swap_total'] - $data['swap_free']) / $data['swap_total'] * 100;
-        $data['swap_used']    = $data['swap_total'] - $data['swap_free'];
+        $data['mem_used']     = round($data['mem_total'] - $data['mem_available'], 2);
+        $data['mem_percent']  = round($data['mem_available'] / $data['mem_total'] * 100, 2);
+        $data['swap_percent'] = round(($data['swap_total'] - $data['swap_free']) / $data['swap_total'] * 100, 2);
+        $data['swap_used']    = round($data['swap_total'] - $data['swap_free'], 2);
 
 		return $data;
 	}
@@ -237,7 +237,7 @@ class FreeBSD implements OperatingSystem {
         $data = [];
 
 		try {
-			$disks = $this->executeCommand('df -TPk');
+			$disks = $this->executeCommand('df -TB1');
 		} catch (\RuntimeException $e) {
 			return $data;
 		}
@@ -259,10 +259,10 @@ class FreeBSD implements OperatingSystem {
             $data[] = [
                 'device'    => $filesystem,
                 'fs'        => $matches['Type'][$i],
-                'used'      => (int)((int)$matches['Used'][$i] / 1024),
-                'available' => (int)((int)$matches['Available'][$i] / 1024),
-                'total'     => (int)((int)$matches['Used'][$i] / 1024) + (int)((int)$matches['Available'][$i] / 1024),
-                'percent'   => (float)$matches['Capacity'][$i],
+                'used'      => round($matches['Used'][$i], 2),
+                'available' => round($matches['Available'][$i], 2),
+                'total'     => round($matches['Used'][$i] + $matches['Available'][$i], 2),
+                'percent'   => round($matches['Capacity'][$i], 2),
                 'mount'     => $matches['Mounted'][$i],
             ];
 		}

@@ -45,10 +45,10 @@ class Linux implements OperatingSystem {
 			}
 		}
 
-        $data['mem_used']     = $data['mem_total'] - $data['mem_available'];
-        $data['mem_percent']  = ($data['mem_total'] - $data['mem_available']) / $data['mem_total'] * 100;
-        $data['swap_used']    = $data['swap_total'] - $data['swap_free'];
-        $data['swap_percent'] = ($data['swap_total'] - $data['swap_free']) / $data['swap_total'] * 100;
+        $data['mem_used']     = round($data['mem_total'] - $data['mem_available'], 2);
+        $data['mem_percent']  = round(($data['mem_total'] - $data['mem_available']) / $data['mem_total'] * 100, 2);
+        $data['swap_used']    = round($data['swap_total'] - $data['swap_free'], 2);
+        $data['swap_percent'] = round(($data['swap_total'] - $data['swap_free']) / $data['swap_total'] * 100, 2);
 
 		return $data;
 	}
@@ -104,7 +104,7 @@ class Linux implements OperatingSystem {
         $exec_loads = sys_getloadavg();
         $exec_cores = (float)trim(shell_exec("grep -P '^processor' /proc/cpuinfo|wc -l"));
 
-        return round($exec_loads[0] / ($exec_cores + 1) * 100, 2);
+        return round($exec_loads[0] / ($exec_cores + 1) * 100, 1);
     }
 
 
@@ -203,7 +203,7 @@ class Linux implements OperatingSystem {
 		$data = [];
 
 		try {
-			$disks = $this->executeCommand('df -TPk');
+			$disks = $this->executeCommand('df -TB1');
 		} catch (\RuntimeException $e) {
 			return $data;
 		}
@@ -226,10 +226,10 @@ class Linux implements OperatingSystem {
             $data[] = [
                 'device'    => $filesystem,
                 'fs'        => $matches['Type'][$i],
-                'used'      => (int)((int)$matches['Used'][$i] / 1024),
-                'available' => (int)((int)$matches['Available'][$i] / 1024),
-                'total'     => (int)((int)$matches['Used'][$i] / 1024) + (int)((int)$matches['Available'][$i] / 1024),
-                'percent'   => (float)$matches['Capacity'][$i],
+                'used'      => round($matches['Used'][$i], 2),
+                'available' => round($matches['Available'][$i], 2),
+                'total'     => round($matches['Used'][$i] + $matches['Available'][$i], 2),
+                'percent'   => round((float)$matches['Capacity'][$i], 1),
                 'mount'     => $matches['Mounted'][$i],
             ];
         }

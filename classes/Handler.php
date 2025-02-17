@@ -17,6 +17,16 @@ use Laminas\Db\Sql\Select;
  */
 class Handler extends Common {
 
+    protected readonly Request $request;
+
+    /**
+     * @param Request $request
+     */
+    public function __construct(Request $request) {
+        parent::__construct();
+        $this->request = $request;
+    }
+
 
     /**
      * Скачивание файла
@@ -122,15 +132,14 @@ class Handler extends Common {
 
     /**
      * Загрузка файла
-     * @param Request $request
      * @return Response
      * @throws AppException|Exception
      */
-    public function uploadFile(Request $request): Response {
+    public function uploadFile(): Response {
 
-        $this->checkHttpMethod($request, 'post');
+        $this->checkHttpMethod('post');
 
-        $files = $request->getFiles();
+        $files = $this->request->getFiles();
 
         if (empty($files['file'])) {
             return $this->getResponseError([ $this->_("Файл не загружен") ]);
@@ -181,7 +190,7 @@ class Handler extends Common {
      * @param array $functions
      * @return array
      */
-    protected function clearData(array $data, array $functions = ['trim', 'strip_tags', 'htmlspecialchars' ]): array {
+    protected function clearData(array $data, array $functions = ['trim', 'strip_tags']): array {
 
         foreach ($functions as $function) {
             foreach ($data as $key => $item) {
@@ -203,14 +212,14 @@ class Handler extends Common {
 
 
     /**
-     * @param array $params
+     * @param array $fields
      * @param array $data
      * @param bool  $strict
      * @return array
      */
-    protected function validateFields(array $params, array $data, bool $strict = true): array {
+    protected function validateFields(array $fields, array $data, bool $strict = true): array {
 
-        return Validator::validateFields($params, $data, $strict);
+        return Validator::validateFields($fields, $data, $strict);
     }
 
 
@@ -258,18 +267,17 @@ class Handler extends Common {
 
     /**
      * Проверка http метода
-     * @param Request $request
      * @param array|string $allow_methods
      * @return void
      * @throws HttpException
      */
-    protected function checkHttpMethod(Request $request, array|string $allow_methods): void {
+    protected function checkHttpMethod(array|string $allow_methods): void {
 
         if (is_string($allow_methods)) {
             $allow_methods = [$allow_methods];
         }
 
-        if ( ! in_array($request->getMethod(), $allow_methods)) {
+        if ( ! in_array($this->request->getMethod(), $allow_methods)) {
             throw new HttpException(400, $this->_("Некорректный метод запроса. Доступно: %s", [ implode(', ', $allow_methods) ]));
         }
     }
@@ -277,19 +285,17 @@ class Handler extends Common {
 
     /**
      * Проверка версии изменяемого объекта
-     * @param Table   $table
-     * @param Request $request
+     * @param Table       $table
+     * @param string|null $record_id
      * @return void
      * @throws HttpException
      */
-    protected function checkVersion(Table $table, Request $request): void {
-
-        $record_id = $request->getQuery('id');
+    protected function checkVersion(Table $table, string $record_id = null): void {
 
         if ($record_id) {
             $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), $record_id);
 
-            if ( ! $control || $control->version != $request->getQuery('v')) {
+            if ( ! $control || $control->version != $this->request->getQuery('v')) {
                 throw new HttpException(400, $this->_(
                     'Кто-то редактировал эту запись одновременно с вами, но успел сохранить данные раньше вас. ' .
                     'Обновите страницу и проверьте, возможно этот кто-то сделал за вас работу'

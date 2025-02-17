@@ -6,6 +6,115 @@ namespace Core3\Classes;
  */
 class Validator extends System {
 
+    private array $fields = [];
+
+
+    /**
+     * @param array|null $fields
+     */
+    public function __construct(array $fields = null) {
+
+        if ($fields) {
+            foreach ($fields as $field => $rule) {
+                if (is_array($rule)) {
+                    $rule_string  = null;
+                    $title_string = null;
+
+                    if (isset($rule[0]) && is_string($rule[0])) {
+                        $rule_string = $rule[0];
+
+                    } elseif (isset($rule['rule']) && is_string($rule['rule'])) {
+                        $rule_string = $rule['rule'];
+                    }
+
+                    if ( ! $rule_string) {
+                        continue;
+                    }
+
+
+                    if (isset($rule[1]) && is_string($rule[1])) {
+                        $title_string = $rule[1];
+
+                    } elseif (isset($rule['title']) && is_string($rule['title'])) {
+                        $title_string = $rule['title'];
+                    }
+
+                    $this->setField($field, $rule_string, $title_string);
+
+                } elseif (is_string($rule)) {
+                    $this->setField($field, $rule);
+                }
+            }
+        }
+    }
+
+
+    /**
+     * @param string      $field
+     * @param string      $rule
+     * @param string|null $title
+     * @return void
+     */
+    public function setField(string $field, string $rule, string $title = null): void {
+
+        $rule = trim($rule);
+
+        if (empty($rule)) {
+            return;
+        }
+
+        $this->fields[$field] = [
+            'rule'  => $rule,
+            'title' => $title ?: null,
+        ];
+    }
+
+
+    /**
+     * @param string $field
+     * @return void
+     */
+    public function deleteField(string $field): void {
+
+        if (isset($this->fields[$field])) {
+            unset($this->fields[$field]);
+        }
+    }
+
+
+    /**
+     * @param array $fields
+     * @return void
+     */
+    public function deleteFields(array $fields): void {
+
+        foreach ($fields as $field) {
+            if (is_string($field)) {
+                $this->deleteField($field);
+            }
+        }
+    }
+
+
+    /**
+     * @return void
+     */
+    public function clearFields(): void {
+
+        $this->fields = [];
+    }
+
+
+    /**
+     * @param array $data
+     * @param bool  $strict
+     * @return array
+     */
+    public function validate(array $data, bool $strict = true): array {
+
+        return $this->validateFields($this->fields, $data, $strict);
+    }
+
 
     /**
      * @param string $method_name
@@ -264,197 +373,201 @@ class Validator extends System {
 
 
     /**
-     * @param array $parameters
+     * @param array $fields
      * @param array $data
      * @param bool  $strict
      * @return array
      */
-    public static function validateFields(array $parameters, array $data, bool $strict = false): array {
+    public static function validateFields(array $fields, array $data, bool $strict = false): array {
 
         $errors = [];
 
-        if ( ! empty($parameters)) {
-            foreach ($parameters as $param => $rules) {
+        foreach ($fields as $field => $rule) {
 
-                $rules_sections = explode(':', $rules);
-
-                if (empty($rules_sections[0])) {
-                    break;
-                }
-
-                $rules_explode = explode(',', $rules_sections[0]);
-                $rule_title    = ! empty($rules_sections[1]) ? trim($rules_sections[1]) : $param;
-
-                foreach ($rules_explode as $rule) {
-
-                    $match = [];
-                    preg_match('~(?<name>[^\(]+)((\((?<options>[^\)]+)\))|)~', $rule, $match);
-
-                    $rule_name    = $match['name'] ?? null;
-                    $rule_options = $match['options'] ?? null;
-
-                    if (empty($rule_name)) {
-                        continue;
-                    }
-
-                    switch ($rule_name) {
-                        case 'req':
-                            if ( ! array_key_exists($param, $data) || ! self::isRequirement($data[$param])) {
-                                $errors[] = self::_('Пустое обязательное поле "%s"', [$rule_title]);
-                            }
-                            break;
-
-                        case 'string':
-                            if (isset($data[$param])) {
-                                if ( ! self::isString($data[$param])) {
-                                    $errors[] = self::_('Некорректный тип поля "%s". Ожидается строка', [$rule_title]);
-
-                                } elseif (isset($rule_options) && $rule_options !== '' && strpos($rule_options, '-') !== false) {
-                                    $range = explode('-', $rule_options);
-
-                                    if (isset($range[0]) && $range[0] !== '' && self::isStringMin($data[$param], $range[0])) {
-                                        $errors[] = self::_('Значение поля "%s" слишком короткое. Минимальная длинна %s', [$rule_title, $range[0]]);
-
-                                    } elseif (isset($range[1]) && $range[1] !== '' && self::isStringMax($data[$param], $range[1])) {
-                                        $errors[] = self::_('Значение поля "%s" слишком длинное. Максимальная длинна %s', [$rule_title, $range[1]]);
-                                    }
-
-                                } elseif (isset($rule_options) && $rule_options !== '' && strpos($rule_options, '|') !== false) {
-                                    $items = explode('|', $rule_options);
-
-                                    if ( ! empty($items) && ! self::isStringEnum($data[$param], $items)) {
-                                        $errors[] = self::_('Некорректное значение поля "%s". Доступные варианты значений: %s', [$rule_title, implode(', ', $items)]);
-                                    }
-                                }
-                            }
-                            break;
-
-                        case 'chars':
-                            if (isset($data[$param])) {
-                                if (isset($rule_options) && $rule_options !== '' && strpos($rule_options, '|') !== false) {
-                                    $items = explode('|', $rule_options);
-
-                                    if ( ! empty($items)) {
-                                        $items_title = [];
-                                        $items_test  = [];
-
-                                        foreach ($items as $item) {
-                                            if ($item == 'alphanumeric') {
-                                                $items_title[] = 'a-Z, 0-9';
-                                                $items_test[]  = "[a-zA-Z0-9]";
-                                            } else {
-                                                $items_title[] = $item;
-                                                $items_test[]  = $item;
-                                            }
-                                        }
-
-                                        if (preg_match('~[^' . implode('', $items_test) . ']~', $data[$param])) {
-                                            $errors[] = self::_('Некорректное значение поля "%s". Доступные символы: %s', [$rule_title, implode(', ', $items_title)]);
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-
-                        case 'array':
-                            if (isset($data[$param])) {
-                                if ( ! self::isArray($data[$param])) {
-                                    $errors[] = self::_('Некорректный тип поля "%s". Ожидается массив', [$rule_title]);
-                                }
-                            }
-                            break;
-
-                        case 'bool':
-                            if (isset($data[$param]) && ! self::isBool($data[$param])) {
-                                $errors[] = self::_('Некорректный тип поля "%s". Ожидается логическое значение', [$rule_title]);
-                            }
-                            break;
-
-                        case 'switch':
-                            if (isset($data[$param]) && ! in_array($data[$param], ['0', '1'])) {
-                                $errors[] = self::_('Некорректный тип поля "%s". Ожидается одно из значений: 0, 1', [$rule_title]);
-                            }
-                            break;
-
-                        case 'int':
-                            if (isset($data[$param])) {
-                                if ( ! self::isInt($data[$param])) {
-                                    $errors[] = self::_('Некорректный тип поля "%s". Ожидается целое число', [$rule_title]);
-
-                                } elseif (isset($rule_options) && $rule_options !== '') {
-                                    $range = explode('-', $rule_options);
-
-                                    if ( ! empty($range)) {
-                                        if (isset($range[0]) && $range[0] !== '' && self::isIntMin($data[$param], $range[0])) {
-                                            $errors[] = self::_('Значение поля "%s" слишком маленькое. Минимальное значение %s', [$rule_title, $range[0]]);
-
-                                        } elseif (isset($range[1]) && $range[1] !== '' && self::isIntMax($data[$param], $range[1])) {
-                                            $errors[] = self::_('Значение поля "%s" слишком большое. Максимальное значение %s', [$rule_title, $range[1]]);
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-
-                        case 'float':
-                            if (isset($data[$param])) {
-                                if ( ! self::isFloat($data[$param])) {
-                                    $errors[] = self::_('Некорректный тип поля "%s". Ожидается число', [$rule_title]);
-
-                                } elseif (isset($rule_options) && $rule_options !== '') {
-                                    $range = explode('-', $rule_options);
-
-                                    if ( ! empty($range)) {
-                                        if (isset($range[0]) && $range[0] !== '' && self::isFloatMin($data[$param], $range[0])) {
-                                            $errors[] = self::_('Значение поля "%s" слишком маленькое. Минимальное значение %s', [$rule_title, $range[0]]);
-
-                                        } elseif (isset($range[1]) && $range[1] !== ''  && self::isFloatMax($data[$param], $range[1])) {
-                                            $errors[] = self::_('Значение поля "%s" слишком большое. Максимальное значение %s', [$rule_title, $range[1]]);
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-
-                        case 'email':
-                            if ( ! empty($data[$param])) {
-                                if ( ! self::isEmail($data[$param])) {
-                                    $errors[] = self::_('Значение поля "%s" не является email', [$rule_title]);
-                                }
-                            }
-                            break;
-
-                        case 'datetime':
-                            if (isset($data[$param])) {
-                                if ( ! self::isDatetime($data[$param])) {
-                                    $errors[] = self::_('Значение поля "%s" не является датой. Требуемый формат YYYY-MM-DD HH:II:SS', [$rule_title]);
-
-                                } elseif ( ! self::isDatetimeCheck($data[$param])) {
-                                    $errors[] = self::_('В поле "%s" указана некорректная дата', [$rule_title]);
-                                }
-                            }
-                            break;
-
-                        case 'date':
-                            if (isset($data[$param])) {
-                                if ( ! self::isDate($data[$param])) {
-                                    $errors[] = self::_('Значение поля "%s" не является датой. Требуемый формат YYYY-MM-DD', [$rule_title]);
-
-                                } elseif ( ! self::isDateCheck($data[$param])) {
-                                    $errors[] = self::_('В поле "%s" указана некорректная дата', [$rule_title]);
-                                }
-                            }
-                            break;
-                    }
-                }
+            if ( ! is_array($rule)) {
+                continue;
             }
 
+            if (empty($rule['rule'])) {
+                break;
+            }
 
-            if ($strict === true) {
-                foreach ($data as $param => $value) {
-                    if ( ! isset($parameters[$param])) {
-                        $errors[] = self::_('Некорректный запрос. Среди переданных значений присутствует лишнее поле "%s"', [$param]);
-                    }
+            $rules_explode = explode(',', $rule['rule']);
+            $rule_title    = $rule['title'] ?? $field;
+
+            foreach ($rules_explode as $rule_item) {
+
+                $match = [];
+                preg_match('~(?<name>[^\(]+)((\((?<options>[^\)]+)\))|)~', $rule_item, $match);
+
+                $rule_name    = $match['name'] ?? null;
+                $rule_options = $match['options'] ?? null;
+
+                if (empty($rule_name)) {
+                    continue;
+                }
+
+                switch ($rule_name) {
+                    case 'req':
+                        if ( ! array_key_exists($field, $data) || ! self::isRequirement($data[$field])) {
+                            $errors[] = self::_('Пустое обязательное поле "%s"', [$rule_title]);
+                        }
+                        break;
+
+                    case 'string':
+                        if (isset($data[$field])) {
+                            if ( ! self::isString($data[$field])) {
+                                $errors[] = self::_('Некорректный тип поля "%s". Ожидается строка', [$rule_title]);
+
+                            } elseif (isset($rule_options) && $rule_options !== '' && strpos($rule_options, '-') !== false) {
+                                $range = explode('-', $rule_options);
+
+                                if (isset($range[0]) && $range[0] !== '' && self::isStringMin($data[$field], $range[0])) {
+                                    $errors[] = self::_('Значение поля "%s" слишком короткое. Минимальная длинна %s', [$rule_title, $range[0]]);
+
+                                } elseif (isset($range[1]) && $range[1] !== '' && self::isStringMax($data[$field], $range[1])) {
+                                    $errors[] = self::_('Значение поля "%s" слишком длинное. Максимальная длинна %s', [$rule_title, $range[1]]);
+                                }
+
+                            } elseif (isset($rule_options) && $rule_options !== '' && strpos($rule_options, '|') !== false) {
+                                $items = explode('|', $rule_options);
+
+                                if ( ! empty($items) && ! self::isStringEnum($data[$field], $items)) {
+                                    $errors[] = self::_('Некорректное значение поля "%s". Доступные варианты значений: %s', [$rule_title, implode(', ', $items)]);
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'regex':
+                        //TODO доделать
+                        break;
+
+                    case 'chars':
+                        if (isset($data[$field])) {
+                            if (isset($rule_options) && $rule_options !== '' && strpos($rule_options, '|') !== false) {
+                                $items = explode('|', $rule_options);
+
+                                if ( ! empty($items)) {
+                                    $items_title = [];
+                                    $items_test  = [];
+
+                                    foreach ($items as $item) {
+                                        if ($item == 'alphanumeric') {
+                                            $items_title[] = 'a-Z, 0-9';
+                                            $items_test[]  = "[a-zA-Z0-9]";
+                                        } else {
+                                            $items_title[] = $item;
+                                            $items_test[]  = $item;
+                                        }
+                                    }
+
+                                    if (preg_match('~[^' . implode('', $items_test) . ']~', $data[$field])) {
+                                        $errors[] = self::_('Некорректное значение поля "%s". Доступные символы: %s', [$rule_title, implode(', ', $items_title)]);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'array':
+                        if (isset($data[$field])) {
+                            if ( ! self::isArray($data[$field])) {
+                                $errors[] = self::_('Некорректный тип поля "%s". Ожидается массив', [$rule_title]);
+                            }
+                        }
+                        break;
+
+                    case 'bool':
+                        if (isset($data[$field]) && ! self::isBool($data[$field])) {
+                            $errors[] = self::_('Некорректный тип поля "%s". Ожидается логическое значение', [$rule_title]);
+                        }
+                        break;
+
+                    case 'switch':
+                        if (isset($data[$field]) && ! in_array($data[$field], ['0', '1'])) {
+                            $errors[] = self::_('Некорректный тип поля "%s". Ожидается одно из значений: 0, 1', [$rule_title]);
+                        }
+                        break;
+
+                    case 'int':
+                        if (isset($data[$field])) {
+                            if ( ! self::isInt($data[$field])) {
+                                $errors[] = self::_('Некорректный тип поля "%s". Ожидается целое число', [$rule_title]);
+
+                            } elseif (isset($rule_options) && $rule_options !== '') {
+                                $range = explode('-', $rule_options);
+
+                                if ( ! empty($range)) {
+                                    if (isset($range[0]) && $range[0] !== '' && self::isIntMin($data[$field], $range[0])) {
+                                        $errors[] = self::_('Значение поля "%s" слишком маленькое. Минимальное значение %s', [$rule_title, $range[0]]);
+
+                                    } elseif (isset($range[1]) && $range[1] !== '' && self::isIntMax($data[$field], $range[1])) {
+                                        $errors[] = self::_('Значение поля "%s" слишком большое. Максимальное значение %s', [$rule_title, $range[1]]);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'float':
+                        if (isset($data[$field])) {
+                            if ( ! self::isFloat($data[$field])) {
+                                $errors[] = self::_('Некорректный тип поля "%s". Ожидается число', [$rule_title]);
+
+                            } elseif (isset($rule_options) && $rule_options !== '') {
+                                $range = explode('-', $rule_options);
+
+                                if ( ! empty($range)) {
+                                    if (isset($range[0]) && $range[0] !== '' && self::isFloatMin($data[$field], $range[0])) {
+                                        $errors[] = self::_('Значение поля "%s" слишком маленькое. Минимальное значение %s', [$rule_title, $range[0]]);
+
+                                    } elseif (isset($range[1]) && $range[1] !== ''  && self::isFloatMax($data[$field], $range[1])) {
+                                        $errors[] = self::_('Значение поля "%s" слишком большое. Максимальное значение %s', [$rule_title, $range[1]]);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'email':
+                        if ( ! empty($data[$field])) {
+                            if ( ! self::isEmail($data[$field])) {
+                                $errors[] = self::_('Значение поля "%s" не является email', [$rule_title]);
+                            }
+                        }
+                        break;
+
+                    case 'datetime':
+                        if (isset($data[$field])) {
+                            if ( ! self::isDatetime($data[$field])) {
+                                $errors[] = self::_('Значение поля "%s" не является датой. Требуемый формат YYYY-MM-DD HH:II:SS', [$rule_title]);
+
+                            } elseif ( ! self::isDatetimeCheck($data[$field])) {
+                                $errors[] = self::_('В поле "%s" указана некорректная дата', [$rule_title]);
+                            }
+                        }
+                        break;
+
+                    case 'date':
+                        if (isset($data[$field])) {
+                            if ( ! self::isDate($data[$field])) {
+                                $errors[] = self::_('Значение поля "%s" не является датой. Требуемый формат YYYY-MM-DD', [$rule_title]);
+
+                            } elseif ( ! self::isDateCheck($data[$field])) {
+                                $errors[] = self::_('В поле "%s" указана некорректная дата', [$rule_title]);
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+
+
+        if ($strict === true) {
+            foreach ($data as $param => $value) {
+                if ( ! isset($fields[$param])) {
+                    $errors[] = self::_('Некорректный запрос. Среди переданных значений присутствует лишнее поле "%s"', [$param]);
                 }
             }
         }
