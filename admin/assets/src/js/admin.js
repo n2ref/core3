@@ -1,5 +1,5 @@
-import adminIndex from "./admin.index";
-import adminIndexPages from "./index/pages";
+import IndexPages from "./index/pages";
+import UsersPages from "./users/pages";
 
 let Admin = {
 
@@ -13,14 +13,36 @@ let Admin = {
 
         Core.setTranslates('admin', Admin.lang)
 
+        this.route(container);
+
+        Core.app.on('module.admin.url', function () {
+            Admin.route(container);
+        })
+
+        Core.app.one('module.admin.deinit', function () {
+
+        })
+    },
+
+
+    /**
+     *
+     */
+    route: function (container) {
 
         let router = new Core.router({
-            "/index(|/)" : [adminIndexPages, 'index'],
+            "/index" : [IndexPages, 'index'],
 
-            "/modules.*" : '',
-            "/settings.*" : "",
-            "/users.*" : "",
-            "/logs.*" : "",
+            "/users" :               [UsersPages, 'index'],
+            "/users/0" :             [UsersPages, 'userAdd'],
+            "/users/{id}" :          [UsersPages, 'user'],
+            "/users/{id}/info" :     [UsersPages, 'user', 'info'],
+            "/users/{id}/sessions" : [UsersPages, 'userSessions', 'sessions'],
+
+            "/roles" : '',
+            "/modules" : '',
+            "/settings" : "",
+            "/logs" : "",
         });
 
         router.setBaseUrl('/admin');

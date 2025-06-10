@@ -32,7 +32,7 @@ const conf = {
         ]
     },
     tpl: {
-        file: 'admin.tpl.js',
+        file: 'tpl.js',
         dist: './src/js',
         src: [
             'src/html/**/*.html',
@@ -41,7 +41,7 @@ const conf = {
 };
 
 
-gulp.task('build_css_min', function(){
+gulp.task('build_css', function(){
     return gulp.src(conf.css.main)
         .pipe(sourcemaps.init())
         .pipe(sass({outputStyle: 'compressed', includePaths: ['node_modules']}).on('error', sass.logError))
@@ -50,7 +50,7 @@ gulp.task('build_css_min', function(){
         .pipe(gulp.dest(conf.dist));
 });
 
-gulp.task('build_css_min_fast', function(){
+gulp.task('build_css_fast', function(){
     return gulp.src(conf.css.main)
         .pipe(sass({includePaths: ['node_modules']}).on('error', sass.logError))
         .pipe(concat(conf.css.fileMin))
@@ -59,32 +59,6 @@ gulp.task('build_css_min_fast', function(){
 
 
 gulp.task('build_js', function() {
-    return rollup({
-        input: conf.js.main,
-        output: {
-            sourcemap: true,
-            format: 'umd',
-            name: conf.name
-        },
-        onwarn: function (log, handler) {
-            if (log.code === 'CIRCULAR_DEPENDENCY') {
-                return; // Ignore circular dependency warnings
-            }
-            handler(log.message);
-        },
-        context: "window",
-        plugins: [
-            nodeResolve(),
-            rollupCommonjs(),
-            rollupBabel({babelHelpers: 'bundled'}),
-        ]
-    })
-        .pipe(source(conf.js.file))
-        .pipe(buffer())
-        .pipe(gulp.dest(conf.dist));
-});
-
-gulp.task('build_js_min', function() {
     return rollup({
         input: conf.js.main,
         output: {
@@ -114,7 +88,7 @@ gulp.task('build_js_min', function() {
         .pipe(gulp.dest(conf.dist));
 });
 
-gulp.task('build_js_min_fast', function() {
+gulp.task('build_js_fast', function() {
     return rollup({
         input: conf.js.main,
         output: {
@@ -131,6 +105,7 @@ gulp.task('build_js_min_fast', function() {
         context: "window",
         plugins: [
             nodeResolve(),
+            rollupSourcemaps(),
             rollupCommonjs(),
             rollupBabel({babelHelpers: 'bundled'}),
         ]
@@ -157,9 +132,9 @@ gulp.task('build_tpl', function() {
 
 
 gulp.task('build_watch', function() {
-    gulp.watch(conf.css.src, gulp.series(['build_css_min_fast']));
-    gulp.watch(conf.tpl.src, gulp.series(['build_tpl', 'build_js_min_fast']));
-    gulp.watch([conf.js.src, '!' + conf.tpl.dist + '/' + conf.tpl.file], gulp.series(['build_js_min_fast']));
+    gulp.watch(conf.css.src, gulp.series(['build_css_fast']));
+    gulp.watch(conf.tpl.src, gulp.series(['build_tpl', 'build_js_fast']));
+    gulp.watch([conf.js.src, '!' + conf.tpl.dist + '/' + conf.tpl.file], gulp.series(['build_js_fast']));
 });
 
-gulp.task("default", gulp.series([ 'build_tpl', 'build_js', 'build_js_min', 'build_css_min']));
+gulp.task("default", gulp.series([ 'build_tpl', 'build_js', 'build_css']));

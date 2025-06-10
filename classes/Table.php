@@ -217,7 +217,7 @@ class Table extends \CoreUI\Table {
         $table_id = $this->getId();
 
         return (new Control\Button('<i class="bi bi-trash"></i> ' . $this->system->_('Удалить')))
-            ->setOnClick("Core.ui.table.get('{$table_id}').deleteSelected('{$url}', Core.menu.reload)")
+            ->setOnClick("Core.ui.table.get('{$table_id}').deleteSelected('{$url}', Core.app.reload)")
             ->setAttr('class', 'btn btn-warning');
     }
 

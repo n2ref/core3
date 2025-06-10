@@ -59,7 +59,19 @@ class coreRouterMethod {
             typeof this._method[0] === 'object' &&
             typeof this._method[1] === 'string'
         ) {
-            this._method[0][this._method[1]].apply(this._method[0], this._params);
+            let params = this._params;
+
+            if (this._method.length > 2) {
+                let paramsMethod = this._method.slice(2);
+
+                if (paramsMethod && paramsMethod.length >= 1) {
+                    paramsMethod.map(function (param) {
+                        params.push(param);
+                    })
+                }
+            }
+
+            this._method[0][this._method[1]].apply(this._method[0], params);
         }
     }
 }

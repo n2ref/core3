@@ -1,0 +1,35 @@
+<li class="menu-list-item core-module core-module-<%= module.name %>
+       <% if (module.sections && module.sections.length > 0) { %>menu-item-nested<% } %>">
+    <div class="item-control">
+        <a href="#/<%= module.name %>/<%= module.index %>" class="mdc-ripple-surface"
+           data-module="<%= module.name %>" data-section="<%= module.index %>">
+            <% if (module.icon) { %>
+            <i class="<%= module.icon %>"></i>
+            <% } else { %>
+            <span class="module-icon-letter"><%= module.title.trim().substring(0, 1) %></span>
+            <% } %>
+            <span class="menu-list-item__text"><%= module.title %></span>
+        </a>
+        <% if (module.sections && module.sections.length > 0) { %>
+        <button class="menu-icon-button mdc-ripple-surface"><i class="fa-solid fa-sort-down"></i></button>
+        <% } %>
+    </div>
+    <ul class="menu-list level-2">
+        <li class="menu-list-item core-module-section-index">
+            <a href="#/<%= module.name %>/<%= module.index %>" class="mdc-ripple-surface"
+               data-module="<%= module.name %>" data-section="<%= module.index %>">
+                <%= module.title %>
+            </a>
+        </li>
+        <% if (module.sections && module.sections.length > 0) { %>
+        <% module.sections.forEach(function(section) { %>
+        <li class="menu-list-item core-module-section core-module-<%= module.name %>-<%= section.name %>">
+            <a href="#/<%= module.name %>/<%= section.name %>" class="mdc-ripple-surface"
+               data-module="<%= module.name %>" data-section="<%= section.name %>">
+                <span class="menu-list-item__text"><%= section.title %></span>
+            </a>
+        </li>
+        <% }); %>
+        <% } %>
+    </ul>
+</li>

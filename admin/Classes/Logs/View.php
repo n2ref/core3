@@ -28,7 +28,7 @@ class View extends Common {
         $table->setShowHeader(false);
         $table->setMaxHeight(800);
         $table->setTheme('no-border');
-        $table->setClick("Core.menu.load('/{$this->base_url}/' + record.data.hash)");
+        $table->setClick("Core.app.load('/{$this->base_url}/' + record.data.hash)");
 
         $table->setHeaderOut($table::LAST)
             ->left([

@@ -1,6 +1,6 @@
 import adminIndexView from "./view";
 
-let adminIndexPages = {
+let IndexPages = {
 
     _container: null,
 
@@ -24,11 +24,11 @@ let adminIndexPages = {
 
         container = container || this._container;
 
-        Core.menu.preloader.show();
+        Core.app.preloader.show();
 
         fetch('admin/index/')
             .then(function (response) {
-                Core.menu.preloader.hide();
+                Core.app.preloader.hide();
 
                 if ( ! response.ok) {
                     CoreUI.notice.danger(Admin._('Ошибка загрузки данных для отображения страницы'));
@@ -46,7 +46,7 @@ let adminIndexPages = {
                         }
 
                         if (Core.tools.isObject(data)) {
-                            adminIndexPages._renderIndex(data, container);
+                            IndexPages._renderIndex(data, container);
                         } else {
                             $(container).html(
                                 CoreUI.info.danger(Admin._('Некорректные данные для отображения на странице'), Admin._('Ошибка'))
@@ -137,4 +137,4 @@ let adminIndexPages = {
     }
 }
 
-export default adminIndexPages;
+export default IndexPages;

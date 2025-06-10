@@ -13,52 +13,44 @@ const nodeResolve      = require('@rollup/plugin-node-resolve');
 const source           = require('vinyl-source-stream');
 const buffer           = require("vinyl-buffer");
 
+const through2 = require('through2');
+const crypto   = require('crypto');
+const fs       = require('fs');
+
 const conf = {
     dist: "./dist",
     css: {
-        fileMin: 'all.min.css',
+        fileMin: 'core.min.css',
         main: 'src/main.scss',
         src: [
             'src/css/**/*.scss',
         ]
     },
     js: {
-        coreui: {
-            file: 'coreui.min.js',
-            main: 'src/main.coreui.js',
-        },
         core: {
             fileMin: 'core.min.js',
-            file: 'core.js',
             main: 'src/main.js',
+            name: 'Core',
             src: [
-                'src/js/**/*.js',
-                'src/js/*.js',
-            ]
-        },
-        all: {
-            fileMin: 'all.min.js',
-            src: [
-                'node_modules/jquery/dist/jquery.min.js',
-                // 'node_modules/select2/dist/js/select2.js',
-                'node_modules/bootstrap/dist/js/bootstrap.bundle.min.js',
-                'dist/coreui.min.js',
-                'dist/core.min.js',
+                'src/**/*.js',
             ]
         }
     },
     tpl: {
-        file: 'core.templates.js',
+        file: 'tpl.js',
         dist: './src/js/core',
         src: [
             'src/html/**/*.html',
             'src/html/*.html'
         ]
+    },
+    html: {
+        file: './index.html'
     }
 };
 
 
-gulp.task('build_css_min', function(){
+gulp.task('build_css', function(){
     return gulp.src(conf.css.main)
         .pipe(sourcemaps.init())
         .pipe(sass({outputStyle: 'compressed', includePaths: ['node_modules']}).on('error', sass.logError))
@@ -67,10 +59,12 @@ gulp.task('build_css_min', function(){
         .pipe(gulp.dest(conf.dist));
 });
 
-gulp.task('build_css_min_fast', function(){
+gulp.task('build_css_fast', function(){
     return gulp.src(conf.css.main)
+        .pipe(sourcemaps.init())
         .pipe(sass({includePaths: ['node_modules']}).on('error', sass.logError))
         .pipe(concat(conf.css.fileMin))
+        .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest(conf.dist));
 });
 
@@ -81,33 +75,7 @@ gulp.task('build_js', function() {
         output: {
             sourcemap: true,
             format: 'umd',
-            name: "Core"
-        },
-        onwarn: function (log, handler) {
-            if (log.code === 'CIRCULAR_DEPENDENCY') {
-                return; // Ignore circular dependency warnings
-            }
-            handler(log.message);
-        },
-        context: "window",
-        plugins: [
-            nodeResolve(),
-            rollupCommonjs(),
-            rollupBabel({babelHelpers: 'bundled'}),
-        ]
-    })
-        .pipe(source(conf.js.core.file))
-        .pipe(buffer())
-        .pipe(gulp.dest(conf.dist));
-});
-
-gulp.task('build_js_min', function() {
-    return rollup({
-        input: conf.js.core.main,
-        output: {
-            sourcemap: true,
-            format: 'umd',
-            name: "Core"
+            name: conf.js.core.name
         },
         onwarn: function (log, handler) {
             if (log.code === 'CIRCULAR_DEPENDENCY') {
@@ -131,39 +99,13 @@ gulp.task('build_js_min', function() {
         .pipe(gulp.dest(conf.dist));
 });
 
-gulp.task('build_js_min_fast', function() {
+gulp.task('build_js_fast', function() {
     return rollup({
         input: conf.js.core.main,
         output: {
             sourcemap: false,
             format: 'umd',
-            name: "Core"
-        },
-        onwarn: function (log, handler) {
-            if (log.code === 'CIRCULAR_DEPENDENCY') {
-                return; // Ignore circular dependency warnings
-            }
-            handler(log.message);
-        },
-        context: "window",
-        plugins: [
-            nodeResolve(),
-            rollupCommonjs(),
-            rollupBabel({babelHelpers: 'bundled'}),
-        ]
-    })
-        .pipe(source(conf.js.core.fileMin))
-        .pipe(buffer())
-        .pipe(gulp.dest(conf.dist));
-});
-
-gulp.task('build_js_coreui', function() {
-    return rollup({
-        input: conf.js.coreui.main,
-        output: {
-            sourcemap: true,
-            format: 'umd',
-            name: "CoreUI"
+            name: conf.js.core.name
         },
         onwarn: function (log, handler) {
             if (log.code === 'CIRCULAR_DEPENDENCY') {
@@ -179,36 +121,8 @@ gulp.task('build_js_coreui', function() {
             rollupBabel({babelHelpers: 'bundled'}),
         ]
     })
-        .pipe(source(conf.js.coreui.file))
+        .pipe(source(conf.js.core.fileMin))
         .pipe(buffer())
-        .pipe(sourcemaps.init())
-        .pipe(uglify({
-            mangle: {
-                reserved: [
-                    'PanelInstance', 'FormInstance', 'TableInstance', 'LayoutInstance', 'InfoInstance',
-                    'BreadcrumbInstance', 'ChartInstance',
-                ]
-            }
-        }))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest(conf.dist));
-});
-
-
-gulp.task('build_js_all_min', function() {
-    return gulp.src(conf.js.all.src)
-        .pipe(sourcemaps.init())
-        .pipe(uglify())
-        .pipe(concat(conf.js.all.fileMin, {newLine: ";\n"}))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest(conf.dist));
-});
-
-gulp.task('build_js_all_min_fast', function() {
-    return gulp.src(conf.js.all.src)
-        .pipe(sourcemaps.init())
-        .pipe(concat(conf.js.all.fileMin, {newLine: ";\n"}))
-        .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest(conf.dist));
 });
 
@@ -227,10 +141,67 @@ gulp.task('build_tpl', function() {
 });
 
 
-gulp.task('build_watch', function() {
-    gulp.watch(conf.css.src, gulp.series(['build_css_min_fast']));
-    gulp.watch(conf.tpl.src, gulp.series(['build_tpl', 'build_js_min_fast', 'build_js_all_min_fast']));
-    gulp.watch(conf.js.core.src, gulp.series(['build_js_min_fast', 'build_js_all_min_fast']));
+gulp.task('update_index', function() {
+
+    /**
+     * Получение хэша из файла
+     * @param filePath
+     * @return {string}
+     */
+    function getFileHash(filePath) {
+        if ( ! fs.existsSync(filePath)) {
+            return 'no_hash';
+        }
+
+        const fileBuffer = fs.readFileSync(filePath);
+        const hashSum    = crypto.createHash('sha256');
+
+        hashSum.update(fileBuffer);
+        return hashSum.digest('hex').slice(0, 8);
+    }
+
+    let dirIndex = conf.html.file.split('/');
+    dirIndex.splice(-1, 1)
+    dirIndex = dirIndex.join('/') + '/';
+
+    return gulp.src(conf.html.file)
+        .pipe(through2.obj((file, enc, cb) => {
+            let content = file.contents.toString();
+
+            const jsRegex  = /(src="[^"]+\.js(\?.*|)")/g;
+            const cssRegex = /(href="[^"]+\.css(\?.*|)")/g;
+
+            // Функция для замены путей с добавлением хэша
+            const addHashToAssets = (match, attr) => {
+                const filePath = match.match(/src="([^"]+)"/)?.[1] || match.match(/href="([^"]+)"/)?.[1];
+
+                if ( ! filePath) {
+                    return match;
+                }
+
+                const filePathPure = filePath.split('?')[0];
+                const pathSplit    = filePathPure.split('/');
+                const fullPath     = conf.dist + '/' + pathSplit[pathSplit.length - 1];
+                const hash         = getFileHash(fullPath);
+
+                return match.replace(filePath, `${filePathPure}?_=${hash}`);
+            };
+
+            // Замена для JS и CSS
+            content = content.replace(jsRegex, (match) => addHashToAssets(match, 'src'));
+            content = content.replace(cssRegex, (match) => addHashToAssets(match, 'href'));
+
+            file.contents = Buffer.from(content);
+            cb(null, file);
+        }))
+        .pipe(gulp.dest(dirIndex));
 });
 
-gulp.task("default", gulp.series([ 'build_tpl', 'build_js', 'build_js_min', 'build_css_min']));
+
+gulp.task('build_watch', function() {
+    gulp.watch(conf.css.src, gulp.series(['build_css_fast', 'update_index']));
+    gulp.watch(conf.tpl.src, gulp.series(['build_tpl', 'build_js_fast', 'update_index']));
+    gulp.watch([conf.js.core.src, '!' + conf.tpl.dist + '/' + conf.tpl.file], gulp.series(['build_js_fast', 'update_index']));
+});
+
+gulp.task("default", gulp.series([ 'build_tpl', 'build_js', 'build_css', 'update_index']));

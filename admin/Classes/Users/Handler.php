@@ -35,6 +35,15 @@ class Handler extends Classes\Handler {
         return $panel->toArray();
     }
 
+    /**
+     * @return array
+     * @throws \Exception
+     */
+    public function getRoles(): array {
+
+        return $this->modAdmin->tableRoles->fetchPairs('id', 'title');
+    }
+
 
     /**
      * Сохранение пользователя

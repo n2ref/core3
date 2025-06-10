@@ -1650,7 +1650,7 @@ class InstallModule extends Common {
 //                    $copy_list[$key]['install_info'] = "<img onclick=\"alert('Сначала установите модули: " . implode(", ", $needToInstall) . "')\" src=\"core2/html/".THEME."/img/box_out.png\" border=\"0\" title=\"Установить\"/>";
                     $copy_list[$key]['install_info'] = "<img src=\"core2/html/".THEME."/img/box_out_disable.png\" title=\"Требуется установка дополнительных модулей\" border=\"0\"/>";
                 } else {
-                    $copy_list[$key]['install_info'] = "<img onclick=\"modules.requestToRepo('$mName', 'v$mVersion', '{$copy_list[$key]['id']}', '{$this->repo_url}', 'install');\" src=\"core2/html/".THEME."/img/box_out.png\" border=\"0\" title=\"Установить\"/>";
+                    $copy_list[$key]['install_info'] = ".THEME."/img/box_out.png\" border=\"0\" title=\"Установить\"/>";
                 }
 
                 $tmp[$mId][$mVersion] = $copy_list[$key];

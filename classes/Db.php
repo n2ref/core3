@@ -5,6 +5,8 @@ use Core3\Mod\Admin;
 use \Laminas\Db\Adapter\Adapter;
 use Laminas\Cache\Exception\ExceptionInterface;
 
+require_once __DIR__ . '/../admin/Tables/Modules.php';
+
 
 /**
  * @property-read Db\Adapter $db
@@ -122,7 +124,7 @@ class Db extends System {
                 $table  = new Admin\Tables\Modules();
                 $module = $table->getRowByName($module_name);
 
-                $is_active = $module->is_active == '1';
+                $is_active = $module?->is_active == '1';
 
                 if ($module) {
                     $this->cache->save($key, $is_active, ['core3_mod']);

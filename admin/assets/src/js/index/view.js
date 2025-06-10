@@ -1,7 +1,7 @@
 import Admin      from "../admin";
-import AdminIndex from "../admin.index";
-import adminTpl   from "../admin.tpl";
-import adminIndexPages from "./pages";
+import AdminIndex from "../index";
+import adminTpl   from "../tpl";
+import IndexPages from "./pages";
 
 let adminIndexView = {
 
@@ -25,7 +25,7 @@ let adminIndexView = {
                 {
                     type: "button",
                     content: "<i class=\"bi bi-arrow-clockwise\"></i>",
-                    onClick: () => adminIndexPages.loadIndex(),
+                    onClick: () => IndexPages.loadIndex(),
                     attr: {
                         class: "btn btn-outline-secondary"
                     }

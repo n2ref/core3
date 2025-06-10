@@ -403,12 +403,7 @@ class Controller extends Common implements Events {
     public function sectionUsers(Request $request): array|Response {
 
         $router = new Router('/admin/users', [
-            '/' => [
-                'get' => function () use ($request) {
-                    $request->isPath('');
-                },
-            ],
-            '(|/)'     => ['get' => [Users\Handler::class, 'getPanelUsers']],
+            '/roles'   => ['get' => [Users\Handler::class, 'getRoles']],
             '/records' => [
                 'get'    => [Users\Handler::class, 'getRecordsUsers'],
                 'delete' => [Users\Handler::class, 'deleteUsers'],

@@ -541,16 +541,16 @@ class Handler extends Common {
         $module_class_name = "\\Core3\\Mod\\Home\\Controller";
 
         if ( ! class_exists($module_class_name)) {
-            throw new HttpException(500, $this->_("Модуль \"%s\" сломан. Не найден класс контроллера.", ['home']), 'broken');
+            throw new HttpException(500, $this->_("Модуль \"%s\" сломан. Не найден класс контроллера", ['home']), 'broken');
         }
 
         $controller = new $module_class_name();
 
-        if ( ! method_exists($controller, 'index')) {
-            throw new HttpException(500, $this->_("Модуль \"%s\" сломан. Не найден метод index.", ['home']), 'broken');
+        if ( ! method_exists($controller, 'init')) {
+            throw new HttpException(500, $this->_("Модуль \"%s\" сломан. Не найден метод init", ['home']), 'broken');
         }
 
-        return $controller->index();
+        return $controller->init();
     }
 
 
