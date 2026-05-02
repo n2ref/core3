@@ -554,8 +554,10 @@ class Init extends Common {
             return $response;
         }
 
-        $index = file_get_contents(__DIR__ . '/../front/index.html');
-        return str_replace('[PATH]', DOC_PATH . CORE_FOLDER, $index);
+        $theme_name = $this->config?->system?->theme?->name ?? 'default';
+
+        $index = file_get_contents(__DIR__ . "/../front/{$theme_name}/index.html");
+        return str_replace('[PATH]', DOC_PATH . CORE_FOLDER . "/front/{$theme_name}", $index);
     }
 
 
