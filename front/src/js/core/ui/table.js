@@ -31,6 +31,7 @@ class CoreUITable extends Table {
             id: id,
             class: "table-hover", // table-striped
             theme: "compact",
+            saveState: true,
         });
 
         this._module  = module;
@@ -41,7 +42,7 @@ class CoreUITable extends Table {
         this.controls.search = function (id) {
             let search = new HelperControlSearch(id);
 
-            search.setBtn(`<i class="bi bi-search"></i> ${Admin._('Поиск')}`, { class: "btn btn-outline-secondary" })
+            search.setBtn(`<i class="bi bi-search"></i> ${Core._('Поиск')}`, { class: "btn btn-outline-secondary" })
             search.setButtonClear(`<i class="bi bi-x bi-x-lg text-danger"></i>`, { class: "btn btn-outline-secondary" })
 
             return search;
@@ -50,7 +51,7 @@ class CoreUITable extends Table {
         this.controls.columns = function (id) {
             let columns = new HelperControlColumns(id);
 
-            columns.setBtn(`<i class="bi bi-layout-three-columns"></i> ${Admin._('Колонки')}`, { class: "btn btn-outline-secondary" })
+            columns.setBtn(`<i class="bi bi-layout-three-columns"></i> ${Core._('Колонки')}`, { class: "btn btn-outline-secondary" })
 
             return columns;
         };

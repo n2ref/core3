@@ -83,12 +83,12 @@ abstract class TableAbstract extends AbstractTableGateway {
 
     /**
      * Получение колонки
-     * @param string            $column_key
-     * @param string            $column_value
-     * @param array|string|null $where
+     * @param string $column_key
+     * @param string $column_value
+     * @param array|string|\Closure|null $where
      * @return array
      */
-    public function fetchPairs(string $column_key, string $column_value, array|string $where = null): array {
+    public function fetchPairs(string $column_key, string $column_value, array|string|\Closure $where = null): array {
 
         $results      = $this->select($where);
         $result_array = $results->toArray();

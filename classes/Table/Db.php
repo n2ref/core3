@@ -27,8 +27,14 @@ class Db extends Table\Adapters\Mysql {
             $page = $request->getQuery('page') ?? 1;
             $page = is_numeric($page) ? max($page, 1) : 1;
 
-            $page_count = $request->getQuery('count') ?? 25;
-            $page_count = is_numeric($page_count) ? max($page_count, 1) : 25;
+            $page_count = $request->getQuery('count');
+
+            if ( ! is_numeric($page_count) || $page_count < 0) {
+                $page_count = 25;
+
+            } else {
+                $page_count = is_numeric($page_count) ? max($page_count, 0) : 25;
+            }
 
             $this->setPage($page, $page_count);
         }

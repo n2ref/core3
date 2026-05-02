@@ -356,6 +356,48 @@ class Handler extends Common {
 
 
     /**
+     * Получение файлов для поля
+     * @param TableFiles    $table
+     * @param int           $id
+     * @param string|null   $object_type
+     * @param \Closure|null $callback
+     * @return array
+     */
+    public function getFiles(Db\TableFiles $table, int $id, string $object_type = null, \Closure $callback = null): array {
+
+        $fields = $table->getFields();
+
+        $files_row = $table->select(function (Select $select) use ($id, $object_type, $fields) {
+            $select->where([ $fields['ref_id'] => $id, ]);
+
+            if ($object_type) {
+                $select->where([$fields['object_type'] => $object_type,]);
+            }
+        });
+
+        $files = [];
+
+        foreach ($files_row as $file_row) {
+            $file = [
+                'id'          => $file_row->id,
+                'name'        => $file_row->name,
+                'size'        => $file_row->size,
+                'urlPreview'  => "",
+                'urlDownload' => "",
+            ];
+
+            if ($callback) {
+                $file = $callback($file);
+            }
+
+            $files[] = $file;
+        }
+
+        return $files;
+    }
+
+
+    /**
      * Сохранение файлов
      * @param TableFiles  $table
      * @param int         $row_id

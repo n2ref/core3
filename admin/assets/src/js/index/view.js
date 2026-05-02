@@ -1,7 +1,7 @@
 import Admin      from "../admin";
-import AdminIndex from "../index";
 import adminTpl   from "../tpl";
-import IndexPages from "./pages";
+import AdminIndex from "./index";
+import IndexPages from "./controller";
 
 let adminIndexView = {
 

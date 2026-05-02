@@ -10,6 +10,7 @@ use Core3\Exceptions\Exception;
 use Core3\Exceptions\HttpException;
 use CoreUI\Table\Adapters\Mysql\Search;
 use Laminas\Cache\Exception\ExceptionInterface;
+use Laminas\Db\Sql\Select;
 
 
 /**
@@ -35,13 +36,27 @@ class Handler extends Classes\Handler {
         return $panel->toArray();
     }
 
+
     /**
      * @return array
      * @throws \Exception
      */
     public function getRoles(): array {
 
-        return $this->modAdmin->tableRoles->fetchPairs('id', 'title');
+        $roles_all = $this->modAdmin->tableRoles->fetchPairs('id', 'title', function (Select $select) {
+            $select->order('title');
+        });
+
+        $roles = [];
+
+        foreach ($roles_all as $role_id => $title) {
+            $roles[] = [
+                'value' => $role_id,
+                'text'  => $title,
+            ];
+        }
+
+        return $roles;
     }
 
 
@@ -64,7 +79,7 @@ class Handler extends Classes\Handler {
             'fname'       => ['string(0-255)',                $this->_('Имя')],
             'lname'       => ['string(0-255)',                $this->_('Фамилия')],
             'mname'       => ['string(0-255)',                $this->_('Отчество')],
-            'is_admin'    => ['int',                          $this->_('Администратор безопасности')],
+            'is_admin'    => ['int',                          $this->_('Администратор')],
             'is_active'   => ['int',                          $this->_('Активен')],
             'avatar_type' => ['string(none|generate|upload)', $this->_('Аватар')],
         ]);
@@ -75,7 +90,7 @@ class Handler extends Classes\Handler {
 
         $files = null;
 
-        if ( ! empty($controls['avatar'])) {
+        if (isset($controls['avatar'])) {
             $files = $controls['avatar'];
             unset($controls['avatar']);
         }
@@ -134,7 +149,7 @@ class Handler extends Classes\Handler {
      */
 	public function saveUserNew(): Response {
 
-        $this->checkHttpMethod(['post', 'put']);
+        $this->checkHttpMethod(['post']);
 
         $validator = new Classes\Validator([
             'login'        => ['req,string(1-255),chars(alphanumeric|_|\\)', $this->_('Логин')],
@@ -144,8 +159,8 @@ class Handler extends Classes\Handler {
             'fname'        => ['string(0-255)',                              $this->_('Имя')],
             'lname'        => ['string(0-255)',                              $this->_('Фамилия')],
             'mname'        => ['string(0-255)',                              $this->_('Отчество')],
-            'is_admin'     => ['string(1|0)',                                $this->_('Администратор безопасности')],
-            'is_active'    => ['string(1|0)',                                $this->_('Активен')],
+            'is_admin'     => ['int',                                        $this->_('Администратор')],
+            'is_active'    => ['int',                                        $this->_('Активен')],
             'avatar_type'  => ['string(none|generate|upload)',               $this->_('Аватар')],
         ]);
 
@@ -155,7 +170,7 @@ class Handler extends Classes\Handler {
 
         $files = null;
 
-        if ( ! empty($controls['avatar'])) {
+        if (isset($controls['avatar'])) {
             $files = $controls['avatar'];
             unset($controls['avatar']);
         }
@@ -235,13 +250,12 @@ class Handler extends Classes\Handler {
 
     /**
      * Изменение активности для сессии пользователя
-     * @param int     $user_id
-     * @param int     $session_id
+     * @param int $session_id
      * @return Response
      * @throws Exception
      * @throws HttpException
      */
-    public function switchUserSession(int $user_id, int $session_id): Response {
+    public function switchUserSession(int $session_id): Response {
 
         $this->checkHttpMethod('patch');
         $controls = $this->request->getJsonContent();
@@ -572,6 +586,81 @@ class Handler extends Classes\Handler {
         }
 
         return (new View())->getForm($user);
+    }
+
+
+    /**
+     * @param int $user_id
+     * @return array
+     * @throws HttpException
+     * @throws Exception
+     */
+    public function getUser(int $user_id): array {
+
+        $user = $this->modAdmin->tableUsers->getRowById($user_id);
+
+        if (empty($user)) {
+            throw new HttpException(404, $this->_('Указанный пользователь не найден'));
+        }
+
+        $control = $this->modAdmin->tableControls->createRow($this->modAdmin->tableUsers->getTable(), $user_id);
+
+
+        $avatar = null;
+
+        if ($user->avatar_type == 'upload') {
+            $avatar = $this->getFiles($this->modAdmin->tableUsersFiles, $user->id, 'avatar', function (array $file) use ($user) {
+                $file['urlPreview']  = "/sys/user/{$user->id}/avatar";
+                $file['urlDownload'] = "/{$this->base_url}/{$user->id}/avatar/download";
+
+                return $file;
+            });
+        }
+
+
+        return [
+            'id'          => $user->id,
+            'is_admin'    => $user->is_admin,
+            'login'       => $user->login,
+            'email'       => $user->email,
+            'role_id'     => $user->role_id,
+            'name'        => $user->name,
+            'lname'       => $user->lname,
+            'fname'       => $user->fname,
+            'mname'       => $user->mname,
+            'avatar_type' => $user->avatar_type,
+            'avatar'      => $avatar,
+            'is_active'   => $user->is_active,
+            '_meta'       => [
+                'version'     => $control->version,
+                'roles'       => $this->modAdmin->tableRoles->fetchPairs('id', 'title'),
+                'size_limit'  => Tools::getUploadMaxFileSize(),
+            ]
+        ];
+    }
+
+
+    /**
+     * @param int $user_id
+     * @return array
+     * @throws HttpException
+     * @throws Exception
+     */
+    public function getUserShort(int $user_id): array {
+
+        $user = $this->modAdmin->tableUsers->getRowById($user_id);
+
+        if (empty($user)) {
+            throw new HttpException(404, $this->_('Указанный пользователь не найден'));
+        }
+
+
+        return [
+            'id'    => $user->id,
+            'login' => $user->login,
+            'email' => $user->email,
+            'name'  => $user->name,
+        ];
     }
 
 

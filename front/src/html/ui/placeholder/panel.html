@@ -1,0 +1,41 @@
+
+<div class="fade-in">
+    <% if (title) { %>
+    <h4 class="placeholder-wave">
+        <% if (title == 'short') { %>
+        <span class="placeholder" style="width: 215px"></span>
+
+        <% } else if (title == 'medium') { %>
+        <span class="placeholder col-4" style="width: 420px"></span>
+        <% } %>
+    </h4>
+    <% } %>
+
+    <% if (tabs) { %>
+        <% if (tabs === 'top') { %>
+        <ul class="nav nav-underline mb-3 placeholder-wave">
+            <li class="nav-item" style="width: 80px">
+                <span class="nav-link position-relative active">
+                    <span class="placeholder placeholder-sm col-10"></span>
+                </span>
+            </li>
+            <li class="nav-item" style="width: 120px">
+                <span class="nav-link position-relative">
+                    <span class="placeholder placeholder-sm col-10"></span>
+                </span>
+            </li>
+            <li class="nav-item" style="width: 140px">
+                <span class="nav-link position-relative">
+                    <span class="placeholder placeholder-sm col-10"></span>
+                </span>
+            </li>
+        </ul>
+        <% } %>
+    <% } %>
+
+    <% if (content) { %>
+        <br>
+        <br>
+        <%- content %>
+    <% } %>
+</div>

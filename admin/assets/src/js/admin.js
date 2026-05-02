@@ -1,5 +1,6 @@
-import IndexPages from "./index/pages";
-import UsersPages from "./users/pages";
+import IndexController    from "./index/controller";
+import UsersController    from "./users/controller";
+import SettingsController from "./settings/controller";
 
 let Admin = {
 
@@ -31,17 +32,21 @@ let Admin = {
     route: function (container) {
 
         let router = new Core.router({
-            "/index" : [IndexPages, 'index'],
+            "/index" : [IndexController, 'index'],
 
-            "/users" :               [UsersPages, 'index'],
-            "/users/0" :             [UsersPages, 'userAdd'],
-            "/users/{id}" :          [UsersPages, 'user'],
-            "/users/{id}/info" :     [UsersPages, 'user', 'info'],
-            "/users/{id}/sessions" : [UsersPages, 'userSessions', 'sessions'],
+            "/users" :               [UsersController, 'index'],
+            "/users/0" :             [UsersController, 'userNew'],
+            "/users/{id}" :          [UsersController, 'user'],
+            "/users/{id}/info" :     [UsersController, 'user', 'info'],
+            "/users/{id}/sessions" : [UsersController, 'user', 'sessions'],
 
             "/roles" : '',
             "/modules" : '',
-            "/settings" : "",
+
+            "/settings"      : [SettingsController, 'table'],
+            "/settings/{id}" : [SettingsController, 'form'],
+
+
             "/logs" : "",
         });
 

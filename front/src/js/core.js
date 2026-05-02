@@ -7,8 +7,11 @@ import PageApp   from './pages/app';
 import PageLogin from './pages/login';
 import PageDisable from './pages/disable';
 
-import UITable from './core/ui/table.js';
-import UIForm  from './core/ui/form.js';
+import UITable       from './core/ui/table.js';
+import UIForm        from './core/ui/form.js';
+import UIPlaceholder from './core/ui/placeholder.js';
+import UIBreadcrumb  from './core/ui/breadcrumb.js';
+import UIPanel       from './core/ui/panel.js';
 
 
 let Core = {
@@ -22,8 +25,11 @@ let Core = {
     disable: PageDisable,
 
     ui: {
-        table: UITable,
-        form: UIForm,
+        Table: UITable,
+        Form: UIForm,
+        Breadcrumb: UIBreadcrumb,
+        Panel: UIPanel,
+        placeholder : UIPlaceholder,
     },
 
     lang: {},

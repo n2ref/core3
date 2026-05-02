@@ -43,6 +43,7 @@ let CoreUI = {
 Object.assign(window, {
     CoreUI,
     $,
+    jQuery,
     bootstrap
 });
 

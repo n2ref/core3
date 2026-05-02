@@ -450,16 +450,29 @@ let PageApp = {
 
 
     /**
-     *
-     * @param url
-     * @param options
-     * @return {Promise<unknown>}
+     * Загрузка json данных по указанному адресу, без отображения прелодера
+     * @param {string} url
+     * @return {Promise}
+     */
+    fetchQuiet: function (url) {
+
+        return this.fetch(url, {
+            preloader: false
+        })
+    },
+
+
+    /**
+     * Загрузка json данных по указанному адресу
+     * @param {string} url
+     * @param {Object} options
+     * @return {Promise}
      */
     fetch: function (url, options) {
 
         options = Tools.isObject(options) ? options : {};
-
         options.preloader = options.hasOwnProperty('preloader') ? options.preloader : true;
+
 
         return new Promise(function (resolve, reject) {
 
@@ -495,7 +508,7 @@ let PageApp = {
                         }).catch(function (e) {
                             console.error(e)
                             CoreUI.notice.danger(Core._('Ошибка'), {
-                                description: Core._('Некорректные данные')
+                                description: Core._('Сервер вернул некорректные данные')
                             });
                             reject()
                         })

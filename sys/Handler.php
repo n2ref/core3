@@ -808,7 +808,7 @@ class Handler extends Common {
             throw new HttpException(404, $this->_('Указанный файл не найден'), 'file_not_found');
         }
 
-        if ( ! $file->thumb && $file->isTypeImage()) {
+        if ( ! $file->thumb && ! $file->isTypeImage()) {
             throw new HttpException(404, $this->_('Указанный файл не является картинкой'), 'file_is_not_image');
         }
 

@@ -403,29 +403,27 @@ class Controller extends Common implements Events {
     public function sectionUsers(Request $request): array|Response {
 
         $router = new Router('/admin/users', [
-            '/roles'   => ['get' => [Users\Handler::class, 'getRoles']],
-            '/records' => [
+            '/' => [
                 'get'    => [Users\Handler::class, 'getRecordsUsers'],
                 'delete' => [Users\Handler::class, 'deleteUsers'],
             ],
-            '/login'   => [
-                'post' => [Users\Handler::class, 'loginUser'],
-            ],
-            '/avatar/upload' => [
-                'post' => [Users\Handler::class, 'uploadFile'],
-            ],
 
-            '/{id:\d+}(|/{tab})' => [
-                'get'   => [Users\Handler::class, 'getPanelUser'],
+            '/{id:\d+}' => [
+                'get'   => [Users\Handler::class, 'getUser'],
                 'put'   => [Users\Handler::class, 'saveUser'],
                 'post'  => [Users\Handler::class, 'saveUserNew'],
                 'patch' => [Users\Handler::class, 'switchUserActive'],
             ],
-            '/{id:\d+}/user/form'                 => ['get' => [Users\Handler::class, 'getUserForm']],
-            '/{id:\d+}/sessions/{session_id:\d+}' => ['get' => [Users\Handler::class, 'switchUserSession']],
-            '/{id:\d+}/sessions/table'            => ['get' => [Users\Handler::class, 'getUserSessions']],
-            '/{id:\d+}/sessions/table/records'    => ['get' => [Users\Handler::class, 'getRecordsSessions']],
-            '/{id:\d+}/avatar/download'           => ['get' => [Users\Handler::class, 'getAvatarDownload']],
+
+            '/{id:\d+}/short' => [ 'get' => [Users\Handler::class, 'getUserShort'] ],
+
+            '/{id:\d+}/sessions'             => ['get'   => [Users\Handler::class, 'getRecordsSessions']],
+            '/{id:\d+}/avatar/download'      => ['get'   => [Users\Handler::class, 'getAvatarDownload']],
+            '/\d+/sessions/{session_id:\d+}' => ['patch' => [Users\Handler::class, 'switchUserSession']],
+
+            '/roles'         => [ 'get'  => [Users\Handler::class, 'getRoles'] ],
+            '/login'         => [ 'post' => [Users\Handler::class, 'loginUser'] ],
+            '/avatar/upload' => [ 'post' => [Users\Handler::class, 'uploadFile'] ],
         ]);
 
         return $this->runRouterMethod($router, $request);
@@ -441,17 +439,21 @@ class Controller extends Common implements Events {
      */
     public function sectionSettings(Request $request): Response|array|string {
 
-        $router = new Router();
-        $router->route('/admin/settings')
-            ->get([Settings\Handler::class, 'getSettings'])
-            ->delete([Settings\Handler::class, 'deleteSettings']);
+        $router = new Router('/admin/settings', [
+            '/' => [
+                'get'    => [Settings\Handler::class, 'getSettings'],
+                'delete' => [Settings\Handler::class, 'deleteSettings'],
+            ],
 
-        $router->route('/admin/settings/{id:\d+}')
-            ->get([  Settings\Handler::class, 'getSetting' ])
-            ->put([  Settings\Handler::class, 'saveSetting' ])
-            ->post([ Settings\Handler::class, 'saveSettingNew' ])
-            ->patch([Settings\Handler::class, 'switchActive']);
+            '/{id:\d+}' => [
+                'get'   => [Settings\Handler::class, 'getSetting'],
+                'put'   => [Settings\Handler::class, 'saveSetting'],
+                'post'  => [Settings\Handler::class, 'saveSettingNew'],
+                'patch' => [Settings\Handler::class, 'switchActive'],
+            ],
 
+            '/modules' => [ 'get' => [Settings\Handler::class, 'getModules'] ],
+        ]);
 
         return $this->runRouterMethod($router, $request);
     }
