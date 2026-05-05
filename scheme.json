@@ -1,0 +1,803 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Core3 REST API",
+        "version": "1.0.0",
+        "description": "REST API методы системы Core3"
+    },
+    "paths": {
+        "/sys/auth/login": {
+            "post": {
+                "tags": ["Аутентификация"],
+                "summary": "Авторизация по логину или email",
+                "description": "Авторизация пользователя по логину или email",
+                "operationId": "sysAuthLogin",
+                "requestBody": {
+                    "description": "Данные для входа",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "login": {
+                                        "type": "string",
+                                        "description": "Логин или email пользователя"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "description": "Пароль пользователя"
+                                    },
+                                    "fp": {
+                                        "type": "string",
+                                        "description": "Фingerprint для защиты от ботов"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Успешная авторизация",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "refresh_token": {
+                                            "type": "string",
+                                            "description": "Токен обновления"
+                                        },
+                                        "access_token": {
+                                            "type": "string",
+                                            "description": "Токен доступа"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/auth/refresh": {
+            "post": {
+                "tags": ["Аутентификация"],
+                "summary": "Обновление токенов",
+                "description": "Обновление токенов доступа и обновления",
+                "operationId": "sysAuthRefresh",
+                "requestBody": {
+                    "description": "Данные для обновления токена",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "refresh_token": {
+                                        "type": "string",
+                                        "description": "Токен обновления"
+                                    },
+                                    "fp": {
+                                        "type": "string",
+                                        "description": "Фingerprint для защиты от ботов"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Успешное обновление токенов",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "refresh_token": {
+                                            "type": "string",
+                                            "description": "Новый токен обновления"
+                                        },
+                                        "access_token": {
+                                            "type": "string",
+                                            "description": "Новый токен доступа"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Неверный токен",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/registration/email": {
+            "post": {
+                "tags": ["Регистрация"],
+                "summary": "Регистрация с помощью email",
+                "description": "Регистрация нового пользователя по email",
+                "operationId": "sysRegistrationEmail",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "description": "Email пользователя"
+                                    },
+                                    "lname": {
+                                        "type": "string",
+                                        "description": "Фамилия"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "description": "Код подтверждения"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "description": "Пароль"
+                                    },
+                                    "fp": {
+                                        "type": "string",
+                                        "description": "Фingerprint для защиты от ботов"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Успешная регистрация",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "refresh_token": {
+                                            "type": "string",
+                                            "description": "Токен обновления"
+                                        },
+                                        "access_token": {
+                                            "type": "string",
+                                            "description": "Токен доступа"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/registration/email/check": {
+            "post": {
+                "tags": ["Регистрация"],
+                "summary": "Проверка email для регистрации",
+                "description": "Проверка наличия email для регистрации",
+                "operationId": "sysRegistrationEmailCheck",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "description": "Email для проверки"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Email доступен для регистрации",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "available": {
+                                            "type": "boolean",
+                                            "description": "Доступен ли email для регистрации"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/restore": {
+            "post": {
+                "tags": ["Восстановление пароля"],
+                "summary": "Восстановление пароля",
+                "description": "Запрос на восстановление пароля по email",
+                "operationId": "sysRestore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "description": "Email пользователя"
+                                    },
+                                    "fp": {
+                                        "type": "string",
+                                        "description": "Фingerprint для защиты от ботов"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Запрос на восстановление отправлен",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Сообщение о статусе запроса"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/restore/check": {
+            "post": {
+                "tags": ["Восстановление пароля"],
+                "summary": "Проверка восстановления пароля",
+                "description": "Проверка статуса запроса на восстановление пароля",
+                "operationId": "sysRestoreCheck",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "description": "Email пользователя"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Статус восстановления пароля",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "description": "Статус восстановления"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/conf": {
+            "get": {
+                "tags": ["Конфигурация"],
+                "summary": "Получение конфигурации системы",
+                "description": "Получение текущей конфигурации системы",
+                "operationId": "sysConf",
+                "responses": {
+                    "200": {
+                        "description": "Успешное получение конфигурации",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Конфигурация системы"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{path}": {
+            "get": {
+                "tags": ["API"],
+                "summary": "Обработка API запросов",
+                "description": "Обработка запросов к API модулей",
+                "operationId": "processApi",
+                "parameters": [
+                    {
+                        "name": "Access-token",
+                        "in": "header",
+                        "description": "Токен доступа",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешный ответ API",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет доступа",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/auth/logout": {
+            "put": {
+                "tags": ["Аутентификация"],
+                "summary": "Выйти из системы",
+                "description": "Обратная авторизация пользователя",
+                "operationId": "sysAuthLogout",
+                "responses": {
+                    "200": {
+                        "description": "Успешный выход",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Сообщение о выходе"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/cabinet": {
+            "get": {
+                "tags": ["Кабинет"],
+                "summary": "Получение данных кабинета",
+                "description": "Получение данных личного кабинета пользователя",
+                "operationId": "sysCabinet",
+                "responses": {
+                    "200": {
+                        "description": "Успешное получение данных кабинета",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Данные личного кабинета"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет доступа",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/error": {
+            "post": {
+                "tags": ["Логирование"],
+                "summary": "Логирование ошибок",
+                "description": "Отправка ошибки в систему логирования",
+                "operationId": "sysError",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "description": "Сообщение об ошибке"
+                                    },
+                                    "trace": {
+                                        "type": "array",
+                                        "description": "Стек вызовов"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ошибка записана",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "description": "Статус записи"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/home": {
+            "get": {
+                "tags": ["Кабинет"],
+                "summary": "Получение главной страницы",
+                "description": "Получение данных главной страницы кабинета",
+                "operationId": "sysHome",
+                "responses": {
+                    "200": {
+                        "description": "Успешное получение главной страницы",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Данные главной страницы"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет доступа",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/user/{id}/avatar": {
+            "get": {
+                "tags": ["Пользователь"],
+                "summary": "Получение аватара пользователя",
+                "description": "Получение аватара пользователя по ID",
+                "operationId": "sysUserAvatar",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID пользователя",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешное получение аватара",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "avatar": {
+                                            "type": "string",
+                                            "description": "URL аватара"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет доступа",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{module}": {
+            "get": {
+                "tags": ["Модули"],
+                "summary": "Инициализация модуля",
+                "description": "Инициализация модуля по имени",
+                "operationId": "getModInit",
+                "parameters": [
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "description": "Название модуля",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "[a-z0-9_]+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешная инициализация модуля",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Данные инициализации модуля"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Модуль не найден",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{module}/{section}": {
+            "any": {
+                "tags": ["Модули"],
+                "summary": "Обработка секции модуля",
+                "description": "Обработка запроса к секции модуля",
+                "operationId": "getModSection",
+                "parameters": [
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "description": "Название модуля",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "[a-z0-9_]+"
+                        }
+                    },
+                    {
+                        "name": "section",
+                        "in": "path",
+                        "description": "Название раздела",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "[a-z0-9_]+"
+                        }
+                    },
+                    {
+                        "name": "mod_query",
+                        "in": "path",
+                        "description": "Запросные параметры",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешная обработка секции",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Данные секции модуля"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет доступа",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Error": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "description": "Код ошибки"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Сообщение об ошибке"
+                    }
+                }
+            }
+        }
+    }
+}
