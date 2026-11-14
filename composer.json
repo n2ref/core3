@@ -1,10 +1,10 @@
 {
-  "name": "n2ref/core3",
+  "name": "n2ref/rowan",
   "version": "3.0.0",
   "type": "framework",
-  "description": "Fullstack framework for business application",
+  "description": "CRM for business application",
   "keywords": ["framework"],
-  "homepage": "https://github.com/n2ref/core3",
+  "homepage": "https://github.com/n2ref/rowan",
   "license": "GPL-3.0-or-later",
   "authors": [
     {
@@ -15,31 +15,39 @@
   "minimum-stability": "dev",
   "classmap-authoritative": true,
   "prefer-stable": true,
+  "scripts": {
+    "post-update-cmd": [
+      "wget https://download.db-ip.com/free/dbip-city-lite-2026-05.mmdb.gz -O ip.mmdb.gz && gzip -d ip.mmdb.gz && find . -name 'dbip-*.mmdb' -exec bash -c 'mv $0 ip.mmdb' {} \\;"
+    ],
+    "test:api": "phpunit --testsuite tests/api"
+  },
   "require": {
-    "php": ">=8.1",
+    "php": ">=8.5",
     "ext-pdo": "*",
     "ext-json": "*",
     "ext-zip": "*",
     "ext-mbstring": "*",
     "ext-curl": "*",
     "ext-gd": "*",
+    "ext-imagick": "*",
+    "ext-imap": "*",
     "ext-intl": "*",
     "ext-xml": "*",
     "ext-sockets": "*",
 
-    "laminas/laminas-session": "2.22.1",
-    "laminas/laminas-serializer": "2.17.0",
-    "laminas/laminas-validator": "2.64.2",
-    "laminas/laminas-mail": "2.25.1",
-    "laminas/laminas-i18n": "2.29.0",
-    "laminas/laminas-permissions-acl": "2.17.0",
-    "laminas/laminas-authentication": "2.18.0",
-    "laminas/laminas-cache": "3.12.2",
-    "laminas/laminas-cache-storage-adapter-filesystem": "2.4.1",
-    "laminas/laminas-cache-storage-adapter-memcache": "1.1.0",
-    "laminas/laminas-cache-storage-adapter-memcached": "3.0.0",
-    "laminas/laminas-cache-storage-adapter-redis": "3.1.0",
-    "laminas/laminas-db": "2.20.0",
+    "laravel/reverb": "v1.12.0",
+    "laravel/pulse": "v1.8.1",
+
+    "illuminate/cache": "v13.40.0",
+    "illuminate/mail": "v13.40.0",
+    "illuminate/log": "v13.40.0",
+    "illuminate/database": "v13.40.0",
+    "illuminate/queue": "v13.40.0",
+    "illuminate/auth": "v13.40.0",
+    "illuminate/filesystem": "v13.40.0",
+    "illuminate/validation": "v13.40.0",
+    "illuminate/support": "v13.40.0",
+    "illuminate/translation": "v13.40.0",
 
     "n2ref/coreui-panel": "1.0.x-dev",
     "n2ref/coreui-table": "dev-main",
@@ -49,36 +57,17 @@
     "n2ref/coreui-layout": "1.0.x-dev",
     "n2ref/coreui-breadcrumb": "v1.0.1",
 
-    "aws/aws-sdk-php": "3.336.2",
-    "geoip2/geoip2": "v3.1.0",
-    "gumlet/php-image-resize": "2.0.4",
-    "jdenticon/jdenticon": "1.0.2",
-    "lefuturiste/monolog-discord-handler": "0.4",
-    "monolog/monolog": "3.8.1",
-    "guzzlehttp/guzzle": "7.9.2",
-    "phpseclib/phpseclib": "2.0.48",
-    "firebase/php-jwt": "v6.10.2",
-    "wolfcast/browser-detection": "2.9.8",
+    "geoip2/geoip2": "v3.3.0",
+    "gumlet/php-image-resize": "2.1.3",
+    "jdenticon/jdenticon": "2.0.0",
+    "monolog/monolog": "3.10.0",
+    "guzzlehttp/guzzle": "7.16.1",
+    "firebase/php-jwt": "v7.0.5",
+    "wolfcast/browser-detection": "2.9.9",
+
     "ratchet/rfc6455": "v0.4.0"
   },
-  "replace": {
-    "laminas/laminas-cache-storage-adapter-apc": "*",
-    "laminas/laminas-cache-storage-adapter-apcu": "*",
-    "laminas/laminas-cache-storage-adapter-blackhole": "*",
-    "laminas/laminas-cache-storage-adapter-dba": "*",
-    "laminas/laminas-cache-storage-adapter-ext-mongodb": "*",
-    "laminas/laminas-cache-storage-adapter-memcache": "*",
-    "laminas/laminas-cache-storage-adapter-memcached": "*",
-    "laminas/laminas-cache-storage-adapter-mongodb": "*",
-    "laminas/laminas-cache-storage-adapter-redis": "*",
-    "laminas/laminas-cache-storage-adapter-session": "*",
-    "laminas/laminas-cache-storage-adapter-wincache": "*",
-    "laminas/laminas-cache-storage-adapter-xcache": "*",
-    "laminas/laminas-cache-storage-adapter-zend-server": "*"
-  },
-  "scripts": {
-    "post-update-cmd": [
-      "wget https://download.db-ip.com/free/dbip-city-lite-2024-10.mmdb.gz -O ip.mmdb.gz && gzip -d ip.mmdb.gz && find . -name 'dbip-*.mmdb' -exec bash -c 'mv $0 ip.mmdb' {} \\;  && rm ip.mmdb.gz"
-    ]
+  "require-dev": {
+    "phpunit/phpunit": "13.1.13"
   }
 }

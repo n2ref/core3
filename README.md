@@ -1,4 +1,4 @@
-core3
+rowan
 =====
 PHP framework for business application.
 
@@ -17,14 +17,14 @@ TODO
 Minimum Server Requirements
 ---------------------------
 
-* PHP 7.4 or greater
+* PHP 8.5 or greater
 * PDO PHP extension
 * MySQL or PostgreSQL Database
 
 
 Installation
 ------------
-1. Put the sources inside *core3* folder anywhere on your server.
+1. Put the sources inside *rowan* folder anywhere on your server.
 2. Create MySQL schema with [db.sql](db.sql)
 3. Create *admin* user with the same password.
 ```sql
@@ -32,17 +32,17 @@ Installation
   INSERT INTO `core_users` (`login`, `pass`, `visible`, `is_admin_sw`) VALUES ('admin', 'ad7123ebca969de21e49c12a7d69ce25', 'Y', 'Y');
 ```
 
-4. Create *index.php* file anywhere inside the document root. Make sure that *core3* folder is available from its place.
+4. Create *index.php* file anywhere inside the document root. Make sure that *rowan* folder is available from its place.
 ```php
     try {
-        require_once("core3/inc/classes/Error.php");
-        require_once("core3/inc/classes/Init.php");
+        require_once("rowan/inc/classes/Error.php");
+        require_once("rowan/inc/classes/Init.php");
     
-        $init = new Core3\Init();
+        $init = new Rowan\Init();
         $init->checkAuth();
     
         echo $init->dispatch();
-    } catch (Core3\Error $e) {
+    } catch (Rowan\Error $e) {
         Error::catchException($e);
     }
 ```

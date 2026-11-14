@@ -1,5 +1,5 @@
 <?php
-namespace Core3;
+namespace Rowan;
 
 
 spl_autoload_register(function ($class) {
@@ -13,7 +13,7 @@ spl_autoload_register(function ($class) {
     $count_namespace = count(explode("\\", __NAMESPACE__));
 
 
-    if (empty($class_explode[1]) || ! in_array($class_explode[1], ['Sys', 'Classes', 'Interfaces', 'Exceptions'])) {
+    if (empty($class_explode[1]) || ! in_array($class_explode[1], ['Sys', 'Classes', 'Interfaces', 'Exceptions', 'Admin'])) {
         return false;
     }
 
@@ -22,8 +22,6 @@ spl_autoload_register(function ($class) {
             $class_path[] = $item;
         }
     }
-
-    $class_path[0] = lcfirst($class_path[0]);
 
     $class_path_implode = implode('/', $class_path);
     $class_path_implode = $class_path_implode ? "/{$class_path_implode}" : '';

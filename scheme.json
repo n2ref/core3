@@ -1,9 +1,9 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "Core3 REST API",
+        "title": "Rowan REST API",
         "version": "1.0.0",
-        "description": "REST API методы системы Core3"
+        "description": "REST API методы системы Rowan"
     },
     "paths": {
         "/sys/auth/login": {
