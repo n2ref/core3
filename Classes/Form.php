@@ -71,7 +71,7 @@ class Form extends \CoreUI\Form {
 
         if ($record_id) {
             $admin   = new Admin\Controller();
-            $control = $admin->tableControls->createRow($table->getTable(), $record_id);
+            $control = $admin->tableControls->createRow($table->getTable(), (string)$record_id, ! $this->system->isReadOnlyDb());
 
             $this->send_props['record_version'] = $control->version;
         }

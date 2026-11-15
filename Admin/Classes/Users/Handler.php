@@ -603,7 +603,11 @@ class Handler extends Classes\Handler {
             throw new HttpException(404, $this->_('Указанный пользователь не найден'));
         }
 
-        $control = $this->modAdmin->tableControls->createRow($this->modAdmin->tableUsers->getTable(), $user_id);
+        $control = $this->modAdmin->tableControls->createRow(
+            $this->modAdmin->tableUsers->getTable(),
+            (string)$user_id,
+            ! $this->isReadOnlyDb()
+        );
 
 
         $avatar = null;

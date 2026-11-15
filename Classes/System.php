@@ -145,6 +145,19 @@ class System {
 
 
     /**
+     * Режим "только чтение" для основной базы
+     * @param string $connection_name
+     * @return bool
+     */
+    public function isReadOnlyDb(string $connection_name = 'base'): bool {
+
+        $readonly = $this->config?->system?->db?->{$connection_name}?->readonly;
+
+        return is_null($readonly) || $readonly;
+    }
+
+
+    /**
      * @param string $name
      * @return bool
      */

@@ -295,7 +295,10 @@ class Handler extends Common {
         if ($record_id) {
             $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), $record_id);
 
-            if ( ! $control || $control->version != $this->request->getQuery('v')) {
+            $control_version = $control ? (int)$control->version : 0;
+            $record_version  = (int)$this->request->getQuery('v');
+
+            if ($control_version != $record_version) {
                 throw new HttpException(400, $this->_(
                     'Кто-то редактировал эту запись одновременно с вами, но успел сохранить данные раньше вас. ' .
                     'Обновите страницу и проверьте, возможно этот кто-то сделал за вас работу'
@@ -337,7 +340,8 @@ class Handler extends Common {
             }
 
 
-            $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), $row_id);
+            $control = $this->modAdmin->tableControls->getRowByTableRowId($table->getTable(), (string)$row_id);
+
             if ($control) {
                 $control->version += 1;
                 $control->save();

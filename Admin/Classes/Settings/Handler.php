@@ -1,6 +1,5 @@
 <?php
 namespace Rowan\Admin\Classes\Settings;
-use Rowan\Classes\Request;
 use Rowan\Classes\Response;
 use Rowan\Classes;
 use Rowan\Classes\Validator;
@@ -101,7 +100,11 @@ class Handler extends Classes\Handler {
             throw new HttpException(400, $this->_('Указанная настройка не найдена'));
         }
 
-        $control = $this->modAdmin->tableControls->createRow($this->modAdmin->tableSettings->getTable(), $setting_id);
+        $control = $this->modAdmin->tableControls->createRow(
+            $this->modAdmin->tableSettings->getTable(),
+            (string)$setting_id,
+            ! $this->isReadOnlyDb()
+        );
 
         return [
             'id'          => $setting->id,

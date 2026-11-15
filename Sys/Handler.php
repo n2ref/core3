@@ -99,15 +99,24 @@ class Handler extends Common {
             if ( ! empty($ip_info['lng']))          { $session['lng']          = $ip_info['lng']; }
         }
 
-        $user_session = $this->modAdmin->tableUsersSession->create($session);
-        $user_session->token_hash;
+        if ($this->isReadOnlyDb()) {
+            // В режиме "только чтение" сессия не создается, в качестве sid используется id пользователя
+            $session_id = (int)$user->id;
 
-        $refresh_token = $this->getRefreshToken($user->login, $user_session->id);
-        $access_token  = $this->getAccessToken($user->login, $user_session->id);
+            $refresh_token = $this->getRefreshToken($user->login, $session_id);
+            $access_token  = $this->getAccessToken($user->login, $session_id);
 
-        $user_session->token_hash   = crc32($refresh_token->toString());
-        $user_session->date_expired = $refresh_token->dateExpired()->format('Y-m-d H:i:s');
-        $user_session->save();
+        } else {
+            $user_session = $this->modAdmin->tableUsersSession->create($session);
+            $user_session->token_hash;
+
+            $refresh_token = $this->getRefreshToken($user->login, $user_session->id);
+            $access_token  = $this->getAccessToken($user->login, $user_session->id);
+
+            $user_session->token_hash   = crc32($refresh_token->toString());
+            $user_session->date_expired = $refresh_token->dateExpired()->format('Y-m-d H:i:s');
+            $user_session->save();
+        }
 
 
         return [
@@ -177,6 +186,22 @@ class Handler extends Common {
             $token_iss != $_SERVER['SERVER_NAME']
         ) {
             throw new HttpException(403, $this->_('Эта сессия больше не активна. Войдите заново'), 'session_inactive');
+        }
+
+
+
+        if ($this->isReadOnlyDb()) {
+            // В режиме "только чтение" sid в токене является id пользователя
+            $user = $this->modAdmin->tableUsers->getRowById((int)$session_id);
+
+            if (empty($user)) {
+                throw new HttpException(403, $this->_('Пользователь не найден'), 'session_user_not_found');
+            }
+
+            return [
+                'refresh_token' => $this->getRefreshToken($user->login, (int)$session_id)->toString(),
+                'access_token'  => $this->getAccessToken($user->login, (int)$session_id)->toString(),
+            ];
         }
 
 

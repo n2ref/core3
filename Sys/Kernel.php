@@ -7,7 +7,6 @@ use Rowan\Classes\Request;
 use Rowan\Classes\Response;
 use Rowan\Classes\Router;
 use Rowan\Classes\System;
-use Rowan\Classes\Tools;
 use Rowan\Classes\Translate;
 use Rowan\Exceptions\AppException;
 use Rowan\Exceptions\DbException;
@@ -691,6 +690,7 @@ class Kernel extends System {
      * Авторизация по токену
      * @param string $access_token
      * @return Auth|null
+     * @throws MissingExtensionException
      */
     private function getAuthByToken(string $access_token): ?Auth {
 
@@ -714,7 +714,19 @@ class Kernel extends System {
             }
 
             $admin_controller = new Admin\Controller();
-            $session          = $admin_controller->tableUsersSession->getRowById($session_id);
+
+            if ($this->isReadOnlyDb()) {
+                // В режиме "только чтение" сессия не создается, sid в токене является id пользователя
+                $user = $admin_controller->tableUsers->getRowById((int)$session_id);
+
+                if (empty($user) || $user->is_active == '0') {
+                    return null;
+                }
+
+                return new Auth($user->toArray(), ['id' => (int)$session_id, 'user_id' => (int)$session_id]);
+            }
+
+            $session = $admin_controller->tableUsersSession->getRowById($session_id);
 
             if (empty($session) ||
                 $session->is_active == '0' ||
