@@ -94,7 +94,30 @@ class Db extends System {
             $config = array_merge($config, $option_params);
         }
 
-        return new Db\Adapter($config);
+        $db = new Db\Adapter($config);
+
+        if ( ! empty($options['readonly'])) {
+            $this->setReadOnlyMode($db, (string)$config['driver']);
+        }
+
+        return $db;
+    }
+
+
+    /**
+     * Установка режима "только чтение" для текущей сессии
+     * @param Db\Adapter $db
+     * @param string     $driver
+     * @return void
+     */
+    private function setReadOnlyMode(Db\Adapter $db, string $driver = 'mysql'): void {
+
+        if (str_starts_with($driver, 'pgsql') || str_starts_with($driver, 'postgres')) {
+            $db->query('SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY');
+
+        } elseif (str_starts_with($driver, 'mysql') || str_starts_with($driver, 'mariadb')) {
+            $db->query('SET SESSION TRANSACTION READ ONLY');
+        }
     }
 
 
