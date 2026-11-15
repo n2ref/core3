@@ -41,58 +41,102 @@ class Log {
 
     /**
      * Информационная запись в лог
-     * @param string $message
-     * @param array  $context
+     * @param string           $message
+     * @param array|\Throwable $context
+     * @throws MissingExtensionException
+     */
+    public function info(string $message, array|\Throwable $context = []): void {
+
+        $this->callEvent(Level::Info, $message, $context);
+    }
+
+
+    /**
+     * @param string           $message
+     * @param array|\Throwable $context
      * @throws \Exception
      */
-    public function info(string $message, array $context = []): void {
+    public function notice(string $message, array|\Throwable $context = []): void {
 
-        if ($this->handlers) {
-            $this->setHandlers(Level::Info);
-        } else {
-            $this->setDefaultHandler();
-            $this->subscription(Level::Info);
-        }
-
-        $this->logger->info($message, $context);
-        $this->clearHandlers();
+        $this->callEvent(Level::Notice, $message, $context);
     }
 
 
     /**
      * Предупреждение в лог
-     * @param string $message
-     * @param array  $context
+     * @param string           $message
+     * @param array|\Throwable $context
+     * @throws MissingExtensionException
      * @throws \Exception
      */
-    public function warning(string $message, array $context = []): void {
+    public function warning(string $message, array|\Throwable $context = []): void {
 
-        if ($this->handlers) {
-            $this->setHandlers(Level::Warning);
-        } else {
-            $this->setDefaultHandler();
-            $this->subscription(Level::Warning);
-        }
-
-        $this->logger->warning($message, $context);
-        $this->clearHandlers();
+        $this->callEvent(Level::Warning, $message, $context);
     }
 
 
     /**
      * Предупреждение в лог
      * @param string          $message
-     * @param array|\Exception $context
+     * @param array|\Throwable $context
      * @throws MissingExtensionException
      * @throws \Exception
      */
-    public function error(string $message, array|\Exception $context = []): void {
+    public function error(string $message, array|\Throwable $context = []): void {
+
+        $this->callEvent(Level::Error, $message, $context);
+    }
+
+
+    /**
+     * @param string           $message
+     * @param array|\Throwable $context
+     * @throws \Exception
+     */
+    public function critical(string $message, array|\Throwable $context = []): void {
+
+        $this->callEvent(Level::Critical, $message, $context);
+    }
+
+
+    /**
+     * @param string           $message
+     * @param array|\Throwable $context
+     * @throws \Exception
+     */
+    public function emergency(string $message, array|\Throwable $context = []): void {
+
+        $this->callEvent(Level::Emergency, $message, $context);
+    }
+
+
+    /**
+     * Отладочная информация в лог
+     * @param string           $message
+     * @param array|\Throwable $context
+     * @throws \Exception
+     */
+    public function debug(string $message, array|\Throwable $context = []): void {
+
+        $this->callEvent(Level::Debug, $message, $context);
+    }
+
+
+    /**
+     * @param Level            $level
+     * @param string           $message
+     * @param array|\Exception $context
+     * @return void
+     * @throws MissingExtensionException
+     * @throws \Exception
+     */
+    private function callEvent(Level $level, string $message, array|\Exception $context = []): void {
 
         if ($this->handlers) {
-            $this->setHandlers(Level::Error);
+            $this->setHandlers($level);
         } else {
             $this->setDefaultHandler();
-            $this->subscription(Level::Error);
+            $this->subscription($level);
         }
 
         if ($context instanceof \Exception) {
@@ -104,26 +148,15 @@ class Log {
             ];
         }
 
-        $this->logger->error($message, $context);
-        $this->clearHandlers();
-    }
 
+        $name = strtolower($level->getName());
 
-    /**
-     * Отладочная информация в лог
-     * @param string $message
-     * @param array  $context
-     * @throws \Exception
-     */
-    public function debug(string $message, array $context = []): void {
-
-        if ($this->handlers) {
-            $this->setHandlers(Level::Debug);
-        } else {
-            $this->setDefaultHandler();
+        try {
+            $this->logger->{$name}($message, $context);
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
         }
 
-        $this->logger->debug($message, $context);
         $this->clearHandlers();
     }
 

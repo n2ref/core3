@@ -11,7 +11,6 @@ use Illuminate\Container\Container;
 use Illuminate\Redis\RedisManager;
 
 
-use Laminas\Cache\Storage;
 
 
 /**
@@ -21,7 +20,7 @@ use Laminas\Cache\Storage;
  */
 class System {
 
-    private   string       $version      = '3.0.0';
+    private   string       $version      = '0.3.0';
     protected static array $static_cache = [];
 
 
