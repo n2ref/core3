@@ -628,17 +628,6 @@ class View extends Common {
         return $form->toArray();
     }
 
-
-    /**
-     * @param int $available_module_id
-     * @return array
-     */
-    public function getPanelAvailModule(int $available_module_id): array {
-
-        return [];
-    }
-
-
     /**
      * @param string $description
      * @return string

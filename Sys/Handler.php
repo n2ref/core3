@@ -548,7 +548,7 @@ class Handler extends Common {
 
         $this->checkAuth();
 
-        $location        = DOC_ROOT . "/mod/home";
+        $location        = "{$this->config->system->root}/mod/home";
         $controller_file = "{$location}/Controller.php";
 
         if ( ! file_exists($controller_file)) {
@@ -780,7 +780,7 @@ class Handler extends Common {
      */
     private function getAvatarDefault(): Response {
 
-        $file_path = DOC_ROOT. '/rowan/front/src/img/default.png';
+        $file_path = "{$this->config->system->root}/rowan/front/src/img/default.png";
 
         if ( ! is_file($file_path)) {
             throw new HttpException(404, $this->_('Указанный файл не найден'), 'file_not_found');

@@ -131,7 +131,7 @@ class Db extends System {
             $is_active = true;
 
         } else {
-            $host = $this->config?->system?->db?->base?->params?->database;
+            $host = $this->config?->system?->db?->main?->params?->database;
             $key  = "core2_mod_is_active{$host}_{$module_name}";
 
             if ($this->cache->test($key)) {
@@ -166,7 +166,7 @@ class Db extends System {
 
         } else {
             $module_name = trim(strtolower($module_name));
-            $host        = $this->config?->system?->db?->base?->params?->database;
+            $host        = $this->config?->system?->db?->main?->params?->database;
             $key         = "rowan_mod_installed_{$host}_{$module_name}";
 
             if ($this->cache->test($key)) {
@@ -199,7 +199,7 @@ class Db extends System {
      */
     final protected function getModuleLocation(string $module_name): string {
 
-		return "{$this->config->system->doc_root}/" . $this->getModuleFolder($module_name);
+		return "{$this->config->system->root}/" . $this->getModuleFolder($module_name);
 	}
 
 
@@ -248,7 +248,7 @@ class Db extends System {
      */
     final protected function getModuleInfo(string $module_name): array {
 
-        $db_name = $this->config?->system?->db?->base?->params?->database;
+        $db_name = $this->config?->system?->db?->main?->params?->database;
         $key     = "rowan_mod_{$db_name}_{$module_name}";
 
         if ($this->cache->test($key)) {

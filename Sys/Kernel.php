@@ -98,17 +98,17 @@ class Kernel extends System {
         $config->addFileIni(__DIR__ . '/../conf.ini', 'production');
         $config->addFileIni($config_file,             $_SERVER['SERVER_NAME'] ?? 'production');
 
-        if (empty($config->system->doc_root)) {
-            throw new \Exception("Missing system.doc_root");
+        if (empty($config->system->root)) {
+            throw new \Exception("Missing system.root");
         }
-        if ( ! is_dir($config->system->doc_root)) {
-            throw new \Exception("Not found doc_root: {$config->system->doc_root}");
+        if ( ! is_dir($config->system->root)) {
+            throw new \Exception("Not found root: {$config->system->root}");
         }
 
 
         if ($config->system?->cache?->options?->dir) {
             $config->system->cache->options->dir = $config->system->cache->options->dir
-                ? $this->getAbsolutePath($config->system->doc_root, $config->system->cache->options->dir)
+                ? $this->getAbsolutePath($config->system->root, $config->system->cache->options->dir)
                 : null;
 
             if (empty($config->system->cache->options->dir)) {
@@ -117,7 +117,7 @@ class Kernel extends System {
         }
 
         if ($config->system?->log?->dir) {
-            $config->system->log->dir = $this->getAbsolutePath($config->system->doc_root, $config->system->log->dir);
+            $config->system->log->dir = $this->getAbsolutePath($config->system->root, $config->system->log->dir);
 
             if (empty($config->system->log->dir)) {
                 throw new \Exception('Incorrect config param system.log.dir');
@@ -125,7 +125,7 @@ class Kernel extends System {
         }
 
         $config->system->tmp = $config->system?->tmp
-            ? $this->getAbsolutePath($config->system->doc_root, $config->system->tmp)
+            ? $this->getAbsolutePath($config->system->root, $config->system->tmp)
             : sys_get_temp_dir();
 
         if (empty($config->system->tmp)) {
@@ -758,11 +758,11 @@ class Kernel extends System {
 
     /**
      * Получение полного пути до файла или папки относительно корня системы
-     * @param string $doc_root
+     * @param string $root
      * @param string $file_path
      * @return string
      */
-    private function getAbsolutePath(string $doc_root, string $file_path): string {
+    private function getAbsolutePath(string $root, string $file_path): string {
 
         if (str_starts_with($file_path, '/')) {
             return $file_path;
@@ -770,6 +770,6 @@ class Kernel extends System {
 
         $file_path = trim($file_path, '/');
 
-        return realpath("{$doc_root}/{$file_path}");
+        return realpath("{$root}/{$file_path}");
     }
 }

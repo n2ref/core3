@@ -91,8 +91,8 @@ class Model extends Common {
             'type'    => $database_statistics['type'],
             'version' => $database_statistics['version'],
             'size'    => $database_statistics['size'],
-            'host'    => $this->config?->system?->db?->base?->params?->hostname,
-            'name'    => $this->config?->system?->db?->base?->params?->database,
+            'host'    => $this->config?->system?->db?->main?->params?->hostname,
+            'name'    => $this->config?->system?->db?->main?->params?->database,
         ];
     }
 }

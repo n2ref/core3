@@ -70,7 +70,7 @@ class Database extends Db {
      */
     protected function getType(): string {
 
-        $type = (string)$this->config?->system?->db?->base?->adapter ?: 'mysql';
+        $type = (string)$this->config?->system?->db?->main?->adapter ?: 'mysql';
 
         if ($type == 'mysql') {
             $type = 'Mysql';
@@ -134,7 +134,7 @@ class Database extends Db {
 		switch ($this->getType()) {
 			case 'Mysql':
                 $mysqlEngine = ['MyISAM', 'InnoDB', 'Aria'];
-                $db_name     = $this->config->system->db?->base?->params?->database ?: '';
+                $db_name     = $this->config->system->db?->main?->params?->database ?: '';
 
 				$result        = $db_name ? $this->db->query("SHOW TABLE STATUS FROM `{$db_name}`")->execute() : [];
 				$database_size = 0;
@@ -149,7 +149,7 @@ class Database extends Db {
 
 			case 'sqlite':
 			case 'sqlite3':
-                $host = $this->config->system->db?->base?->params?->host;
+                $host = $this->config->system->db?->main?->params?->host;
 
 				if (file_exists($host)) {
 					$database_size = filesize($host);
@@ -173,7 +173,7 @@ class Database extends Db {
                 $proname = $this->db->fetchOne($sql);
 
 				if ($proname === 'pg_database_size') {
-                    $db_name = $this->config->system->db?->base->params->database;
+                    $db_name = $this->config->system->db?->main->params->database;
 
 					if (strpos($db_name, '.') !== false) {
 						[$db_name, ] = explode('.', $db_name);

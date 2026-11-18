@@ -249,14 +249,17 @@ class Tools {
      * @param string $href - CSS filename
      */
     public static function printCss($href) {
+
+        $config = Registry::get('config');
+
         if (strpos($href, '?')) {
             $explode_href = explode('?', $href, 2);
-            $href .= file_exists(DOC_ROOT . $explode_href[0])
-                    ? '&_=' . crc32(md5_file(DOC_ROOT . $explode_href[0]))
+            $href .= file_exists("{$config->system->root}/{$explode_href[0]}")
+                    ? '&_=' . crc32(md5_file("{$config->system->root}/{$explode_href[0]}"))
                     : '';
         } else {
-            $href .= file_exists(DOC_ROOT . $href)
-                    ? '?_=' . crc32(md5_file(DOC_ROOT . $href))
+            $href .= file_exists("{$config->system->root}/{$href}")
+                    ? '?_=' . crc32(md5_file("{$config->system->root}/{$href}"))
                     : '';
         }
         echo '<link href="' . $href . '" type="text/css" rel="stylesheet" />';
@@ -523,14 +526,16 @@ class Tools {
      */
     public static function addSrcHash(string $src): string {
 
+        $config = Registry::get('config');
+
         if (strpos($src, '?')) {
             $explode_src = explode('?', $src, 2);
-            $src .= file_exists(DOC_ROOT . "/{$explode_src[0]}")
-                ? '&_=' . crc32(md5_file(DOC_ROOT . "/{$explode_src[0]}"))
+            $src .= file_exists("{$config->system->root}/{$explode_src[0]}")
+                ? '&_=' . crc32(md5_file("{$config->system->root}/{$explode_src[0]}"))
                 : '';
         } else {
-            $src .= file_exists(DOC_ROOT . "/{$src}")
-                ? '?_=' . crc32(md5_file(DOC_ROOT . "/{$src}"))
+            $src .= file_exists("{$config->system->root}/{$src}")
+                ? '?_=' . crc32(md5_file("{$config->system->root}/{$src}"))
                 : '';
         }
 
