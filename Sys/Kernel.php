@@ -1,5 +1,6 @@
 <?php
 namespace Rowan\Sys;
+use Rowan\Classes\Acl;
 use Rowan\Classes\Cli;
 use Rowan\Classes\Config;
 use Rowan\Classes\Registry;
@@ -66,10 +67,12 @@ class Kernel extends System {
                 'worker-stop',
                 'modules',
                 'composer',
+                'ipdb',
                 'host',
                 'version',
                 'help',
             ]);
+
             if (( ! empty($options['host']) && is_string($options['host'])) ||
                 ( ! empty($options['t']) && is_string($options['t']))
             ) {
@@ -278,6 +281,17 @@ class Kernel extends System {
                 $cli->updateComposer($params);
 
             } catch (Exception $e) {
+                $this->log->error('Error composer', $e);
+                $result = $e->getMessage() . PHP_EOL;
+            }
+
+        // Download latest DB-IP geolocation database
+        } elseif (isset($options['ipdb'])) {
+            try {
+                $result = $cli->downloadIpDb();
+
+            } catch (Exception $e) {
+                $this->log->error('Error download ipdb', $e);
                 $result = $e->getMessage() . PHP_EOL;
             }
 
@@ -396,20 +410,6 @@ class Kernel extends System {
                 $response->setHeader('Content-Type', 'text/plain');
             }
 
-            if ( ! is_array($result)) {
-                if (Registry::has('js')) {
-                    foreach (Registry::get('js') as $src) {
-                        $response->appendContent("<script type=\"text/javascript\" src=\"{$src}\"></script>'");
-                    }
-                }
-
-                if (Registry::has('css')) {
-                    foreach (Registry::get('css') as $src) {
-                        $response->appendContent("<link href=\"{$src}\" type=\"text/css\" rel=\"stylesheet\"/>");
-                    }
-                }
-            }
-
 
         } catch (HttpException $e) {
             $response = Response::errorJson(
@@ -455,25 +455,26 @@ class Kernel extends System {
     /**
      * Получение настроенных привилегий
      * @param int $role_id
-     * @return Permissions\Acl\Acl|null
+     * @return Acl|null
      * @throws ExceptionInterface
      * @throws DbException
      */
-    private function getRoleAcl(int $role_id):? Permissions\Acl\Acl {
+    private function getRoleAcl(int $role_id): ?Acl {
 
         $cache_key = 'rowan_acl_' . $role_id;
+        $acl       = null;
 
         if ($this->cache->test($cache_key)) {
             $acl = $this->cache->load($cache_key);
         }
 
-        if (empty($acl)) {
+        if ( ! $acl instanceof Acl) {
             $modules  = (new Admin\Tables\Modules())->getRowsByActive();
             $sections = (new Admin\Tables\ModulesSections())->getRowsByActive();
             $role     = (new Admin\Tables\Roles())->getRowById($role_id);
 
-            $acl = new Permissions\Acl\Acl();
-            $acl->addRole(new Permissions\Acl\Role\GenericRole($role_id));
+            $acl = new Acl();
+            $acl->addRole($role_id);
 
 
             $resources    = [];
@@ -488,7 +489,7 @@ class Kernel extends System {
                     ? $modules_info[$module->name]['privileges']
                     : [];
 
-                $acl->addResource(new Permissions\Acl\Resource\GenericResource($module->name));
+                $acl->addResource($module->name);
 
 
                 foreach ($sections as $section) {
@@ -502,7 +503,7 @@ class Kernel extends System {
                             ? $modules_info[$module->name]['sections'][$section->name]['privileges']
                             : [];
 
-                        $acl->addResource(new Permissions\Acl\Resource\GenericResource($resource), $module->name);
+                        $acl->addResource($resource, $module->name);
                     }
                 }
             }

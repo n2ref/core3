@@ -11,7 +11,7 @@ use Laminas\Cache\Exception\ExceptionInterface;
 class Cli extends Common {
 
     /**
-     * Опции указанные в командной строке
+     * Параметры командной строки
      * @return array
      */
     public function getOptions(): array {
@@ -25,6 +25,7 @@ class Cli extends Common {
             'worker-stop',
             'modules',
             'composer',
+            'ipdb',
             'host',
             'version',
             'help',
@@ -54,6 +55,7 @@ class Cli extends Common {
             "       --worker-start           Start worker",
             " -d                             Daemonize worker",
             "       --worker-stop            Stop worker",
+            "       --ipdb                   Download latest DB-IP city-lite mmdb database",
             " -c    --composer               Control composer",
             " -h    --help                   Help info",
             " -v    --version                Version info",
@@ -64,6 +66,7 @@ class Cli extends Common {
             "php index.php --module cron --method runJob --param 123 --param abc",
             "php index.php --composer --param update",
             "php index.php --composer --param search --param monolog",
+            "php index.php --ipdb",
             "php index.php --version",
             "php index.php --cli-methods",
         ]);
@@ -112,32 +115,32 @@ class Cli extends Common {
 
         $temp_dir = sys_get_temp_dir();
         if ( ! is_writable($temp_dir)) {
-            throw new Exception(sprintf("Error. Folder %s not writable.", $temp_dir));
+            throw new Exception($this->_('Error. Folder %s not writable.', [$temp_dir]));
         }
         if ( ! is_writable(__DIR__ . '/..')) {
-            throw new Exception(sprintf("Error. Folder %s not writable.", realpath(__DIR__ . '/..')));
+            throw new Exception($this->_('Error. Folder %s not writable.', [realpath(__DIR__ . '/..')]));
         }
 
         $composer_setup_file = $temp_dir . '/' . uniqid() . '-composer-setup.php';
-        echo 'Download composer installer...' . PHP_EOL;
+        echo $this->_('Download composer installer...') . PHP_EOL;
 
         if ( ! copy('https://getcomposer.org/installer', $composer_setup_file)) {
-            throw new Exception('Fail download composer installer.');
+            throw new Exception($this->_('Fail download composer installer.'));
         }
 
         $composer_signature = trim(file_get_contents('https://composer.github.io/installer.sig'));
         if ( ! $composer_signature) {
             unlink($composer_setup_file);
-            throw new Exception('Fail download composer signature.');
+            throw new Exception($this->_('Fail download composer signature.'));
         }
 
         if (hash_file('SHA384', $composer_setup_file) !== $composer_signature) {
             unlink($composer_setup_file);
-            throw new Exception('Error. Composer installer corrupt.');
+            throw new Exception($this->_('Error. Composer installer corrupt.'));
         }
 
-        echo 'Composer Installer verified.' . PHP_EOL;
-        echo 'Install composer...' . PHP_EOL;
+        echo $this->_('Composer Installer verified.') . PHP_EOL;
+        echo $this->_('Install composer...') . PHP_EOL;
 
 
         $old_cwd  = getcwd();
@@ -146,18 +149,51 @@ class Cli extends Common {
         echo shell_exec(sprintf('%s %s', $php_path, $composer_setup_file));
 
         $cmd = sprintf('%s composer.phar %s', $php_path, implode(' ', $params));
-        echo 'Run command: ' . $cmd . PHP_EOL . PHP_EOL;
+        echo $this->_('Run command: %s', [$cmd]) . PHP_EOL . PHP_EOL;
         echo shell_exec($cmd);
 
         $composer_file = __DIR__ . '/../composer.phar';
         if ( ! unlink($composer_file)) {
-            echo sprintf('Warning. Could not delete the file %s', $composer_file) . PHP_EOL;
+            echo $this->_('Warning. Could not delete the file %s', [$composer_file]) . PHP_EOL;
         }
         if ( ! unlink($composer_setup_file)) {
-            echo sprintf('Warning. Could not delete the file %s', $composer_setup_file) . PHP_EOL;
+            echo $this->_('Warning. Could not delete the file %s', [$composer_setup_file]) . PHP_EOL;
         }
 
         chdir($old_cwd);
+    }
+
+
+    /**
+     * Загрузка актуальной базы IP-геолокации DB-IP City Lite.
+     *
+     * Ссылка на базу содержит месяц выпуска (YYYY-MM), поэтому месяц
+     * вычисляется динамически. Если база за текущий месяц ещё не опубликована
+     * (обновление выходит обычно 1-го числа), используется предыдущий месяц.
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function downloadIpDb(): string {
+
+        $ipdb = new Ipdb();
+        $path = $ipdb->resolveDestination();
+
+        if ($path === '') {
+            return $this->_('Не указан system.root — загрузка базы IP пропущена.');
+        }
+
+        clearstatcache(true, $path);
+
+        // Если база уже скачана и файл корректного размера, повторно не загружаем
+        if (is_file($path) && (int)filesize($path) >= Ipdb::MIN_DATABASE_SIZE) {
+            return $this->_('База IP-геолокации уже скачана: %s (%s)', [
+                $path,
+                $ipdb->formatBytes((int)filesize($path)),
+            ]);
+        }
+
+        return $ipdb->download($path);
     }
 
 

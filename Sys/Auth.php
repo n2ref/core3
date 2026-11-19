@@ -1,5 +1,6 @@
 <?php
 namespace Rowan\Sys;
+use Rowan\Classes\Acl;
 
 
 /**
@@ -13,6 +14,7 @@ class Auth {
 
     private array $session = [];
     private array $user    = [];
+    private ?Acl  $acl     = null;
 
 
     /**
@@ -129,10 +131,10 @@ class Auth {
 
     /**
      * Установка привилегий
-     * @param Permissions\Acl\Acl $acl
+     * @param Acl $acl
      * @return void
      */
-    public function setAcl(Permissions\Acl\Acl $acl): void {
+    public function setAcl(Acl $acl): void {
 
         $this->acl = $acl;
     }

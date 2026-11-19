@@ -1,5 +1,6 @@
 <?php
 namespace Rowan\Sys;
+use Rowan\Classes\Ipdb;
 use Rowan\Classes\Common;
 use Rowan\Classes\Registry;
 use Rowan\Classes\Request;
@@ -12,7 +13,6 @@ use Rowan\Exceptions\HttpException;
 use Gumlet\ImageResize;
 use Gumlet\ImageResizeException;
 use Illuminate\Database\Query\Expression;
-use MaxMind\Db\Reader;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
@@ -484,11 +484,11 @@ class Handler extends Common {
                 'icon'             => "",
                 'is_visible_index' => true,
                 'sections'         => [
-                    ["name" => "modules",    'title' => $this->_("Модули")],
-                    ["name" => "settings",   'title' => $this->_("Настройки")],
-                    ["name" => "users",      'title' => $this->_("Пользователи")],
-                    ["name" => "roles",      'title' => $this->_("Роли")],
-                    ["name" => "logs",       'title' => $this->_("Логи")],
+                    ["name" => "modules",  'title' => $this->_("Модули")],
+                    ["name" => "settings", 'title' => $this->_("Настройки")],
+                    ["name" => "users",    'title' => $this->_("Пользователи")],
+                    ["name" => "roles",    'title' => $this->_("Роли")],
+                    ["name" => "logs",     'title' => $this->_("Логи")],
                 ],
             ];
         }
@@ -947,45 +947,40 @@ class Handler extends Common {
      */
     private function getIpInfo(string $ip): array {
 
-        $result    = [];
-        $file_ipdb = $this->config?->system?->ipdb?->file ?: 'ip.mmdb';
+        $result  = [];
+        $ip_info = (new Ipdb())->getIpInfo($ip);
 
-        if (file_exists($file_ipdb)) {
-            $reader  = new Reader($file_ipdb);
-            $ip_info = $reader->get($ip);
+        if ($ip_info) {
+            $lang = $this->config?->system?->lang ?: 'en';
 
-            if ($ip_info && is_array($ip_info)) {
-                $lang = $this->config?->system?->lang ?: 'en';
+            /**
+             * @param array  $names
+             * @param string $lang
+             * @return string|null
+             */
+            function getBestName(array $names, string $lang):? string {
 
-                /**
-                 * @param array  $names
-                 * @param string $lang
-                 * @return string|null
-                 */
-                function getBestName(array $names, string $lang):? string {
+                if ( ! empty($names[$lang])) {
+                    $result = $names[$lang];
 
-                    if ( ! empty($names[$lang])) {
-                        $result = $names[$lang];
+                } elseif ( ! empty($names['en'])) {
+                    $result = $names['en'];
 
-                    } elseif ( ! empty($names['en'])) {
-                        $result = $names['en'];
-
-                    } else {
-                        $result = $names ? current($names) : null;
-                    }
-
-                    return is_string($result) ? $result : null;
+                } else {
+                    $result = $names ? current($names) : null;
                 }
 
-                $result = [
-                    'country_name' => ! empty($ip_info['country']) && ! empty($ip_info['country']['names']) ? getBestName($ip_info['country']['names'], $lang) : null,
-                    'country_code' => ! empty($ip_info['country']) && ! empty($ip_info['country']['iso_code']) ? $ip_info['country']['iso_code'] : null,
-                    'region_name'  => ! empty($ip_info['subdivisions']) && ! empty($ip_info['subdivisions'][0]) && ! empty($ip_info['subdivisions'][0]['names']) ? getBestName($ip_info['subdivisions'][0]['names'], $lang) : null,
-                    'city_name'    => ! empty($ip_info['city']) && ! empty($ip_info['city']['names']) ? getBestName($ip_info['city']['names'], $lang) : null,
-                    'lat'          => ! empty($ip_info['location']) && ! empty($ip_info['location']['latitude'])  ? $ip_info['location']['latitude'] : null,
-                    'lng'          => ! empty($ip_info['location']) && ! empty($ip_info['location']['longitude']) ? $ip_info['location']['longitude'] : null,
-                ];
+                return is_string($result) ? $result : null;
             }
+
+            $result = [
+                'country_name' => ! empty($ip_info['country']) && ! empty($ip_info['country']['names']) ? getBestName($ip_info['country']['names'], $lang) : null,
+                'country_code' => ! empty($ip_info['country']) && ! empty($ip_info['country']['iso_code']) ? $ip_info['country']['iso_code'] : null,
+                'region_name'  => ! empty($ip_info['subdivisions']) && ! empty($ip_info['subdivisions'][0]) && ! empty($ip_info['subdivisions'][0]['names']) ? getBestName($ip_info['subdivisions'][0]['names'], $lang) : null,
+                'city_name'    => ! empty($ip_info['city']) && ! empty($ip_info['city']['names']) ? getBestName($ip_info['city']['names'], $lang) : null,
+                'lat'          => ! empty($ip_info['location']) && ! empty($ip_info['location']['latitude'])  ? $ip_info['location']['latitude'] : null,
+                'lng'          => ! empty($ip_info['location']) && ! empty($ip_info['location']['longitude']) ? $ip_info['location']['longitude'] : null,
+            ];
         }
 
         return $result;
