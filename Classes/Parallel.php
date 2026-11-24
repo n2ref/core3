@@ -1,6 +1,7 @@
 <?php
 namespace Rowan\Classes;
 
+use Illuminate\Cache\RedisStore;
 
 /**
  *
@@ -43,13 +44,17 @@ class Parallel extends Db {
      * @param \Closure|null $complete_callback
      * @return array
      * @throws \Exception
+     * @throws \Throwable
      */
     public function start(\Closure $complete_callback = null): array {
 
-        $this->db->driver->getConnection()->disconnect();
+        $this->db->disconnect();
 
-        if ( ! str_contains(get_class($this->cache->getAdapter()), 'Adapter\\Filesystem')) {
-            $this->cache->getAdapter()->__destruct();
+        $store = $this->cache->getAdapter()->getStore();
+
+        // Redis-соединение нельзя наследовать форкнутым процессам - закрываем до fork
+        if ($store instanceof RedisStore) {
+            $store->connection()->disconnect();
         }
 
         $process_count = 0;

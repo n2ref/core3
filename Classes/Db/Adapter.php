@@ -150,4 +150,23 @@ class Adapter {
 
         $this->manager->getConnection()->rollback();
     }
+
+
+    /**
+     * @return \PDO
+     */
+    public function getPdo(): \PDO {
+
+        return $this->manager->getConnection()->getPdo();
+    }
+
+
+    /**
+     * @return void
+     * @throws \Throwable
+     */
+    public function disconnect(): void {
+
+        $this->manager->getConnection()->disconnect();
+    }
 }

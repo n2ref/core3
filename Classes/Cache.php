@@ -1,6 +1,7 @@
 <?php
 namespace Rowan\Classes;
 
+use Illuminate\Cache\RedisStore;
 use Illuminate\Cache\Repository;
 use Illuminate\Contracts\Cache\Store;
 
@@ -104,7 +105,9 @@ class Cache {
             if ($key) {
                 $this->repository->forget($key);
             } else {
-                $this->repository->flush();
+                if ( ! $this->flushStore()) {
+                    $this->repository->flush();
+                }
             }
         });
     }
@@ -142,6 +145,42 @@ class Cache {
                 $this->repository->forget($item);
             }
         });
+    }
+
+
+    /**
+     * Очистка хранилища с учётом особенностей адаптера.
+     * Для Redis удаляются только ключи Rowan (SCAN + DEL батчами), чтобы
+     * не затрагивать чужие данные и не делать flushdb всей базы.
+     * @return bool true - очищено здесь; false - нужно вызвать flush() хранилища
+     */
+    private function flushStore(): bool {
+
+        if ( ! $this->repository->getStore() instanceof RedisStore) {
+            return false;
+        }
+
+        $store      = $this->repository->getStore();
+        $connection = $store->connection();
+        $pattern    = $store->getPrefix() . '*';
+
+        $cursor = '0';
+
+        do {
+            $keys = $connection->scan($cursor, ['match' => $pattern, 'count' => 1000]);
+
+            if ($keys === false) {
+                return false;
+            }
+
+            if ( ! empty($keys)) {
+                foreach (array_chunk($keys, 500) as $chunk) {
+                    $connection->del(...$chunk);
+                }
+            }
+        } while ((string)$cursor !== '0');
+
+        return true;
     }
 
 

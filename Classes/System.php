@@ -76,37 +76,42 @@ class System {
                     break;
 
                 case 'cache':
-                    $adapter_name = $this->config?->system?->cache?->adapter ?? 'Filesystem';
-                    $options      = $this->config?->system?->cache?->options->toArray() ?? [];
+                    $cache_config = $this->config?->system?->cache;
+                    $adapter_name = $cache_config?->adapter ?? 'Filesystem';
+                    $options      = $cache_config?->options?->toArray() ?? [];
 
                     switch ($adapter_name) {
                         case 'Filesystem':
-                            if ( ! $options['dir']) {
-                                throw new \Exception('В файле конфиге не указана папка для кэша: system.cache.options.dir');
+                            if (empty($options['dir'])) {
+                                throw new \Exception($this->_('В файле конфиге не указана папка для кэша: system.cache.options.dir'));
                             }
 
                             $store = new FileStore(new Filesystem(), $options['dir']);
                             break;
 
                         case 'Redis':
-                            $host = $this->config?->system?->host ?? ($_SERVER['SERVER_NAME'] ?? '');
+                            $server = $options['server'] ?? [];
+                            $client = $options['client'] ?? 'phpredis';
 
-                            if ( ! $host) {
-                                throw new \Exception('В файле конфиге не указан хост: system.host');
+                            if ( ! in_array($client, ['phpredis', 'predis'], true)) {
+                                throw new \Exception($this->_('Неизвестный клиент Redis для кэша: %s', $client));
                             }
 
-                            // 'predis' (пакет predis/predis) или 'phpredis' (расширение ext-redis)
-                            $redis = new RedisManager(Container::getInstance(), 'phpredis', [
+                            $redis = new RedisManager(new Container(), $client, [
                                 'default' => [
-                                    'host'     => $options['host']     ?? '127.0.0.1',
-                                    'port'     => $options['port']     ?? 6379,
-                                    'password' => $options['password'] ?? null,
-                                    'database' => $options['database'] ?? 0,
+                                    'host'     => $server['host']     ?? '127.0.0.1',
+                                    'port'     => (int)($server['port'] ?? 6379),
+                                    'password' => $server['password'] ?? null,
+                                    'database' => (int)($server['database'] ?? 0),
                                 ],
                             ]);
 
-                            // prefix подставляется к ключу без разделителя, поэтому двоеточие в конце
-                            $store = new RedisStore($redis, "{$host}:Rowan:");
+
+                            $host = $this->config?->system?->host
+                                ?: ($_SERVER['SERVER_NAME'] ?? null)
+                                    ?: (gethostname() ?: 'rowan');
+
+                            $store = new RedisStore($redis, "{$host}:Rowan:", 'default');
                             break;
 
                         case 'Memcached':

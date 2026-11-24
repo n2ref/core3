@@ -20,7 +20,7 @@ class Db extends Table\Adapters\Mysql {
 
         $core_db = new Classes\Db();
 
-        parent::__construct($core_db->db->getDriver()->getConnection()->getResource());
+        parent::__construct($core_db->db->getPdo());
 
 
         if ($request) {
